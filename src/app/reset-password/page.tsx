@@ -1,0 +1,118 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+
+export default function ResetPasswordPage() {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const supabase = createClient();
+  const router = useRouter();
+
+  // Ensure user is actually logged in (session established via code exchange)
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login?error=session-expired');
+      }
+    };
+    checkSession();
+  }, [supabase, router]);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: 'Password reset successful! Redirecting...' });
+      
+      // Clear fields
+      setPassword('');
+      setConfirmPassword('');
+
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
+
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-ink-50 flex items-center justify-center px-6">
+      <div className="w-full max-w-md">
+        <div className="flex items-center justify-center gap-2 mb-12">
+          <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
+            <span className="text-white font-bold text-xl italic">I</span>
+          </div>
+          <span className="font-bold text-xl tracking-tight text-ink-900">InvoPilot</span>
+        </div>
+
+        <div className="glass-card p-8 bg-white shadow-xl rounded-2xl border border-ink-100">
+          <h1 className="text-3xl font-bold mb-2 text-ink-900 tracking-tight">
+            Reset <span className="headline-accent italic text-brand-500 font-serif">Password</span>
+          </h1>
+          <p className="text-ink-500 mb-8">Enter your new secure password below.</p>
+
+          <form onSubmit={handleUpdatePassword} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-ink-700 mb-2">New Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl border border-ink-200 px-4 py-3 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all bg-white"
+                placeholder="Min 6 characters"
+                required
+                minLength={6}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-ink-700 mb-2">Confirm New Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full rounded-xl border border-ink-200 px-4 py-3 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all bg-white"
+                placeholder="Confirm your new password"
+                required
+              />
+            </div>
+
+            {message && (
+              <p className={`text-sm text-center font-bold ${message.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                {message.text}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-ink-900 hover:bg-ink-800 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
+            >
+              {loading ? 'Updating...' : 'Save New Password'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+  );
+}

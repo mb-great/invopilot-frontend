@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-brand-50: #FFF5EB;
+  --color-brand-100: #FFE4CC;
+  --color-brand-200: #FFC999;
+  --color-brand-300: #FFAE66;
+  --color-brand-400: #FF9433;
+  --color-brand-500: #F39C5B;
+  --color-brand-600: #E5853D;
+  --color-brand-700: #C26B27;
+  --color-brand-800: #9A521A;
+  --color-brand-900: #6B3810;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-ink-50: #F7F8F9;
+  --color-ink-100: #EEF0F2;
+  --color-ink-200: #D9DDE2;
+  --color-ink-300: #B6BCC4;
+  --color-ink-400: #8A92A0;
+  --color-ink-500: #5C6471;
+  --color-ink-600: #3F4654;
+  --color-ink-700: #262C38;
+  --color-ink-800: #161B25;
+  --color-ink-900: #0A0D14;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-serif: "DM Serif Display", Georgia, serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-ink-50);
+  color: var(--color-ink-900);
+}
+
+/* === Component classes === */
+
+.glass-card {
+  background: white;
+  border: 1px solid var(--color-ink-200);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.btn-brand {
+  background: var(--color-brand-500);
+  color: white;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1rem;
+  transition: background 0.15s;
+}
+.btn-brand:hover {
+  background: var(--color-brand-600);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--color-ink-600);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-link:hover {
+  background: var(--color-ink-100);
+  color: var(--color-ink-900);
+}
+.nav-link.active {
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+  font-weight: 500;
+}
+
+.headline-accent {
+  font-style: italic;
+  color: var(--color-brand-500);
+}
+
+.status-pill {
+  display: inline-flex;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.status-paid { background: #ECFDF5; color: #047857; }
+.status-queued { background: var(--color-brand-50); color: var(--color-brand-700); }
+.status-processing { background: #EFF6FF; color: #1D4ED8; }
+.status-failed { background: #FEF2F2; color: #B91C1C; }
+
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Mobile-first touch improvements */
+@media (max-width: 768px) {
+  button, a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  input, select {
+    font-size: 16px !important; /* Prevent iOS zoom */
+  }
+
+  .nav-link {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
 }
