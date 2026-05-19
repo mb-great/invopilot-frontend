@@ -23,23 +23,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
   }
 
-  // 4. Fetch metrics to archive
-  const { data: profile } = await supabase
+  // 4. Create Admin Client
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // 5. Fetch metrics to archive
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
 
-  const { count: invoiceCount } = await supabase
+  const { count: invoiceCount } = await supabaseAdmin
     .from('invoices')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id);
-
-  // 5. Create Admin Client
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+    .eq('user_id', user.id)
+    .is('deleted_at', null);
 
   // 6. Archive metrics
   await supabaseAdmin.from('deleted_accounts_archive').insert({
@@ -48,18 +49,41 @@ export async function POST(request: Request) {
     full_name: profile?.full_name,
     total_invoices: invoiceCount || 0,
     last_active_at: new Date().toISOString(),
-    reason: 'User self-deletion'
+    reason: 'User self-deletion (90-day grace period)'
   });
 
-  // 7. Hard Delete Invoices (to prevent bloat)
-  await supabaseAdmin.from('invoices').delete().eq('user_id', user.id);
+  // 7. Soft Delete: rename email in auth (frees original for re-signup)
+  const timestamp = Math.floor(Date.now() / 1000);
+  const [localPart, domain] = user.email!.split('@');
+  const deletedEmail = `${localPart}+deleted${timestamp}@${domain}`;
 
-  // 8. Hard delete the user from auth.users (cascades to public.profiles)
-  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    email: deletedEmail,
+    user_metadata: { ...user.user_metadata, deleted_at: new Date().toISOString(), original_email: user.email }
+  });
 
-  if (deleteError) {
+  if (authError) {
     return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  // 8. Soft delete profile (keeps data for 90 days, cron handles hard delete)
+  await supabaseAdmin
+    .from('profiles')
+    .update({ 
+      deleted_at: new Date().toISOString(),
+      email: deletedEmail
+    })
+    .eq('id', user.id);
+
+  // 9. Soft delete all invoices (keeps PDFs in storage for 90 days)
+  await supabaseAdmin
+    .from('invoices')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .is('deleted_at', null);
+
+  return NextResponse.json({ 
+    success: true, 
+    message: 'Account scheduled for deletion. Your data will be retained for 90 days. Sign up again to restore.' 
+  });
 }

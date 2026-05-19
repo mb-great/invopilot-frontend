@@ -25,7 +25,7 @@ export default function DeleteAccountSection() {
         throw new Error(result.error || 'Failed to delete account');
       }
 
-      alert("Your account has been permanently deleted.");
+      alert("Your account has been scheduled for deletion. You can restore your data by signing up again with the same email within 90 days.");
       await supabase.auth.signOut();
       router.push('/login');
     } catch (err: any) {
@@ -42,14 +42,14 @@ export default function DeleteAccountSection() {
           <Trash2 className="w-5 h-5" /> Danger Zone
         </h3>
         <p className="text-sm text-red-600/70 mb-6 leading-relaxed">
-          Permanently delete your account. This removes your profile and login access. 
-          All your invoices will be deleted. You can sign up again later with the same email.
+          Schedule your account for deletion. This will remove your profile and login access. 
+          Your data is retained for 90 days if you wish to restore it by signing up again.
         </p>
         <button 
           onClick={() => setIsModalOpen(true)}
           className="px-6 py-2 border border-red-500/50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-2"
         >
-          Delete Account Permanently
+          Delete Account
         </button>
       </section>
 
@@ -57,9 +57,9 @@ export default function DeleteAccountSection() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onConfirm={handleDelete}
-        title="Permanent Deletion"
-        message="⚠️ WARNING: This will permanently delete your login, profile, and all generated invoices. This action cannot be undone. You will be able to sign up again with the same email as a fresh user."
-        confirmLabel="Delete Everything"
+        title="Account Deletion"
+        message="⚠️ Proceed with account deletion? Your invoices and profile will be hidden and scheduled for removal in 90 days. You can sign up again later with the same email to restore your history."
+        confirmLabel="Confirm Deletion"
         isDestructive={true}
       />
     </>

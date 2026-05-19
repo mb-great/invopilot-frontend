@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import DashboardShell from '@/components/layout/DashboardShell'
 import InvoiceTable from '@/components/dashboard/InvoiceTable'
+import EmptyState from '@/components/dashboard/EmptyState'
 
 export default async function InvoicesPage() {
   const supabase = await createClient()
@@ -46,38 +47,36 @@ export default async function InvoicesPage() {
       avatarUrl={profile?.avatar_url} 
       isAdmin={profile?.role === 'admin'}
     >
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-ink-900">Invoices</h1>
-          <p className="text-ink-500 mt-1">Manage and track all your generated invoices.</p>
-        </div>
-        <Link 
-          href="/invoices/new"
-          className="bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-500/20 flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-          New Invoice
-        </Link>
-      </div>
-
-      <div className="glass-card p-6">
-        {invoices && invoices.length > 0 ? (
-          <InvoiceTable 
-            invoices={invoices} 
-            initialMeta={initialMeta}
-            availableCurrencies={availableCurrencies} 
-            showPaymentToggle={true} 
-            showHeader={false}
-          />
-        ) : (
-          <div className="py-20 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-ink-50 text-ink-400 mb-4">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            </div>
-            <h3 className="text-lg font-bold text-ink-900">No invoices yet</h3>
-            <p className="text-ink-500 mt-1 max-w-xs mx-auto">Create your first invoice to start tracking your business revenue.</p>
+      <div className="flex flex-col h-full space-y-6 md:space-y-8 min-h-0">
+        <div className="flex items-center justify-between shrink-0 px-1">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-ink-900">Invoices</h1>
+            <p className="text-ink-500 mt-1">Manage and track all your generated invoices.</p>
           </div>
-        )}
+          <Link 
+            href="/invoices/new"
+            className="bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-500/20 flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+            New Invoice
+          </Link>
+        </div>
+
+        <div className="glass-card flex-1 flex flex-col overflow-hidden min-h-0 mb-4">
+          <div className="flex-1 overflow-auto p-2">
+            {invoices && invoices.length > 0 ? (
+              <InvoiceTable 
+                invoices={invoices} 
+                initialMeta={initialMeta}
+                availableCurrencies={availableCurrencies} 
+                showPaymentToggle={true} 
+                showHeader={false}
+              />
+            ) : (
+              <EmptyState />
+            )}
+          </div>
+        </div>
       </div>
     </DashboardShell>
   )

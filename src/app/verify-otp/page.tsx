@@ -23,7 +23,7 @@ function VerifyOtpContent() {
 
   const handleVerify = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!otp || otp.length < 6) return setError('Please enter the 6-digit code.');
+    if (!otp || otp.length < 6) return setError('Please enter the 8-digit code.');
     
     setLoading(true);
     setError(null);
@@ -62,7 +62,7 @@ function VerifyOtpContent() {
             Verify <span className="headline-accent italic text-brand-500 font-serif">Code</span>
           </h1>
           <p className="text-ink-500 mb-8">
-            We sent a 6-digit code to <span className="font-bold text-ink-900">{email}</span>. 
+            We sent an 8-digit code to <span className="font-bold text-ink-900">{email}</span>. 
             Enter it below to continue.
           </p>
 
@@ -71,8 +71,8 @@ function VerifyOtpContent() {
               <label className="block text-xs uppercase font-bold text-muted mb-2 tracking-widest">Verification Code</label>
               <input
                 type="text"
-                placeholder="000000"
-                maxLength={6}
+                placeholder="00000000"
+                maxLength={8}
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                 className="w-full rounded-xl border border-ink-200 px-4 py-4 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all bg-white font-mono tracking-[0.5em] text-center text-2xl"
@@ -97,7 +97,7 @@ function VerifyOtpContent() {
 
           <p className="mt-8 text-center text-xs text-ink-400 leading-relaxed">
             Link in the email not working? <br/>
-            Type the 6-digit code manually to bypass security scanners.
+            Type the 8-digit code manually to bypass security scanners.
           </p>
         </div>
 

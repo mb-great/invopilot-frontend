@@ -20,8 +20,8 @@ export const PreviewDetails = ({
   invoiceTerms: InvoiceTerms;
   onClick?: (step: string) => void;
 }) => (
-  <div className="w-full flex justify-center py-4 md:py-8">
-    <div className="w-full max-w-3xl aspect-[1/1.414] bg-white shadow-2xl rounded-sm border border-ink-100 flex flex-col overflow-hidden">
+  <div className="w-full h-full flex justify-center py-4 md:py-8 overflow-hidden">
+    <div className="h-full w-auto aspect-[1/1.414] bg-white shadow-2xl rounded-sm border border-ink-100 flex flex-col overflow-hidden">
       {/* Header section */}
       <div className="border-b grid grid-cols-2 border-ink-100">
         <div

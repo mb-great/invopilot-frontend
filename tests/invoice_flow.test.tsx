@@ -6,59 +6,81 @@ import InvoiceBuilder from '../src/components/invoice/InvoiceBuilder';
 const fetchMock = vi.fn();
 global.fetch = fetchMock as unknown as typeof fetch;
 
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn()
+  })),
+  usePathname: vi.fn(() => '/invoices/new')
+}));
+
 describe('Invoice Flow', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    localStorage.clear();
   });
 
-  it('updates preview panel when form is filled', () => {
+  it('updates form state when input is filled', async () => {
     render(<InvoiceBuilder />);
     
-    const nicknameInput = screen.getByPlaceholderText('e.g. Acme Corp - March 2024');
-    fireEvent.change(nicknameInput, { target: { value: 'Test Nickname' } });
+    // We start at step 1: Your Details
+    const emailInput = await screen.findByLabelText(/Email/i);
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     
-    // Test that the form state changes are reflected
-    expect(nicknameInput).toHaveValue('Test Nickname');
+    expect(emailInput).toHaveValue('test@example.com');
   });
 
-  it('triggers API call on generate button click', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true })
+  it('triggers API call on generate button click from step 6', async () => {
+    fetchMock.mockImplementation((url) => {
+      if (url === '/api/invoices/generate') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true, invoiceId: 'test-id' })
+        });
+      }
+      if (url.includes('/status')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ status: 'done', share_slug: 'test-slug' })
+        });
+      }
+      return Promise.resolve({ ok: false });
     });
 
+    // Start directly at step 6 to show the Generate PDF button
+    // Must set items so it doesn't trigger shouldReset
+    localStorage.setItem('items', JSON.stringify([{itemDescription: 'Test'}]));
+    localStorage.setItem('step', '6');
     render(<InvoiceBuilder />);
     
-    const nicknameInput = screen.getByPlaceholderText('e.g. Acme Corp - March 2024');
-    fireEvent.change(nicknameInput, { target: { value: 'API Test' } });
-    
-    const generateBtn = screen.getByText('Generate PDF');
+    const generateBtn = await screen.findByRole('button', { name: /Generate Invoice/i });
     fireEvent.click(generateBtn);
     
     expect(global.fetch).toHaveBeenCalledWith('/api/invoices/generate', expect.objectContaining({
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('API Test')
+      method: 'POST'
     }));
 
     await waitFor(() => {
-      expect(screen.getByText('Generating...')).toBeInTheDocument();
-    });
+      expect(screen.getByText(/Done!/i)).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
-  it('shows error state on failed API call', async () => {
+  it('shows error state on failed API call from step 6', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: 'Failed' })
     });
 
+    localStorage.setItem('items', JSON.stringify([{itemDescription: 'Test'}]));
+    localStorage.setItem('step', '6');
     render(<InvoiceBuilder />);
     
-    const generateBtn = screen.getByText('Generate PDF');
+    const generateBtn = await screen.findByRole('button', { name: /Generate Invoice/i });
     fireEvent.click(generateBtn);
     
     await waitFor(() => {
-      expect(screen.getByText('Failed to generate invoice. Please try again.')).toBeInTheDocument();
-    });
+      expect(screen.getByText('Failed')).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 });

@@ -1,16 +1,22 @@
+import Link from 'next/link';
+import { FileText } from 'lucide-react';
+
 export default function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-xl">
-      <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
+    <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-ink-100 rounded-2xl bg-white/50">
+      <div className="w-12 h-12 bg-ink-50 rounded-full flex items-center justify-center mb-4">
+        <FileText className="w-6 h-6 text-ink-300" />
       </div>
-      <h3 className="text-xl font-semibold mb-2">No invoices yet</h3>
-      <p className="text-muted mb-6 text-center max-w-sm">
-        Generate your first invoice to see it here. History is kept for 30 days.
+      <h3 className="text-lg font-bold text-ink-900 mb-1">No invoices yet</h3>
+      <p className="text-ink-500 mb-6 text-center max-w-sm text-xs">
+        Start by creating your first invoice. Your data is stored securely and available whenever you need it.
       </p>
-      <button className="btn-accent">New Invoice</button>
+      <Link href="/invoices/new" className="bg-brand-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-brand-600 transition-all shadow-xl shadow-brand-500/20 text-sm flex items-center gap-2">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Create Invoice
+      </Link>
     </div>
   );
 }

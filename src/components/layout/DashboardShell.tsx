@@ -141,7 +141,7 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
         </header>
 
         <main className="flex-1 overflow-auto relative">
-          <div className="w-full max-w-[1440px] mx-auto px-4 py-6 md:px-8 md:py-10">
+          <div className="w-full max-w-[1440px] mx-auto px-4 py-6 md:px-8 md:py-10 flex flex-col h-full min-h-0">
             {children}
           </div>
         </main>

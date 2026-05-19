@@ -7,10 +7,15 @@ import { useEffect, useState } from "react";
 import { useGetValue } from "@/hooks/useGetValue";
 import { getInitialValue } from "@/lib/getInitialValue";
 import { GenerateInvoiceButton } from "@/components/invoice/form/downloadInvoice/generateInvoiceButton";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Trash2 } from "lucide-react";
 
 export default function InvoiceBuilder() {
   const methods = useForm();
   const [isClient, setIsClient] = useState(false);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -70,25 +75,64 @@ export default function InvoiceBuilder() {
     }
   }, [methods]);
 
+  const handleDiscard = () => {
+    if (typeof window !== "undefined") {
+      localStorage.clear();
+      router.push("/dashboard");
+    }
+  };
+
+  const handleBackClick = () => {
+    router.push("/dashboard");
+  };
+
   return (
     <>
       {isClient ? (
         <FormProvider {...methods}>
-          <div className="min-h-screen h-[100vh] flex flex-col md:flex-row bg-white overflow-hidden">
+          <ConfirmationModal
+            isOpen={showDiscardModal}
+            onClose={() => setShowDiscardModal(false)}
+            onConfirm={handleDiscard}
+            title="Clear current draft?"
+            message="This will permanently delete all the information you've entered in this invoice. This action cannot be undone."
+            confirmLabel="Clear Draft"
+            isDestructive={true}
+            requirePassword={false}
+          />
+
+          <div className="h-screen w-screen flex flex-col md:flex-row bg-white overflow-hidden">
             {/* Form Side */}
             <div className="w-full md:w-[450px] lg:w-[500px] h-full overflow-y-auto bg-white border-r border-ink-100 flex flex-col p-6 md:p-10 lg:p-12 shrink-0">
               <div className="flex-1">
-                <a href="/dashboard" className="inline-block mb-10 group">
-                  <div className="flex gap-3 items-center">
-                    <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
-                      <span className="font-bold text-xl italic">I</span>
-                    </div>
-                    <div>
-                      <p className="font-bold text-ink-900 leading-tight">InvoPilot</p>
-                      <p className="text-brand-500 text-[10px] font-bold uppercase tracking-widest">Builder</p>
-                    </div>
+                <div className="flex items-center justify-between mb-10">
+                  <button 
+                    onClick={handleBackClick}
+                    className="flex items-center gap-2 text-ink-400 hover:text-ink-900 transition-colors group"
+                  >
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    <span className="text-sm font-bold uppercase tracking-widest">Back</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => setShowDiscardModal(true)}
+                    className="flex items-center gap-2 text-ink-300 hover:text-red-500 transition-colors text-xs font-bold uppercase tracking-widest"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Clear Draft
+                  </button>
+                </div>
+
+                <div className="flex gap-3 items-center mb-10">
+                  <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                    <span className="font-bold text-xl italic">I</span>
                   </div>
-                </a>
+                  <div>
+                    <p className="font-bold text-ink-900 leading-tight">InvoPilot</p>
+                    <p className="text-brand-500 text-[10px] font-bold uppercase tracking-widest">Builder</p>
+                  </div>
+                </div>
+
                 <div className="pb-20">
                   <UserInputFormWithGenerate />
                 </div>
@@ -99,9 +143,9 @@ export default function InvoiceBuilder() {
             </div>
 
             {/* Preview Side */}
-            <div className="flex-1 h-full bg-ink-50 relative flex justify-center items-center p-4 md:p-12 overflow-y-auto">
+            <div className="flex-1 h-full bg-ink-50 relative flex justify-center items-center p-4 md:p-12 overflow-hidden">
               <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]"></div>
-              <div className="w-full max-w-[800px] shadow-2xl shadow-ink-900/10 rounded-sm">
+              <div className="h-full w-auto shadow-2xl shadow-ink-900/10 rounded-sm">
                 <UserDataPreview />
               </div>
             </div>

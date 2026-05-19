@@ -11,30 +11,26 @@ export async function DELETE(
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // 1. Verify ownership and get PDF path
+  // 1. Verify ownership
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
-    .select('pdf_url')
+    .select('id')
     .eq('id', id)
     .eq('user_id', user.id)
+    .is('deleted_at', null)
     .single();
 
   if (fetchError || !invoice) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // 2. Remove from Storage (prevent bloat)
-  if (invoice.pdf_url) {
-    await supabase.storage.from('invoices').remove([invoice.pdf_url]);
-  }
-
-  // 3. Hard Delete from DB
+  // 2. Soft Delete (ADR-005). Storage cleanup by 90-day cron.
   const { error: deleteError } = await supabase
     .from('invoices')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
     .eq('user_id', user.id);
 
   if (deleteError) {
-    console.error('Hard delete error:', deleteError);
+    console.error('Soft delete error:', deleteError);
     return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
   }
 

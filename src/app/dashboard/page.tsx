@@ -63,11 +63,11 @@ export default async function DashboardPage({
       avatarUrl={profile?.avatar_url} 
       isAdmin={profile?.role === 'admin'}
     >
-      <div className="space-y-10">
+      <div className="flex flex-col h-full space-y-8 md:space-y-10 min-h-0">
         {/* Header */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between shrink-0">
           <div>
-            <h1 className="text-5xl font-bold tracking-tight text-ink-900">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-ink-900">
               Your <span className="headline-accent italic font-serif font-normal">dashboard</span>
             </h1>
             <p className="text-ink-500 mt-2 text-lg">Snapshot of your invoicing — outstanding, paid, and what&apos;s due next.</p>
@@ -79,20 +79,22 @@ export default async function DashboardPage({
         </div>
 
         {/* Metric Cards */}
-        <StatCards 
-          topCurrencies={stats.top_currencies} 
-          otherCurrencies={stats.other_currencies} 
-        />
+        <div className="shrink-0">
+          <StatCards 
+            topCurrencies={stats.top_currencies} 
+            otherCurrencies={stats.other_currencies} 
+          />
+        </div>
 
         {/* Main Content Sections */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <div className="glass-card overflow-hidden">
-              <div className="px-6 py-5 border-b border-ink-100 flex items-center justify-between">
+        <div className="flex-1 grid lg:grid-cols-3 gap-8 min-h-0 pb-4">
+          <div className="lg:col-span-2 flex flex-col min-h-0">
+            <div className="glass-card flex flex-col overflow-hidden h-full">
+              <div className="px-6 py-5 border-b border-ink-100 flex items-center justify-between shrink-0">
                 <h2 className="font-bold text-ink-800 tracking-tight">Recent Invoices</h2>
                 <Link href="/invoices" className="text-sm font-bold text-brand-600 hover:text-brand-700">View all</Link>
               </div>
-              <div className="p-2">
+              <div className="flex-1 overflow-auto p-2">
                 {recentInvoices && recentInvoices.length > 0 ? (
                   <InvoiceTable 
                     invoices={recentInvoices} 
@@ -101,30 +103,13 @@ export default async function DashboardPage({
                     availableCurrencies={availableCurrencies}
                   />
                 ) : (
-                  <div className="py-12"><EmptyState /></div>
+                  <EmptyState />
                 )}
               </div>
             </div>
           </div>
 
-          <div className="space-y-8">
-            {/* Quick Actions - Reserved for v2 */}
-            {/* 
-            <div className="glass-card p-6 dot-grid">
-              <h2 className="font-bold text-ink-800 mb-6 tracking-tight">Quick Actions</h2>
-              <div className="space-y-3">
-                <button className="w-full text-left p-4 rounded-xl border border-ink-200 hover:bg-ink-50 transition-all group">
-                  <div className="font-bold text-ink-900 group-hover:text-brand-600 transition-colors">Export GST Data</div>
-                  <div className="text-xs text-ink-400">Download quarterly summary</div>
-                </button>
-                <button className="w-full text-left p-4 rounded-xl border border-ink-200 hover:bg-ink-50 transition-all group">
-                  <div className="font-bold text-ink-900 group-hover:text-brand-600 transition-colors">Client Audit</div>
-                  <div className="text-xs text-ink-400">Verify payment history</div>
-                </button>
-              </div>
-            </div>
-            */}
-
+          <div className="space-y-8 shrink-0">
             <div className="glass-card p-6 bg-brand-500 text-white relative overflow-hidden group cursor-pointer">
               <div className="absolute top-[-20%] right-[-20%] w-[60%] h-[60%] bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform" />
               <div className="relative z-10">

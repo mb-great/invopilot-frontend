@@ -4,7 +4,7 @@ import { rateLimit } from '@/lib/ratelimit';
 import { logger } from '@/lib/logger';
 
 const QUEUE_CAP = 100;
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
 
 export async function POST(request: Request) {
   const supabase = await createClient();

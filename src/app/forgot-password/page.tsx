@@ -11,21 +11,37 @@ function ForgotPasswordContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
 
   useEffect(() => {
     const emailParam = searchParams.get('email')
+    const tokenParam = searchParams.get('token')
     const errorParam = searchParams.get('error')
 
     if (emailParam) setEmail(emailParam)
     
+    // Auto-fill OTP from email link
+    if (tokenParam) {
+      setOtpCode(tokenParam)
+      setSent(true)
+      setStep('verify')
+    }
+    
     if (errorParam === 'auth-failed-pkce') {
-      setError('Auth link expired or opened in a different browser. Please enter the 6-digit code sent to your email.')
+      setError('Auth link expired or opened in a different browser. Please enter the 8-digit code sent to your email.')
       setStep('verify')
     }
   }, [searchParams])
+
+  // Auto-submit when OTP is pre-filled from URL
+  useEffect(() => {
+    if (step === 'verify' && otpCode.length === 8 && email && searchParams.get('token')) {
+      handleVerify()
+    }
+  }, [step, otpCode])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,36 +50,48 @@ function ForgotPasswordContent() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/api/auth/callback?next=/reset-password`,
-    })
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() })
+      });
 
-    if (error) {
-      setError(error.message)
-    } else {
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to send recovery code');
+      }
+
       setSent(true)
       setStep('verify')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const handleVerify = async () => {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: otpCode,
-      type: 'recovery'
-    })
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/auth/forgot-password/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), token: otpCode }),
+        credentials: 'include'
+      });
 
-    if (error) {
-      setError(error.message)
-    } else {
-      // verifyOtp with type='recovery' establishes a session
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
+
       router.push('/reset-password')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -121,21 +149,21 @@ function ForgotPasswordContent() {
                 </svg>
               </div>
               <div>
-                <p className="text-ink-900 font-bold text-lg">Check your email!</p>
+                <p className="text-ink-900 font-bold text-lg">Verify your identity</p>
                 <p className="text-ink-500 text-sm mt-2 leading-relaxed">
-                  We sent a recovery link to <span className="font-bold text-ink-900">{email}</span>.
-                  <br />Enter the 6-digit code below or click the link in your email.
+                  If an account exists for <span className="font-bold text-ink-900">{email}</span>, we sent a recovery code.
+                  <br />Enter the 8-digit code below or click the link in your email.
                 </p>
               </div>
 
               <div className="space-y-4">
                 <input
                   type="text"
-                  placeholder="000000"
+                  placeholder="00000000"
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                   className="w-full text-center text-3xl tracking-[0.5em] font-mono rounded-xl border border-ink-200 px-4 py-4 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all bg-white"
-                  maxLength={6}
+                  maxLength={8}
                 />
                 
                 {error && (

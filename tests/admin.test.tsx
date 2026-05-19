@@ -14,12 +14,13 @@ type QueryBuilder = {
   order: ReturnType<typeof vi.fn>;
   limit: ReturnType<typeof vi.fn>;
   or: ReturnType<typeof vi.fn>;
+  range: ReturnType<typeof vi.fn>;
   then: Promise<QueryResult>['then'];
 };
 
 const { supabaseClient } = vi.hoisted(() => {
   const result = Promise.resolve({ 
-    data: [{ id: 'user-1', email: 'user@example.com', full_name: 'Test User', role: 'user', created_at: new Date().toISOString() }], 
+    data: [{ id: 'user-1', email: 'user@example.com', full_name: 'Test User', role: 'user', created_at: new Date().toISOString(), total_invoices_generated: 5 }], 
     count: 10 
   });
   const query = {} as QueryBuilder;
@@ -30,6 +31,7 @@ const { supabaseClient } = vi.hoisted(() => {
   query.order = vi.fn(() => query);
   query.limit = vi.fn(() => query);
   query.or = vi.fn(() => query);
+  query.range = vi.fn(() => query);
   query.then = result.then.bind(result);
 
   return {
@@ -37,7 +39,8 @@ const { supabaseClient } = vi.hoisted(() => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'admin-user', email: 'admin@example.com' } } })
       },
-      from: vi.fn(() => query)
+      from: vi.fn(() => query),
+      rpc: vi.fn().mockResolvedValue({ data: [{ active_invoices_count: 10, total_users: 5, total_invoices_lifetime: 100 }] })
     }
   };
 });
@@ -51,7 +54,8 @@ vi.mock('next/link', () => ({
 vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
   usePathname: vi.fn(() => '/admin'),
-  useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() }))
+  useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
+  useSearchParams: vi.fn(() => new URLSearchParams())
 }));
 
 vi.mock('next/headers', () => ({
@@ -73,7 +77,8 @@ describe('Admin Page', () => {
     render(ResolvedPage);
     
     expect(screen.getByText('System Admin')).toBeInTheDocument();
-    expect(screen.getByText('Total Invoices')).toBeInTheDocument();
+    expect(screen.getByText('Active Invoices')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument(); // active_invoices_count
   });
 
   it('renders user directory', async () => {

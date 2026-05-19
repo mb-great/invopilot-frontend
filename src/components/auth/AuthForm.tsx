@@ -19,109 +19,103 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'
+
   const isLogin = mode === 'login'
 
   // Step 0: Check for stray 'code' (Magic Link) parameters
   useEffect(() => {
     const code = searchParams.get('code')
     if (code) {
-      setError('Invalid login method detected. Our system requires a 6-digit code for security. Please request a new code below.')
+      setError('Invalid login method detected. Our system requires an 8-digit code for security. Please request a new code below.')
     }
   }, [searchParams])
 
-  // Step 1: Send OTP
+  // Step 1: Send OTP via Backend Proxy
   const handleSendOtp = async () => {
     setLoading(true)
     setError(null)
     
-    // For Signup, we use passwordless to start (OTP only)
-    const { error } = await supabase.auth.signInWithOtp({ 
-      email: email.trim()
-    })
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/auth/signup/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() })
+      });
 
-    if (error) {
-      setError(error.message)
-    } else {
-      setSuccess('6-digit code sent to your email.')
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send code');
+
+      setSuccess('8-digit code sent to your email.');
       setStep('verify')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
-  // Step 2: Verify OTP
+  // Step 2: Verify OTP via Backend Proxy
   const handleVerifyOtp = async () => {
     setLoading(true)
     setError(null)
-    const trimmedEmail = email.trim().toLowerCase()
     
-    console.log(`Auth: Current system time (UTC): ${new Date().toISOString()}`)
+    try {
+      const endpoint = isLogin ? '/api/auth/forgot-password/verify' : '/api/auth/signup/verify-otp';
+      const res = await fetch(`${BACKEND_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), token: otpCode }),
+        // Important: allow step-cookie to be set
+        credentials: 'include'
+      });
 
-    // Determine the exact type to avoid burning attempts.
-    // For logins via signInWithOtp, the type is 'magiclink'.
-    // For signups (or if they clicked sign up and we used passwordless), it's 'signup'.
-    const exactType = isLogin ? 'magiclink' : 'signup'
-    console.log(`Auth: Attempting OTP verification with exact type: ${exactType}`)
-    
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: otpCode,
-      type: exactType
-    })
-
-    if (!error) {
-      console.log(`Auth: Verification successful!`)
-      proceedAfterVerify()
-    } else {
-      console.warn(`Auth: Verification failed:`, error.message)
-      
-      // Only do a single fallback to 'email' if the exact type fails, as 'email' is the catch-all
-      if (error.message.includes('expired or is invalid')) {
-        const fallbackType = isLogin ? 'signup' : 'email'
-        console.log(`Auth: Fallback to type: ${fallbackType}`)
-        const fallbackRes = await supabase.auth.verifyOtp({
-          email: email.trim(),
-          token: otpCode,
-          type: fallbackType
-        })
-        if (!fallbackRes.error) {
-          proceedAfterVerify()
-          setLoading(false)
-          return
-        } else {
-          console.warn(`Auth: Fallback verification also failed:`, fallbackRes.error.message)
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.code === 'OTP_EXPIRED') {
+          throw new Error('Code expired. Please request a new one.');
         }
+        throw new Error(data.error || 'Verification failed');
       }
-      
-      setError(error.message || 'Verification failed. Please check your code.')
-    }
-    setLoading(false)
-  }
 
-  const proceedAfterVerify = () => {
-    if (isLogin) {
-      router.push('/dashboard')
-    } else {
       setStep('profile')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Step 3: Complete Profile (Password + Name)
+  // Step 3: Complete Profile via Backend Proxy
   const handleCompleteProfile = async () => {
     setLoading(true)
     setError(null)
 
-    // Set the password and name
-    const { error } = await supabase.auth.updateUser({
-      password,
-      data: { full_name: fullName }
-    })
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/auth/signup/set-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, fullName }),
+        credentials: 'include'
+      });
 
-    if (error) {
-      setError(error.message)
-    } else {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to set password');
+
+      // Set session in Supabase client
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      });
+
+      if (sessionError) throw sessionError;
+
       router.push('/dashboard')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   // Legacy Login with Password
@@ -229,7 +223,7 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
           Verify your <span className="headline-accent italic text-brand-500 font-serif">email</span>
         </h1>
         <p className="text-ink-500 mb-10 text-lg leading-relaxed">
-          We sent a 6-digit code to <span className="font-bold text-ink-900">{email}</span>.
+          We sent an 8-digit code to <span className="font-bold text-ink-900">{email}</span>.
         </p>
 
         <div className="space-y-6">
@@ -237,11 +231,11 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
             <label className="block text-sm font-semibold text-ink-700 mb-2">Verification Code</label>
             <input
               type="text"
-              placeholder="000000"
+              placeholder="00000000"
               value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
               className="w-full text-center text-3xl tracking-[0.5em] font-mono rounded-xl border border-ink-200 px-4 py-5 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all bg-white"
-              maxLength={6}
+              maxLength={8}
               autoFocus
             />
           </div>

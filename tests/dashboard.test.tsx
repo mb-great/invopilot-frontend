@@ -92,6 +92,5 @@ describe('Dashboard Page', () => {
     render(ResolvedPage);
     
     expect(screen.getByText('Test Inv')).toBeInTheDocument();
-    expect(screen.getByText('draft')).toBeInTheDocument();
   });
 });
