@@ -47,3 +47,7 @@ yarn-error.log*
 next-env.d.ts
 *.md
 docs/
+
+# Scratch and test files
+test-exhaustion.ts
+/scripts/
