@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 export default function DashboardLoading() {
   return (
-    <div className="flex h-screen bg-ink-50 overflow-hidden">
+    <div className="flex h-[100dvh] bg-ink-50 overflow-hidden">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes zoom-out-in {
           0% { transform: scale(1.05); opacity: 0; }

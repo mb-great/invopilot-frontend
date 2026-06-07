@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest'
 describe('Row Level Security (RLS)', () => {
   it('prevents users from seeing other profiles', () => {
     // Conceptual test for RLS policies
-    const currentUserId = 'user-1'
-    const queryId = 'user-2'
+    const currentUserId: string = 'user-1'
+    const queryId: string = 'user-2'
     
     expect(currentUserId === queryId).toBe(false)
   })

@@ -21,11 +21,11 @@ export const PreviewDetails = ({
   onClick?: (step: string) => void;
 }) => (
   <div className="w-full h-full flex justify-center py-4 md:py-8 overflow-hidden">
-    <div className="h-full w-auto aspect-[1/1.414] bg-white shadow-2xl rounded-sm border border-ink-100 flex flex-col overflow-hidden">
+    <div className="h-full w-auto aspect-[1/1.414] bg-white shadow-2xl rounded-sm border border-ink-100 flex flex-col overflow-y-auto">
       {/* Header section */}
       <div className="border-b grid grid-cols-2 border-ink-100">
         <div
-          className="py-6 px-8 border-r border-ink-100 cursor-pointer relative group transition-colors hover:bg-brand-50/30"
+          className={`py-6 px-8 border-r border-ink-100 relative group transition-colors ${onClick ? 'cursor-pointer hover:bg-brand-50/30' : 'cursor-default'}`}
           onClick={() => onClick && onClick("1")}
         >
           {!!onClick && (
@@ -34,7 +34,7 @@ export const PreviewDetails = ({
           <YourDetailsPreview {...yourDetails} />
         </div>
         <div
-          className="py-6 px-8 cursor-pointer relative group transition-colors hover:bg-brand-50/30"
+          className={`py-6 px-8 relative group transition-colors ${onClick ? 'cursor-pointer hover:bg-brand-50/30' : 'cursor-default'}`}
           onClick={() => onClick && onClick("2")}
         >
           {!!onClick && (

@@ -11,21 +11,34 @@ export const UserDataPreview = () => {
     paymentDetails,
     yourDetails,
   } = useData();
-  const { setValue } = useFormContext();
+  const { setValue, watch } = useFormContext();
+  const currentStep = watch("step");
+  const generationStatus = watch("generationStatus") || "ready";
 
-  const onClick = (step: string) => {
+  const isGenerating = generationStatus === "generating" || generationStatus === "polling";
+
+  const onClick = currentStep === "6" ? undefined : (step: string) => {
     setValue("step", step);
     localStorage.setItem("step", step);
   };
 
   return (
-    <PreviewDetails
-      onClick={onClick}
-      companyDetails={companyDetails}
-      invoiceDetails={invoiceDetails}
-      invoiceTerms={invoiceTerms}
-      paymentDetails={paymentDetails}
-      yourDetails={yourDetails}
-    />
+    <div className="relative h-full">
+      {isGenerating && (
+        <div className="absolute inset-0 z-10 bg-white/5 backdrop-blur-[1px] flex items-end justify-center pb-8 pointer-events-none">
+          <span className="bg-ink-900/80 text-ink-200 text-xs px-3 py-1.5 rounded-full font-medium animate-pulse">
+            Generating PDF...
+          </span>
+        </div>
+      )}
+      <PreviewDetails
+        onClick={onClick}
+        companyDetails={companyDetails}
+        invoiceDetails={invoiceDetails}
+        invoiceTerms={invoiceTerms}
+        paymentDetails={paymentDetails}
+        yourDetails={yourDetails}
+      />
+    </div>
   );
 };

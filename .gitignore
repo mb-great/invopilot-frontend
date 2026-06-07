@@ -22,7 +22,13 @@
 
 # misc
 .DS_Store
+
+# secrets & keys
 *.pem
+*.key
+*.p12
+*.pfx
+*.secret
 
 # debug
 npm-debug.log*

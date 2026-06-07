@@ -2,8 +2,8 @@ import AuthForm from '@/components/auth/AuthForm'
 
 export default function SignupPage() {
   return (
-    <main className="min-h-screen bg-ink-50">
-      <div className="grid lg:grid-cols-2 min-h-screen">
+    <main className="min-h-[100dvh] bg-ink-50">
+      <div className="grid lg:grid-cols-2 min-h-[100dvh]">
         {/* Left Side: Auth Form */}
         <div className="flex items-center justify-center px-8 py-12 bg-white lg:bg-ink-50">
           <AuthForm mode="signup" />

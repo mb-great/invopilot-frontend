@@ -6,6 +6,9 @@ import AvatarUpload from '@/components/dashboard/AvatarUpload';
 import PasswordSettings from '@/components/dashboard/PasswordSettings';
 import ProfileForm from '@/components/dashboard/ProfileForm';
 import DeleteAccountSection from '@/components/dashboard/DeleteAccountSection';
+import BusinessProfilesSection from '@/components/dashboard/BusinessProfilesSection';
+import NotificationSettingsSection from '@/components/dashboard/NotificationSettingsSection';
+import { resolvePlanAccess } from '@/lib/billing/tiers';
 import { logger } from '@/lib/logger';
 
 export default async function SettingsPage() {
@@ -32,6 +35,7 @@ export default async function SettingsPage() {
     const bankName = formData.get('bankName') as string;
     const accountNo = formData.get('accountNo') as string;
     const ifsc = formData.get('ifsc') as string;
+    const purchaseRemindersEnabled = formData.get('purchaseRemindersEnabled') === 'on';
     
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -52,7 +56,8 @@ export default async function SettingsPage() {
       .update({ 
         full_name: fullName,
         company_name: companyName,
-        defaults
+        defaults,
+        purchase_reminders_enabled: purchaseRemindersEnabled
       })
       .eq('id', user.id);
 
@@ -71,7 +76,10 @@ export default async function SettingsPage() {
       userEmail={user.email} 
       userName={profile?.full_name} 
       avatarUrl={profile?.avatar_url} 
-      isAdmin={profile?.role === 'admin'}
+      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
+      tier={profile?.tier}
+      subscriptionStatus={profile?.subscription_status}
+      subscriptionPeriodEnd={profile?.subscription_period_end}
     >
       <div className="max-w-4xl">
         <div className="mb-12">
@@ -94,6 +102,21 @@ export default async function SettingsPage() {
                 updateAction={updateProfile} 
               />
             </section>
+
+            {(() => {
+              const access = resolvePlanAccess(profile);
+              return (
+                <>
+                  <BusinessProfilesSection
+                    profile={profile}
+                    userId={user.id}
+                    maxBusinesses={access.plan.maxBusinesses}
+                    canUploadLogo={access.plan.canUploadLogo}
+                  />
+                  <NotificationSettingsSection profile={profile} />
+                </>
+              );
+            })()}
 
             <DeleteAccountSection />
           </div>

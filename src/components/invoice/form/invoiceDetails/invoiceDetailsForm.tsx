@@ -18,7 +18,7 @@ export const InvoiceDetailsForm = () => {
   return (
     <Controller
       render={({ field: { onChange, value } }) => (
-        <div className="pt-24">
+        <div className="pt-4">
           <p className="text-2xl font-semibold pb-3">Invoice Details</p>
           <div className="flex flex-col gap-6">
             <div>

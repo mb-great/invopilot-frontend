@@ -11,7 +11,24 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      console.log('Auth Callback: Code exchange successful, redirecting to:', next);
+      console.log('Auth Callback: Code exchange successful.');
+
+      // Check if user needs onboarding
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('defaults')
+          .eq('id', user.id)
+          .single()
+
+        if (!profile?.defaults?.onboarding_seen) {
+          console.log('Auth Callback: New user, redirecting to onboarding.');
+          return NextResponse.redirect(`${origin}/onboarding`)
+        }
+      }
+
+      console.log('Auth Callback: Returning user, redirecting to:', next);
       return NextResponse.redirect(`${origin}${next}`)
     } else {
       console.error('Auth Callback Error:', error.message, error.status);

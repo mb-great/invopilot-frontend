@@ -32,6 +32,9 @@ export const useData = () => {
   const routingCode = useGetValue("routingCode");
   const swiftCode = useGetValue("swiftCode");
   const ifscCode = useGetValue("ifscCode");
+  const upiId = useGetValue("upiId");
+  const upiLockAmount = useGetValue("upiLockAmount", "false") === "true";
+  const showUpiQr = useGetValue("showUpiQr", "true") !== "false";
 
   const invoiceNumber = useGetValue("invoiceNo");
   const issueDate = useGetValue("issueDate");
@@ -60,7 +63,10 @@ export const useData = () => {
     routingCode: routingCode,
     swiftCode: swiftCode,
     ifscCode: ifscCode,
-    currency
+    currency,
+    upiId,
+    upiLockAmount,
+    showUpiQr
   };
 
   const yourDetails = {

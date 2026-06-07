@@ -35,22 +35,31 @@ export default function StatCards({ topCurrencies, otherCurrencies }: StatCardsP
   const renderMetricList = (type: 'outstanding' | 'paid' | 'overdue' | 'this_month') => {
     const list = showAll ? [...topCurrencies, ...otherCurrencies] : topCurrencies;
     
-    if (list.length === 0) return <div className="text-3xl font-bold text-ink-900">₹0</div>;
+    if (list.length === 0) return <div className="text-3xl font-black text-ink-900">₹0</div>;
 
     // Sort to show the currency with highest value in this category first
     const sortedList = [...list].sort((a, b) => b[type] - a[type]);
+    const displayedList = showAll ? sortedList : sortedList.slice(0, 3);
 
     return (
       <div className="space-y-2">
-        {sortedList.map((c, i) => {
+        {displayedList.map((c, i) => {
           const val = c[type];
-          if (val === 0 && sortedList.length > 1 && !showAll) return null; 
+          if (val === 0 && displayedList.length > 1 && !showAll) return null; 
           
           return (
             <div key={c.currency} className="flex flex-col">
-              <div className={`${i === 0 ? 'text-3xl' : 'text-sm text-ink-500'} font-bold text-ink-900 flex items-baseline gap-1.5`}>
+              <div className={`font-bold text-ink-900 flex items-baseline gap-1.5 ${
+                i === 0 ? 'text-3xl font-black' : 
+                i === 1 ? 'text-lg font-bold text-ink-700' : 
+                'text-xs font-semibold text-ink-500'
+              }`}>
                 {formatCurrency(val, c.currency)}
-                <span className={`${i === 0 ? 'text-[10px]' : 'text-[8px]'} font-bold text-ink-400 uppercase tracking-tighter`}>{c.currency}</span>
+                <span className={`font-bold text-ink-400 uppercase tracking-tighter ${
+                  i === 0 ? 'text-[10px]' :
+                  i === 1 ? 'text-[8px]' :
+                  'text-[7px]'
+                }`}>{c.currency}</span>
               </div>
             </div>
           );

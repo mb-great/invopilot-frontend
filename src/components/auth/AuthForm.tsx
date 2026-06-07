@@ -4,6 +4,9 @@ import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Mail, Lock, User, ShieldCheck } from 'lucide-react'
+import { getBackendUrl } from '@/lib/url'
+
+const BACKEND_URL = getBackendUrl();
 
 function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
   const [email, setEmail] = useState('')
@@ -19,7 +22,7 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'
+
 
   const isLogin = mode === 'login'
 
@@ -48,8 +51,8 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
 
       setSuccess('8-digit code sent to your email.');
       setStep('verify')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
@@ -79,8 +82,8 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
       }
 
       setStep('profile')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
@@ -110,9 +113,9 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
 
       if (sessionError) throw sessionError;
 
-      router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message)
+      router.push('/onboarding')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
@@ -122,17 +125,27 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
   const handlePasswordLogin = async () => {
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      if (error.message.includes('Email not confirmed')) {
-        handleSendOtp(); // Switch to OTP flow
-      } else {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
         setError(error.message);
+      } else {
+        router.push('/dashboard');
       }
-    } else {
-      router.push('/dashboard');
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : '') || 'An unexpected error occurred during sign in');
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (isLogin) {
+      await handlePasswordLogin()
+    } else {
+      await handleSendOtp()
+    }
   }
 
   const handleGoogleLogin = async () => {
@@ -140,6 +153,9 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback`,
+        queryParams: {
+          prompt: 'select_account'
+        }
       },
     })
   }
@@ -149,9 +165,7 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
     return (
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center gap-2 mb-12">
-          <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-            <span className="text-white font-bold text-xl italic">I</span>
-          </div>
+          <img src="/logo.png" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
           <span className="font-bold text-xl tracking-tight text-ink-900">InvoPilot</span>
         </div>
 
@@ -213,9 +227,7 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
     return (
       <div className="w-full max-w-md animate-in fade-in slide-in-from-right-4 duration-500">
         <div className="flex items-center gap-2 mb-12">
-          <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-            <span className="text-white font-bold text-xl italic">I</span>
-          </div>
+          <img src="/logo.png" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
           <span className="font-bold text-xl tracking-tight text-ink-900">InvoPilot</span>
         </div>
 
@@ -275,9 +287,7 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
   return (
     <div className="w-full max-w-md animate-in fade-in duration-500">
       <div className="flex items-center gap-2 mb-12">
-        <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-          <span className="text-white font-bold text-xl italic">I</span>
-        </div>
+        <img src="/logo.png" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
         <span className="font-bold text-xl tracking-tight text-ink-900">InvoPilot</span>
       </div>
 
@@ -314,7 +324,7 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
           <div className="h-px bg-ink-200 flex-1" />
         </div>
 
-        <div className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-ink-700 mb-2">Email Address</label>
             <div className="relative">
@@ -358,23 +368,13 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
           {error && <p className="text-sm text-center font-medium text-red-500">{error}</p>}
 
           <button
-            onClick={isLogin ? handlePasswordLogin : handleSendOtp}
-            disabled={loading || !email}
+            type="submit"
+            disabled={loading || !email || (isLogin && !password)}
             className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-brand-500/25 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? 'Sign in' : 'Continue')}
           </button>
-          
-          {/* OTP Link for Logged in users who forgot password but know OTP */}
-          {isLogin && (
-            <button 
-              onClick={() => handleSendOtp()}
-              className="w-full text-ink-400 text-xs font-bold hover:text-brand-500 transition-colors uppercase tracking-widest"
-            >
-              Sign in with OTP instead
-            </button>
-          )}
-        </div>
+        </form>
       </div>
 
       <p className="mt-12 text-sm text-ink-500 text-center">

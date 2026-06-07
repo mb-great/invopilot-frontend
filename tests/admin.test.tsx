@@ -59,7 +59,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/headers', () => ({
-  cookies: vi.fn().mockResolvedValue({ getAll: vi.fn(() => []), set: vi.fn() })
+  cookies: vi.fn().mockResolvedValue({ getAll: vi.fn(() => []), set: vi.fn() }),
+  headers: vi.fn().mockResolvedValue(new Map())
 }));
 
 vi.mock('@supabase/ssr', () => ({

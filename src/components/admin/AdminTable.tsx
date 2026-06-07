@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
+import { toast } from 'sonner';
 
 interface UserStats {
   id: string;
@@ -15,6 +16,8 @@ interface UserStats {
   created_at: string;
   total_invoices_generated: number;
   isDeleted?: boolean;
+  tier?: string;
+  subscription_status?: string;
 }
 
 interface PaginationMeta {
@@ -35,10 +38,12 @@ interface CurrencyStats {
 
 export default function AdminTable({ 
   users: initialUsers,
-  pagination 
+  pagination,
+  currentUserRole = 'admin'
 }: { 
   users: UserStats[],
-  pagination: PaginationMeta
+  pagination: PaginationMeta,
+  currentUserRole?: string
 }) {
   const [users, setUsers] = useState(initialUsers);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -46,6 +51,9 @@ export default function AdminTable({
   const [userMetrics, setUserMetrics] = useState<Record<string, { top_currencies: CurrencyStats[], other_currencies: CurrencyStats[] } | null>>({});
   const [metricsLoading, setMetricsLoading] = useState<string | null>(null);
   const [roleModal, setRoleModal] = useState<{ isOpen: boolean; user: UserStats | null }>({ isOpen: false, user: null });
+  const [subModal, setSubModal] = useState<{ isOpen: boolean; user: UserStats | null }>({ isOpen: false, user: null });
+  const [subDuration, setSubDuration] = useState('1_month');
+  const [subTier, setSubTier] = useState('business');
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -101,7 +109,7 @@ export default function AdminTable({
 
       if (!verifyRes.ok) {
         const errData = await verifyRes.json();
-        alert(errData.error || "Invalid admin password. Action cancelled.");
+        toast.error(errData.error || "Invalid admin password. Action cancelled.");
         return;
       }
 
@@ -120,10 +128,45 @@ export default function AdminTable({
       setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, role: updatedUser.role } : u));
       setRoleModal({ isOpen: false, user: null });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update role');
+      toast.error(err instanceof Error ? err.message : 'Failed to update role');
     } finally {
       setLoadingId(null);
     }
+  };
+
+  const handleStripSub = async (userId: string) => {
+    try {
+      setLoadingId(userId);
+      const res = await fetch(`/api/admin/users/${userId}/subscription`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'strip' })
+      });
+      if (!res.ok) throw new Error('Failed to strip subscription');
+      toast.success('Subscription stripped successfully');
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, tier: 'free', subscription_status: 'canceled' } : u));
+      router.refresh();
+    } catch(err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally { setLoadingId(null); }
+  };
+
+  const handleNukeSub = async (userId: string) => {
+    if (!confirm('⚠️ NUKE: This will hard-reset ALL subscription and payment fields to zero. Are you sure?')) return;
+    try {
+      setLoadingId(userId);
+      const res = await fetch(`/api/admin/users/${userId}/subscription`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'nuke' })
+      });
+      if (!res.ok) throw new Error('Failed to nuke subscription');
+      toast.success('Subscription nuked — all payment fields cleared');
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, tier: 'free', subscription_status: 'none' } : u));
+      router.refresh();
+    } catch(err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally { setLoadingId(null); }
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -144,11 +187,65 @@ export default function AdminTable({
         isOpen={roleModal.isOpen}
         onClose={() => setRoleModal({ isOpen: false, user: null })}
         onConfirm={handleToggleRole}
-        title={roleModal.user?.role === 'admin' ? 'Demote Administrator' : 'Promote to Administrator'}
-        message={`Are you sure you want to change the role for ${roleModal.user?.email}? This will ${roleModal.user?.role === 'admin' ? 'remove' : 'grant'} administrative privileges including full database access and user management.`}
-        confirmLabel={roleModal.user?.role === 'admin' ? 'Demote User' : 'Promote User'}
-        isDestructive={roleModal.user?.role === 'admin'}
+        title={roleModal.user?.role === 'admin' || roleModal.user?.role === 'superadmin' ? 'Demote Administrator' : 'Promote to Administrator'}
+        message={`Are you sure you want to change the role for ${roleModal.user?.email}? This will ${roleModal.user?.role === 'admin' || roleModal.user?.role === 'superadmin' ? 'remove' : 'grant'} administrative privileges including full database access and user management.`}
+        confirmLabel={roleModal.user?.role === 'admin' || roleModal.user?.role === 'superadmin' ? 'Demote User' : 'Promote User'}
+        isDestructive={roleModal.user?.role === 'admin' || roleModal.user?.role === 'superadmin'}
       />
+
+      <ConfirmationModal
+        isOpen={subModal.isOpen}
+        onClose={() => setSubModal({ isOpen: false, user: null })}
+        onConfirm={async () => {
+          if (!subModal.user) return;
+          try {
+            setLoadingId(subModal.user.id);
+            const res = await fetch(`/api/admin/users/${subModal.user.id}/subscription`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'grant', duration: subDuration, tier: subTier })
+            });
+            if (!res.ok) throw new Error('Failed to grant subscription');
+            toast.success(`${subTier.charAt(0).toUpperCase() + subTier.slice(1)} Tier granted successfully`);
+            
+            setUsers(prev => prev.map(u => u.id === subModal.user!.id ? { ...u, tier: subTier, subscription_status: 'active' } : u));
+            setSubModal({ isOpen: false, user: null });
+            router.refresh();
+          } catch(err: unknown) {
+            toast.error(err instanceof Error ? err.message : String(err));
+          } finally { setLoadingId(null); }
+        }}
+        title="Grant Subscription Tier"
+        message={`Grant a subscription tier to ${subModal.user?.email}?`}
+        confirmLabel={`Grant ${subTier.charAt(0).toUpperCase() + subTier.slice(1)} Tier`}
+      >
+        <div className="mt-6 mb-2 space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-ink-600 uppercase tracking-widest mb-2">Tier</label>
+            <select 
+              value={subTier} 
+              onChange={(e) => setSubTier(e.target.value)} 
+              className="w-full p-3 bg-white border border-ink-200 rounded-xl font-medium text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+              <option value="business">Business</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-ink-600 uppercase tracking-widest mb-2">Duration</label>
+            <select 
+              value={subDuration} 
+              onChange={(e) => setSubDuration(e.target.value)} 
+              className="w-full p-3 bg-white border border-ink-200 rounded-xl font-medium text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option value="1_month">1 Month</option>
+              <option value="1_year">1 Year</option>
+              <option value="lifetime">Lifetime</option>
+            </select>
+          </div>
+        </div>
+      </ConfirmationModal>
 
       <div className="w-full overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[800px]">
@@ -211,30 +308,73 @@ export default function AdminTable({
                               </p>
                             </div>
                             
-                            {!user.isDeleted && (
-                              <div className="pt-4 space-y-3">
-                                <Link 
-                                  href={`/admin/users/${user.id}`}
-                                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-ink-900 text-white rounded-xl font-bold text-xs transition-all hover:bg-black uppercase tracking-widest shadow-lg shadow-black/10"
-                                >
-                                  View Full Profile & Invoices
-                                </Link>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setRoleModal({ isOpen: true, user });
-                                  }}
-                                  disabled={loadingId === user.id}
-                                  className={`w-full px-4 py-3 rounded-xl font-bold text-xs transition-all border shadow-sm disabled:opacity-50 uppercase tracking-widest ${
-                                    user.role === 'admin' 
-                                      ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-600 hover:text-white' 
-                                      : 'bg-brand-50 text-brand-600 border-brand-100 hover:bg-brand-600 hover:text-white'
-                                  }`}
-                                >
-                                  {loadingId === user.id ? 'Updating...' : user.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}
-                                </button>
-                              </div>
-                            )}
+                            {!user.isDeleted && (() => {
+                              const isTargetSuperadmin = user.role === 'superadmin';
+                              const canModifySub = currentUserRole === 'superadmin' || !isTargetSuperadmin;
+                              const canModifyRole = currentUserRole === 'superadmin';
+                              const isElevated = user.role === 'admin' || user.role === 'superadmin';
+                              const hasPaidTier = user.tier && user.tier !== 'free';
+
+                              return (
+                                <div className="pt-4 space-y-3">
+                                  <Link 
+                                    href={`/admin/users/${user.id}`}
+                                    className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-ink-900 text-white rounded-xl font-bold text-xs transition-all hover:bg-black uppercase tracking-widest shadow-lg shadow-black/10"
+                                  >
+                                    View Full Profile & Invoices
+                                  </Link>
+
+                                  {/* Role promote/demote — superadmin only */}
+                                  {canModifyRole && (
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRoleModal({ isOpen: true, user });
+                                      }}
+                                      disabled={loadingId === user.id || isTargetSuperadmin}
+                                      className={`w-full px-4 py-3 rounded-xl font-bold text-xs transition-all border shadow-sm disabled:opacity-50 uppercase tracking-widest ${
+                                        isElevated 
+                                          ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-600 hover:text-white' 
+                                          : 'bg-brand-50 text-brand-600 border-brand-100 hover:bg-brand-600 hover:text-white'
+                                      }`}
+                                    >
+                                      {loadingId === user.id ? 'Updating...' : isTargetSuperadmin ? 'Protected Superadmin' : isElevated ? 'Demote to User' : 'Promote to Admin'}
+                                    </button>
+                                  )}
+
+                                  {/* Subscription management */}
+                                  <div className="pt-2 border-t border-ink-100 space-y-2">
+                                    <div className="flex gap-2">
+                                      {hasPaidTier ? (
+                                        <button 
+                                          onClick={(e) => { e.stopPropagation(); handleStripSub(user.id); }}
+                                          disabled={loadingId === user.id || !canModifySub}
+                                          className="flex-1 py-3 bg-ink-100 hover:bg-ink-200 text-ink-900 rounded-xl font-bold text-xs transition-all uppercase tracking-widest shadow-sm disabled:opacity-50"
+                                        >
+                                          Strip Tier
+                                        </button>
+                                      ) : null}
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); if (canModifySub) setSubModal({ isOpen: true, user }); }}
+                                        disabled={loadingId === user.id || !canModifySub}
+                                        className="flex-1 py-3 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-xl font-bold text-xs transition-all uppercase tracking-widest shadow-sm border border-brand-200 disabled:opacity-50"
+                                      >
+                                        Grant Tier
+                                      </button>
+                                    </div>
+                                    {hasPaidTier && canModifySub && (
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); handleNukeSub(user.id); }}
+                                        disabled={loadingId === user.id}
+                                        className="w-full py-3 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded-xl font-bold text-xs transition-all uppercase tracking-widest shadow-sm border border-red-100 disabled:opacity-50"
+                                      >
+                                        ☢️ Nuke Subscription
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             {user.isDeleted && (
                               <div className="pt-4">

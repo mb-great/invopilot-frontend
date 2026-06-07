@@ -60,11 +60,13 @@ vi.mock('next/link', () => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/dashboard'),
-  useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() }))
+  useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
+  useSearchParams: vi.fn(() => new URLSearchParams())
 }));
 
 vi.mock('next/headers', () => ({
-  cookies: vi.fn().mockResolvedValue({ getAll: vi.fn(() => []), set: vi.fn() })
+  cookies: vi.fn().mockResolvedValue({ getAll: vi.fn(() => []), set: vi.fn() }),
+  headers: vi.fn().mockResolvedValue(new Map())
 }));
 
 vi.mock('@supabase/ssr', () => ({
@@ -91,6 +93,8 @@ describe('Dashboard Page', () => {
     const ResolvedPage = await DashboardPage({ searchParams: Promise.resolve({}) });
     render(ResolvedPage);
     
-    expect(screen.getByText('Test Inv')).toBeInTheDocument();
+    const elements = await screen.findAllByText('Test Inv');
+    expect(elements.length).toBeGreaterThan(0);
+    expect(elements[0]).toBeInTheDocument();
   });
 });

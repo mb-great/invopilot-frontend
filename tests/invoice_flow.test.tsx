@@ -48,12 +48,14 @@ describe('Invoice Flow', () => {
       return Promise.resolve({ ok: false });
     });
 
-    // Start directly at step 6 to show the Generate PDF button
-    // Must set items so it doesn't trigger shouldReset
+    // Start at step 5 and click next to reach step 6 naturally (since component blocks mounting directly into step 6)
     localStorage.setItem('items', JSON.stringify([{itemDescription: 'Test'}]));
-    localStorage.setItem('step', '6');
+    localStorage.setItem('step', '5');
     render(<InvoiceBuilder />);
     
+    const nextBtn = await screen.findByRole('button', { name: /Review & Generate/i });
+    fireEvent.click(nextBtn);
+
     const generateBtn = await screen.findByRole('button', { name: /Generate Invoice/i });
     fireEvent.click(generateBtn);
     
@@ -73,9 +75,12 @@ describe('Invoice Flow', () => {
     });
 
     localStorage.setItem('items', JSON.stringify([{itemDescription: 'Test'}]));
-    localStorage.setItem('step', '6');
+    localStorage.setItem('step', '5');
     render(<InvoiceBuilder />);
     
+    const nextBtn = await screen.findByRole('button', { name: /Review & Generate/i });
+    fireEvent.click(nextBtn);
+
     const generateBtn = await screen.findByRole('button', { name: /Generate Invoice/i });
     fireEvent.click(generateBtn);
     

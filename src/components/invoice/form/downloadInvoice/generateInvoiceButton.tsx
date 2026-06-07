@@ -1,11 +1,20 @@
 "use client";
 
-import { CheckCircle2, Loader2, Send } from "lucide-react";
+import { CheckCircle2, FilePlus2, Loader2, Send } from "lucide-react";
 import { useData } from "@/hooks/useData";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFormContext } from "react-hook-form";
 import { ShareDialog } from "@/components/dashboard/ShareDialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { resolvePlanAccess } from "@/lib/billing/tiers";
+import { saveRecurringTemplate } from "@/app/dashboard/recurring/actions";
+import PremiumBadge from "@/components/ui/PremiumBadge";
+import { toast } from "sonner";
+import { clearInvoiceDraft } from "@/lib/invoiceStorage";
 
-export const GenerateInvoiceButton = () => {
+export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
+  const { setValue } = useFormContext();
   const [status, setStatus] = useState<
     "ready" | "generating" | "polling" | "done" | "error"
   >("ready");
@@ -13,6 +22,21 @@ export const GenerateInvoiceButton = () => {
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isQuote, setIsQuote] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // P0 fix: clear interval on unmount to prevent background polling leak
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  // Broadcast generation status to form context for preview overlay
+  useEffect(() => {
+    setValue("generationStatus", status);
+  }, [status, setValue]);
 
   const {
     companyDetails,
@@ -21,13 +45,6 @@ export const GenerateInvoiceButton = () => {
     paymentDetails,
     yourDetails,
   } = useData();
-
-  useEffect(() => {
-    if (status === "done") {
-      const timer = setTimeout(() => setStatus("ready"), 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [status]);
 
   const handleGenerate = async () => {
     setStatus("generating");
@@ -56,13 +73,31 @@ export const GenerateInvoiceButton = () => {
       invoiceNumber: invoiceTerms.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
     };
 
+    if (isRecurring) {
+      try {
+        await saveRecurringTemplate({
+          nickname: `${companyDetails.companyName || "Template"} - ${invoiceTerms.invoiceNumber || ""}`.trim() || "My Template",
+          form_data: formData,
+          frequency: "monthly",
+          reminder_date: "1st of month",
+        });
+        toast.success("Saved as recurring template!");
+        setStatus("done");
+      } catch (e: unknown) {
+        setErrorMsg(e instanceof Error ? e.message : "Failed to save template");
+        setStatus("error");
+      }
+      return;
+    }
+
     try {
       const res = await fetch("/api/invoices/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           formData,
-          nickname: `${companyDetails.companyName || "Invoice"} - ${invoiceTerms.invoiceNumber || ""}`.trim(),
+          nickname: `${companyDetails.companyName || (isQuote ? "Quote" : "Invoice")} - ${invoiceTerms.invoiceNumber || ""}`.trim(),
+          payment_status: isQuote ? "quote" : "draft",
         }),
       });
 
@@ -77,19 +112,19 @@ export const GenerateInvoiceButton = () => {
 
       // Poll for completion
       let attempts = 0;
-      const interval = setInterval(async () => {
+      intervalRef.current = setInterval(async () => {
         attempts++;
         try {
           const statusRes = await fetch(`/api/invoices/${invoiceId}/status`);
           if (!statusRes.ok) return;
           const data = await statusRes.json();
 
-          if (data.status === "done") {
-            clearInterval(interval);
+          if (data.status === "done" || data.status === "completed") {
+            clearInterval(intervalRef.current!);
             setShareSlug(data.share_slug);
             setStatus("done");
           } else if (data.status === "failed") {
-            clearInterval(interval);
+            clearInterval(intervalRef.current!);
             setErrorMsg(data.error_msg || "Generation failed");
             setStatus("error");
           }
@@ -98,13 +133,13 @@ export const GenerateInvoiceButton = () => {
         }
 
         if (attempts > 60) {
-          clearInterval(interval);
+          clearInterval(intervalRef.current!);
           setErrorMsg("Timed out waiting for PDF");
           setStatus("error");
         }
       }, 2000);
-    } catch (e: any) {
-      setErrorMsg(e.message);
+    } catch (e: unknown) {
+      setErrorMsg(e instanceof Error ? e.message : String(e));
       setStatus("error");
     }
   };
@@ -116,7 +151,7 @@ export const GenerateInvoiceButton = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-208px)] justify-center items-center px-4">
+    <div className="flex py-12 md:py-24 justify-center items-center px-4">
       <ShareDialog 
         isOpen={isShareOpen} 
         onClose={() => setIsShareOpen(false)} 
@@ -129,8 +164,73 @@ export const GenerateInvoiceButton = () => {
         <p className="text-ink-500 text-lg pb-8">
           {status === "done"
             ? "Your PDF has been generated and stored securely."
-            : "Please review the details carefully before generating your invoice."}
+            : "Please review the details carefully before generating your document."}
         </p>
+
+        {status === "ready" && (() => {
+          const access = resolvePlanAccess(profile);
+          const canUseRecurring = access.plan.canUseRecurring || access.isAdmin;
+          return (
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center justify-between bg-ink-50 p-4 rounded-xl border border-ink-100 relative">
+                <div className="flex flex-col text-left">
+                  <Label htmlFor="quote-mode" className="text-ink-900 cursor-pointer font-bold text-sm flex items-center gap-1">
+                    Save as Quote
+                    <PremiumBadge type="pro" />
+                  </Label>
+                  <span className="text-[10px] text-ink-500 mt-0.5">Saves as a draft approval document</span>
+                </div>
+                <Switch 
+                  id="quote-mode" 
+                  disabled={!access.plan.canUseQuotes && !access.isAdmin}
+                  checked={(access.plan.canUseQuotes || access.isAdmin) ? isQuote : false} 
+                  onCheckedChange={(val) => {
+                    setIsQuote(val);
+                    if (val) setIsRecurring(false);
+                  }} 
+                />
+                {(!access.plan.canUseQuotes && !access.isAdmin) && (
+                  <div 
+                    className="absolute inset-0 z-10 cursor-not-allowed bg-transparent"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toast.error("Upgrade to Pro to save documents as Quotes.");
+                    }}
+                  />
+                )}
+              </div>
+              <div className="flex items-center justify-between bg-ink-50 p-4 rounded-xl border border-ink-100 relative">
+                <div className="flex flex-col text-left">
+                  <Label htmlFor="recurring-mode" className="text-ink-900 cursor-pointer font-bold text-sm flex items-center gap-1">
+                    Save as Recurring Template
+                    <PremiumBadge type="pro" />
+                  </Label>
+                  <span className="text-[10px] text-ink-500 mt-0.5">Save preset to quickly generate invoices later</span>
+                </div>
+                <Switch 
+                  id="recurring-mode" 
+                  disabled={!canUseRecurring}
+                  checked={canUseRecurring ? isRecurring : false} 
+                  onCheckedChange={(val) => {
+                    setIsRecurring(val);
+                    if (val) setIsQuote(false);
+                  }} 
+                />
+                {!canUseRecurring && (
+                  <div 
+                    className="absolute inset-0 z-10 cursor-not-allowed bg-transparent"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toast.error("Upgrade to Pro to save invoices as recurring templates.");
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {status === "error" && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -139,18 +239,18 @@ export const GenerateInvoiceButton = () => {
         )}
 
         <button
-          disabled={status === "generating" || status === "polling"}
+          disabled={status === "generating" || status === "polling" || status === "done"}
           onClick={handleGenerate}
           className="w-full h-14 rounded-xl text-xl bg-brand-500 text-white font-bold hover:bg-brand-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-xl shadow-brand-500/20"
         >
           {status === "ready" && (
             <>
-              <Send className="h-6 w-6" /> Generate Invoice
+              <Send className="h-6 w-6" /> {isRecurring ? "Save Template" : `Generate ${isQuote ? "Quote" : "Invoice"}`}
             </>
           )}
           {status === "generating" && (
             <>
-              <Loader2 className="h-6 w-6 animate-spin" /> Queuing...
+              <Loader2 className="h-6 w-6 animate-spin" /> {isRecurring ? "Saving..." : "Queuing..."}
             </>
           )}
           {status === "polling" && (
@@ -202,6 +302,16 @@ export const GenerateInvoiceButton = () => {
             >
               Go to Dashboard
             </a>
+            <button
+              onClick={() => {
+                clearInvoiceDraft();
+                window.location.href = '/invoices/new';
+              }}
+              className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 transition-colors mt-4 mx-auto"
+            >
+              <FilePlus2 className="w-4 h-4" />
+              New Invoice
+            </button>
           </div>
         )}
       </div>

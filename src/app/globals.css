@@ -109,7 +109,7 @@ body {
 
 /* Mobile-first touch improvements */
 @media (max-width: 768px) {
-  button, a {
+  .touch-target {
     min-height: 44px;
     display: inline-flex;
     align-items: center;

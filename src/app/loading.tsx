@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react'
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-ink-50 flex items-center justify-center flex-col gap-4 overflow-hidden">
+    <div className="min-h-[100dvh] bg-ink-50 flex items-center justify-center flex-col gap-4 overflow-hidden">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes zoom-out-in {
           0% { transform: scale(1.1); opacity: 0; }
@@ -15,9 +15,7 @@ export default function Loading() {
       
       <div className="animate-zoom-out flex flex-col items-center gap-6">
         <div className="flex items-center gap-2">
-          <div className="w-12 h-12 rounded-xl bg-brand-500 flex items-center justify-center shadow-xl shadow-brand-500/20">
-            <span className="text-white font-bold text-2xl italic">I</span>
-          </div>
+          <img src="/logo.png" alt="InvoPilot Logo" className="w-12 h-12 object-contain drop-shadow-sm" />
           <span className="font-bold text-2xl tracking-tight text-ink-900">InvoPilot</span>
         </div>
         

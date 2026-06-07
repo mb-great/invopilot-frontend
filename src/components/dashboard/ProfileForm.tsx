@@ -174,6 +174,24 @@ export default function ProfileForm({
         ></textarea>
       </div>
 
+      <div className="rounded-xl border border-ink-100 bg-ink-50/50 p-4">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            name="purchaseRemindersEnabled"
+            defaultChecked={profile?.purchase_reminders_enabled ?? true}
+            disabled={!isEditing}
+            className="mt-1 h-4 w-4 rounded border-ink-300 text-brand-500 focus:ring-brand-500 disabled:cursor-not-allowed"
+          />
+          <span>
+            <span className="block text-sm font-bold text-ink-800">Purchase reminder emails</span>
+            <span className="mt-1 block text-xs leading-relaxed text-ink-500">
+              Send occasional renewal reminders after a subscription ends. Billing notices, purchase confirmations, and subscription start/end emails still send.
+            </span>
+          </span>
+        </label>
+      </div>
+
     </form>
   );
 }

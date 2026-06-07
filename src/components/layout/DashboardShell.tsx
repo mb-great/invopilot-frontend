@@ -4,7 +4,9 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Menu, X, LogOut, LayoutDashboard, FileText, Users, Settings, ShieldCheck } from 'lucide-react'
+import { Menu, X, LogOut, LayoutDashboard, FileText, Users, Settings, ShieldCheck, CreditCard, Repeat } from 'lucide-react'
+import { resolvePlanAccess } from '@/lib/billing/tiers'
+import PremiumBadge from '@/components/ui/PremiumBadge'
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -12,17 +14,23 @@ interface DashboardShellProps {
   userName?: string
   avatarUrl?: string | null
   isAdmin?: boolean
+  tier?: string | null
+  subscriptionStatus?: string | null
+  subscriptionPeriodEnd?: string | null
 }
 
 const navLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
   { name: 'Invoices', href: '/invoices', icon: <FileText className="w-4 h-4" /> },
+  { name: 'Quotes', href: '/dashboard/quotes', icon: <FileText className="w-4 h-4" />, premiumBadge: 'pro' as const },
+  { name: 'Recurring', href: '/dashboard/recurring', icon: <Repeat className="w-4 h-4" />, premiumBadge: 'pro' as const },
   { name: 'Clients', href: '/dashboard/clients', icon: <Users className="w-4 h-4" /> },
+  { name: 'Pricing', href: '/pricing', icon: <CreditCard className="w-4 h-4" /> },
   { name: 'Settings', href: '/dashboard/settings', icon: <Settings className="w-4 h-4" /> },
   { name: 'Admin', href: '/admin', adminOnly: true, icon: <ShieldCheck className="w-4 h-4" /> }
 ]
 
-export default function DashboardShell({ children, userEmail, userName, avatarUrl, isAdmin }: DashboardShellProps) {
+export default function DashboardShell({ children, userEmail, userName, avatarUrl, isAdmin, tier, subscriptionStatus, subscriptionPeriodEnd }: DashboardShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
@@ -45,9 +53,23 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
   };
 
   const initials = getInitials(userName, userEmail);
+  const access = resolvePlanAccess({
+    role: isAdmin ? 'admin' : 'user',
+    tier,
+    subscription_status: subscriptionStatus,
+    subscription_period_end: subscriptionPeriodEnd,
+  });
+  const tierLabel = access.isAdmin ? 'Admin' : access.plan.name;
+  const statusLabel = access.isExpired
+    ? 'expired'
+    : access.isAdmin
+      ? 'bypass'
+      : access.effectiveTier === 'free'
+        ? 'free'
+        : subscriptionStatus || 'active';
 
   return (
-    <div className="flex h-screen bg-ink-50 overflow-hidden">
+    <div className="flex h-[100dvh] bg-ink-50 overflow-hidden">
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -63,9 +85,7 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
       `}>
         <div className="flex items-center justify-between px-6 py-6 lg:py-8">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-              <span className="text-white font-bold text-lg italic">I</span>
-            </div>
+            <img src="/logo.png" alt="InvoPilot Logo" className="w-8 h-8 object-contain drop-shadow-sm" />
             <span className="font-bold text-lg tracking-tight text-ink-900">InvoPilot</span>
           </div>
           <button 
@@ -92,7 +112,10 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
                 }`}
               >
                 {link.icon}
-                {link.name}
+                <span className="flex-1 flex items-center justify-between">
+                  <span>{link.name}</span>
+                  {link.premiumBadge && <PremiumBadge type={link.premiumBadge} />}
+                </span>
               </Link>
             )
           })}
@@ -112,6 +135,13 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
               <div className="text-[10px] text-ink-400 font-bold uppercase truncate">{userEmail || 'user@example.com'}</div>
             </div>
           </div>
+          <Link
+            href="/pricing"
+            className="mb-4 flex items-center justify-between rounded-xl border border-ink-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-tight text-ink-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+          >
+            <span>{tierLabel} tier</span>
+            <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10px]">{statusLabel}</span>
+          </Link>
           <button
             onClick={handleSignOut}
             className="w-full flex items-center justify-center gap-2 text-sm font-bold text-ink-600 hover:text-red-600 py-3 rounded-xl hover:bg-red-50 transition-all border border-ink-200 hover:border-red-100 bg-white"
@@ -127,9 +157,7 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
         {/* Mobile Header */}
         <header className="lg:hidden h-16 bg-white border-b border-ink-200 flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded bg-brand-500 flex items-center justify-center shadow-md shadow-brand-500/10">
-              <span className="text-white font-bold text-sm italic">I</span>
-            </div>
+            <img src="/logo.png" alt="InvoPilot Logo" className="w-7 h-7 object-contain drop-shadow-sm" />
             <span className="font-bold text-md text-ink-900">InvoPilot</span>
           </div>
           <button 
@@ -141,7 +169,7 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
         </header>
 
         <main className="flex-1 overflow-auto relative">
-          <div className="w-full max-w-[1440px] mx-auto px-4 py-6 md:px-8 md:py-10 flex flex-col h-full min-h-0">
+          <div className="w-full max-w-[1440px] mx-auto px-4 py-6 md:px-8 md:py-10 flex flex-col min-h-full">
             {children}
           </div>
         </main>

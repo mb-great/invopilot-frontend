@@ -1,0 +1,75 @@
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import DashboardShell from '@/components/layout/DashboardShell';
+import { resolvePlanAccess } from '@/lib/billing/tiers';
+import RecurringClient from './RecurringClient';
+import { getRecurringTemplates } from './actions';
+import Link from 'next/link';
+import LockedFeatureOverlay from '@/components/ui/LockedFeatureOverlay';
+export default async function RecurringTemplatesPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect('/login');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end')
+    .eq('id', user.id)
+    .single();
+
+  const access = resolvePlanAccess({
+    role: profile?.role,
+    tier: profile?.tier,
+    subscription_status: profile?.subscription_status,
+    subscription_period_end: profile?.subscription_period_end,
+  });
+
+  const { data: invoicesData } = await supabase
+    .from('invoices')
+    .select('id, nickname, form_data, created_at, invoice_number')
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+
+  const templates = await getRecurringTemplates();
+
+  const invoices = invoicesData?.map(inv => ({
+    id: inv.id,
+    nickname: inv.nickname || `Invoice #${inv.invoice_number || 'Unknown'}`,
+    form_data: inv.form_data,
+    created_at: inv.created_at
+  })) || [];
+
+  return (
+    <DashboardShell 
+      userEmail={user.email} 
+      userName={profile?.full_name} 
+      avatarUrl={profile?.avatar_url} 
+      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
+      tier={profile?.tier}
+      subscriptionStatus={profile?.subscription_status}
+      subscriptionPeriodEnd={profile?.subscription_period_end}
+    >
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-ink-900">Recurring Templates</h1>
+          <p className="text-ink-500 mt-1">Manage your automated invoice templates.</p>
+        </div>
+      </div>
+
+      <div className="relative flex-1 min-h-[400px]">
+        {!access.plan.canUseRecurring && !access.isAdmin && (
+          <LockedFeatureOverlay featureName="Recurring Templates" />
+        )}
+        <div className={!access.plan.canUseRecurring && !access.isAdmin ? 'opacity-30 pointer-events-none' : ''}>
+          <RecurringClient 
+            initialTemplates={templates || []} 
+            invoices={invoices} 
+            maxAllowed={access.effectiveTier === 'pro' ? 20 : Infinity} 
+          />
+        </div>
+      </div>
+    </DashboardShell>
+  );
+}

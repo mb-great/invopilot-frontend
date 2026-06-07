@@ -24,8 +24,8 @@ export default async function UserDetailPage({
   const { data: { user: adminUser } } = await supabase.auth.getUser()
   if (!adminUser) redirect('/login')
 
-  const { data: adminProfile } = await supabase.from('profiles').select('role, full_name, avatar_url').eq('id', adminUser.id).single()
-  if (adminProfile?.role !== 'admin') redirect('/dashboard')
+  const { data: adminProfile } = await supabase.from('profiles').select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end').eq('id', adminUser.id).single()
+  if (adminProfile?.role !== 'admin' && adminProfile?.role !== 'superadmin') redirect('/dashboard')
 
   // 1. Fetch Targeted User Profile
   const { data: targetUser, error: userError } = await supabase
@@ -66,6 +66,9 @@ export default async function UserDetailPage({
       userName={adminProfile?.full_name} 
       avatarUrl={adminProfile?.avatar_url} 
       isAdmin={true}
+      tier={adminProfile?.tier}
+      subscriptionStatus={adminProfile?.subscription_status}
+      subscriptionPeriodEnd={adminProfile?.subscription_period_end}
     >
       <div className="mb-8">
         <Link 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 export async function PATCH(
   request: Request,
@@ -19,16 +20,27 @@ export async function PATCH(
     .eq('id', user.id)
     .single();
 
-  if (callerProfile?.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 });
+  if (callerProfile?.role !== 'superadmin') {
+    return NextResponse.json({ error: 'Forbidden — only superadmin can change roles' }, { status: 403 });
+  }
+
+  // 2.5 Verify target is not superadmin (unless caller is superadmin)
+  const { data: targetProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', targetUserId)
+    .single();
+
+  if (targetProfile?.role === 'superadmin' && callerProfile?.role !== 'superadmin') {
+    return NextResponse.json({ error: 'Forbidden — cannot modify superadmin' }, { status: 403 });
   }
 
   // 3. Parse body
   const body = await request.json();
   const newRole = body.role;
 
-  if (!['admin', 'user'].includes(newRole)) {
-    return NextResponse.json({ error: 'Invalid role. Must be "admin" or "user".' }, { status: 400 });
+  if (!['admin', 'user', 'superadmin'].includes(newRole)) {
+    return NextResponse.json({ error: 'Invalid role.' }, { status: 400 });
   }
 
   // 4. Prevent self-demotion (safety: don't lock yourself out)
@@ -37,7 +49,12 @@ export async function PATCH(
   }
 
   // 5. Update target user's role
-  const { data, error } = await supabase
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data, error } = await supabaseAdmin
     .from('profiles')
     .update({ role: newRole })
     .eq('id', targetUserId)

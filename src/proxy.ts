@@ -8,6 +8,12 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: {
+        headers: {
+          ...(request.headers.get('Authorization') ? { Authorization: request.headers.get('Authorization')! } : {}),
+        },
+        fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' })
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -28,8 +34,6 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { data: { session } } = await supabase.auth.getSession()
-
   const { pathname } = request.nextUrl
 
   // Public routes — no auth required
@@ -41,15 +45,18 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/verify-otp') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/billing/unsubscribe') ||
     pathname.startsWith('/i/') // public share links
 
   const isAdminRoute = pathname.startsWith('/admin')
 
-  // Unauthenticated user on protected route → login
+  // Unauthenticated user on protected route
   if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    if (!pathname.startsWith('/api/')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
   }
 
   // Admin role check
@@ -60,7 +67,7 @@ export async function proxy(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

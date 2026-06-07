@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, AlertTriangle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface ConfirmationModalProps {
   confirmLabel: string;
   isDestructive?: boolean;
   requirePassword?: boolean;
+  children?: React.ReactNode;
 }
 
 export default function ConfirmationModal({
@@ -22,7 +24,8 @@ export default function ConfirmationModal({
   message,
   confirmLabel,
   isDestructive = false,
-  requirePassword = true
+  requirePassword = true,
+  children
 }: ConfirmationModalProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,7 +34,7 @@ export default function ConfirmationModal({
 
   const handleConfirm = async () => {
     if (requirePassword && !password) {
-      alert("Please enter your password to confirm.");
+      toast.error("Please enter your password to confirm.");
       return;
     }
     setLoading(true);
@@ -55,6 +58,8 @@ export default function ConfirmationModal({
 
           <h3 className="text-xl font-bold text-ink-900 mb-2">{title}</h3>
           <p className="text-ink-500 text-sm leading-relaxed mb-6">{message}</p>
+
+          {children}
 
           {requirePassword && (
             <div className="mb-6">

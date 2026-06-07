@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       .eq('id', user.id)
       .single();
     
-    if (profile?.role === 'admin') {
+    if (profile?.role === 'admin' || profile?.role === 'superadmin') {
       queryUserId = targetUserId;
     } else {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -53,11 +53,15 @@ export async function GET(request: Request) {
     .is('deleted_at', null);
 
   if (search) {
-    query = query.or(`client_name.ilike.%${search}%,invoice_number.ilike.%${search}%,nickname.ilike.%${search}%,client_email.ilike.%${search}%,form_data->>clientName.ilike.%${search}%,form_data->>invoiceNumber.ilike.%${search}%,form_data->>issueDate.ilike.%${search}%,form_data->>dueDate.ilike.%${search}%`);
+    query = query.or(`client_name.ilike.%${search}%,invoice_number.ilike.%${search}%,nickname.ilike.%${search}%,client_email.ilike.%${search}%,currency.ilike.%${search}%,form_data->>clientName.ilike.%${search}%,form_data->>invoiceNumber.ilike.%${search}%,form_data->>issueDate.ilike.%${search}%,form_data->>dueDate.ilike.%${search}%,form_data->>currency.ilike.%${search}%`);
   }
 
   if (status) {
-    query = query.eq('payment_status', status);
+    if (status.includes(',')) {
+      query = query.in('payment_status', status.split(','));
+    } else {
+      query = query.eq('payment_status', status);
+    }
   }
 
   if (currency) {

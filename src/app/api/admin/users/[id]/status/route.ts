@@ -20,8 +20,19 @@ export async function PATCH(
     .eq('id', adminUser.id)
     .single();
 
-  if (adminProfile?.role !== 'admin') {
+  if (adminProfile?.role !== 'admin' && adminProfile?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // Verify target is not superadmin
+  const { data: targetProfileAuth } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', targetUserId)
+    .single();
+
+  if (targetProfileAuth?.role === 'superadmin' && adminProfile?.role !== 'superadmin') {
+    return NextResponse.json({ error: 'Forbidden — cannot modify superadmin' }, { status: 403 });
   }
 
   const supabaseAdmin = createSupabaseClient(

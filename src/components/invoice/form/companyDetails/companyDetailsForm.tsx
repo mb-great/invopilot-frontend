@@ -3,7 +3,7 @@ import CustomNumberInput from "@/components/invoice/ui/customNumberInput";
 import ImageInput from "@/components/invoice/ui/imageInput";
 
 export const CompanyDetailsForm = () => (
-  <div className="pt-24">
+  <div className="pt-4">
     <p className="text-2xl font-semibold pb-3">Company Details (To)</p>
     <CustomTextInput
       label="Email"
@@ -19,7 +19,7 @@ export const CompanyDetailsForm = () => (
       placeholder="Invopilot"
       variableName="companyName"
     />
-    <ImageInput label="Logo" variableName="companyLogo" />
+    <ImageInput label="Logo" variableName="companyLogo" premium="pro" />
     <CustomTextInput
       label="Address"
       placeholder="Address"
@@ -35,7 +35,7 @@ export const CompanyDetailsForm = () => (
       placeholder="State"
       variableName="companyState"
     />
-    <CustomNumberInput
+    <CustomTextInput
       label="Zip"
       placeholder="E.g. '110001'"
       variableName="companyZip"

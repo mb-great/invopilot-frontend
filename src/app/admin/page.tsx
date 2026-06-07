@@ -19,11 +19,11 @@ export default async function AdminPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name, avatar_url')
+    .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'admin') {
+  if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
     redirect('/dashboard')
   }
 
@@ -51,7 +51,7 @@ export default async function AdminPage({
     // 2. Fetch Active Users
     let userQuery = supabase
       .from('profiles')
-      .select('id, email, full_name, role, created_at, total_invoices_generated', { count: 'exact' });
+      .select('id, email, full_name, role, created_at, total_invoices_generated, tier, subscription_status', { count: 'exact' });
 
     if (queryParam) {
       userQuery = userQuery.or(`email.ilike.%${queryParam}%,full_name.ilike.%${queryParam}%`);
@@ -107,6 +107,9 @@ export default async function AdminPage({
       userName={profile?.full_name} 
       avatarUrl={profile?.avatar_url} 
       isAdmin={true}
+      tier={profile?.tier}
+      subscriptionStatus={profile?.subscription_status}
+      subscriptionPeriodEnd={profile?.subscription_period_end}
     >
       <div className="mb-12">
         <h1 className="text-4xl font-bold mb-3 tracking-tight text-ink-900" style={{ fontFamily: 'var(--font-display)' }}>
@@ -163,6 +166,7 @@ export default async function AdminPage({
                     totalPages,
                     totalCount: totalCount || 0
                   }} 
+                  currentUserRole={profile.role}
                 />
               ) : (
                 <div className="py-20 text-center text-ink-400 italic">

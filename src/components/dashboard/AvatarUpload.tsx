@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 
 export default function AvatarUpload({ 
   initialUrl, 
@@ -54,7 +55,7 @@ export default function AvatarUpload({
       setUrl(publicUrl);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown upload error';
-      alert('Error uploading avatar: ' + message);
+      toast.error('Error uploading avatar: ' + message);
     } finally {
       setUploading(false);
     }

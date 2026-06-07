@@ -49,6 +49,9 @@ interface PaymentDetails {
   routingCode?: string | null;
   swiftCode?: string | null;
   ifscCode?: string | null;
+  upiId?: string | null;
+  upiLockAmount?: boolean;
+  showUpiQr?: boolean;
   currency?: string;
 }
 

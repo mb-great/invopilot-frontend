@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Trash2 } from 'lucide-react';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
+import { toast } from 'sonner';
 
 export default function DeleteAccountSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,11 +26,11 @@ export default function DeleteAccountSection() {
         throw new Error(result.error || 'Failed to delete account');
       }
 
-      alert("Your account has been scheduled for deletion. You can restore your data by signing up again with the same email within 90 days.");
+      toast.success("Your account has been scheduled for deletion. You can restore your data by signing up again with the same email within 90 days.");
       await supabase.auth.signOut();
       router.push('/login');
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setIsModalOpen(false);
     }

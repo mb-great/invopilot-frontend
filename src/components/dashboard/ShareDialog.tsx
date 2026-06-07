@@ -3,6 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Copy, MessageCircle, Share2, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface ShareDialogProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
         console.error('Error sharing natively', err);
       }
     } else {
-      alert("Native sharing not supported on this browser.");
+      toast.error("Native sharing not supported on this browser.");
     }
   };
 

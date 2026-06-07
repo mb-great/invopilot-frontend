@@ -18,7 +18,7 @@ export async function GET(
     .eq('id', user.id)
     .single();
 
-  if (profile?.role !== 'admin') {
+  if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

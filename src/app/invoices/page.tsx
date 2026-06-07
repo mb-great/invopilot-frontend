@@ -4,6 +4,7 @@ import Link from 'next/link'
 import DashboardShell from '@/components/layout/DashboardShell'
 import InvoiceTable from '@/components/dashboard/InvoiceTable'
 import EmptyState from '@/components/dashboard/EmptyState'
+import { resolvePlanAccess } from '@/lib/billing/tiers'
 
 export default async function InvoicesPage() {
   const supabase = await createClient()
@@ -13,9 +14,16 @@ export default async function InvoicesPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name, avatar_url, total_invoices_generated')
+    .select('role, full_name, avatar_url, total_invoices_generated, tier, subscription_status, subscription_period_end')
     .eq('id', user.id)
     .single()
+
+  // Get actual count of non-deleted invoices (NOT lifetime counter which includes deleted)
+  const { count: actualInvoiceCount } = await supabase
+    .from('invoices')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
 
   const { data: invoices } = await supabase
     .from('invoices')
@@ -31,8 +39,9 @@ export default async function InvoicesPage() {
     .eq('user_id', user.id)
 
   const availableCurrencies = metrics?.map(m => m.currency) || []
+  const access = resolvePlanAccess(profile);
   
-  const totalCount = profile?.total_invoices_generated || 0;
+  const totalCount = actualInvoiceCount ?? 0;
   const initialMeta = {
     total: totalCount,
     page: 1,
@@ -45,7 +54,10 @@ export default async function InvoicesPage() {
       userEmail={user.email} 
       userName={profile?.full_name} 
       avatarUrl={profile?.avatar_url} 
-      isAdmin={profile?.role === 'admin'}
+      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
+      tier={profile?.tier}
+      subscriptionStatus={profile?.subscription_status}
+      subscriptionPeriodEnd={profile?.subscription_period_end}
     >
       <div className="flex flex-col h-full space-y-6 md:space-y-8 min-h-0">
         <div className="flex items-center justify-between shrink-0 px-1">
@@ -71,6 +83,8 @@ export default async function InvoicesPage() {
                 availableCurrencies={availableCurrencies} 
                 showPaymentToggle={true} 
                 showHeader={false}
+                canUseQuotes={access.plan.canUseQuotes}
+                canExportCsv={access.plan.canExportCsv || access.isAdmin}
               />
             ) : (
               <EmptyState />

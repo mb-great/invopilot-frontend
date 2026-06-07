@@ -54,9 +54,10 @@ export default function ResetPasswordPage() {
         router.push('/dashboard');
       }, 2000);
 
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
-      if (err.message.includes('expired')) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage({ type: 'error', text: msg });
+      if (msg.includes('expired')) {
         setTimeout(() => router.push('/forgot-password'), 3000);
       }
     } finally {
@@ -65,12 +66,10 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="min-h-screen bg-ink-50 flex items-center justify-center px-6">
+    <main className="min-h-[100dvh] bg-ink-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-12">
-          <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-            <span className="text-white font-bold text-xl italic">I</span>
-          </div>
+          <img src="/logo.png" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
           <span className="font-bold text-xl tracking-tight text-ink-900">InvoPilot</span>
         </div>
 

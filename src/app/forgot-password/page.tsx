@@ -4,6 +4,10 @@ import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 
+import { getBackendUrl } from '@/lib/url'
+
+const BACKEND_URL = getBackendUrl();
+
 function ForgotPasswordContent() {
   const [email, setEmail] = useState('')
   const [otpCode, setOtpCode] = useState('')
@@ -11,7 +15,6 @@ function ForgotPasswordContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -64,8 +67,8 @@ function ForgotPasswordContent() {
 
       setSent(true)
       setStep('verify')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
@@ -87,20 +90,18 @@ function ForgotPasswordContent() {
       if (!res.ok) throw new Error(data.error || 'Verification failed');
 
       router.push('/reset-password')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <main className="min-h-screen bg-ink-50 flex items-center justify-center px-6">
+    <main className="min-h-[100dvh] bg-ink-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-12">
-          <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-            <span className="text-white font-bold text-xl italic">I</span>
-          </div>
+          <img src="/logo.png" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
           <span className="font-bold text-xl tracking-tight text-ink-900">InvoPilot</span>
         </div>
 

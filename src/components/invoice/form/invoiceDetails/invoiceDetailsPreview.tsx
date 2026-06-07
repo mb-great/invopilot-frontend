@@ -17,7 +17,7 @@ export const InvoiceDetailsPreview: React.FC<
 
   return (
     <div
-      className="group cursor-pointer relative"
+      className={`relative ${onClick ? 'group cursor-pointer' : 'cursor-default'}`}
       onClick={() => onClick && onClick("3")}
     >
       {!!onClick && (

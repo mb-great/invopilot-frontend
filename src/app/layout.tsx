@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display, DM_Sans } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -25,7 +26,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${dmSerif.variable} h-full antialiased`}>
-      <body className="min-h-full font-sans text-ink-900" suppressHydrationWarning>{children}</body>
+      <body className="min-h-full font-sans text-ink-900" suppressHydrationWarning>
+        {children}
+        <Toaster position="top-right" richColors />
+      </body>
     </html>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Ban, UserCheck, Trash2, Loader2 } from 'lucide-react';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
+import { toast } from 'sonner';
 
 export default function UserStatusActions({ 
   userId, 
@@ -45,11 +46,11 @@ export default function UserStatusActions({
       });
 
       if (!verifyRes.ok) {
-        alert("Invalid admin password. Action cancelled.");
+        toast.error("Invalid admin password. Action cancelled.");
         return;
       }
     } catch (err) {
-      alert("Verification failed. Please try again.");
+      toast.error("Verification failed. Please try again.");
       return;
     }
 
@@ -67,13 +68,13 @@ export default function UserStatusActions({
       if (action === 'ban') setBanned(true);
       if (action === 'delete') {
         setDeleted(true);
-        alert("User account and data have been permanently deleted.");
+        toast.success("User account and data have been permanently deleted.");
         router.push('/admin'); // Redirect away from deleted user detail
       }
 
       router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Something went wrong');
+      toast.error(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
       setModalConfig({ ...modalConfig, isOpen: false });
@@ -110,7 +111,7 @@ export default function UserStatusActions({
       if (res.ok) setBanned(false);
       router.refresh();
     } catch (err) {
-      alert('Failed to unban');
+      toast.error('Failed to unban');
     } finally {
       setLoading(false);
     }

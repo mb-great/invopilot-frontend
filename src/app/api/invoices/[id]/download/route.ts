@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(
   request: Request,
@@ -14,6 +15,7 @@ export async function GET(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // 1. Get the PDF URL and nickname from the invoice
+  // We use the user's supabase client here so RLS ensures they own it
   const { data: invoice, error } = await supabase
     .from('invoices')
     .select('pdf_url, nickname, invoice_number')
@@ -22,11 +24,15 @@ export async function GET(
 
   if (error || !invoice || !invoice.pdf_url) return NextResponse.json({ error: 'Not found or not generated' }, { status: 404 });
 
+  if (invoice.pdf_url.startsWith('http://') || invoice.pdf_url.startsWith('https://')) {
+    return NextResponse.redirect(invoice.pdf_url);
+  }
+
   // 2. Generate signed URL (expires in 60s)
-  // If not viewOnly, set the download filename
+  // We use supabaseAdmin to bypass storage RLS
   const filename = `${invoice.nickname || invoice.invoice_number || 'invoice'}.pdf`.replace(/[^a-z0-9.]/gi, '_');
   
-  const { data: signedUrl, error: signedUrlError } = await supabase
+  const { data: signedUrl, error: signedUrlError } = await supabaseAdmin
     .storage
     .from('invoices')
     .createSignedUrl(invoice.pdf_url, 60, {

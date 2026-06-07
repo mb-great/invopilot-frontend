@@ -48,8 +48,8 @@ export default function PasswordSettings({ userEmail }: { userEmail?: string }) 
       setCurrentPassword('');
       setPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : String(err) });
     } finally {
       setLoading(false);
     }
