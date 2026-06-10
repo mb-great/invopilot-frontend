@@ -36,17 +36,59 @@ interface Invoice {
 }
 
 interface Props {
-  invoices: Invoice[];
+  activeWorkspaceId?: string;
   targetCurrency?: string;
   profile?: any;
 }
 
 type RangeType = '30days' | '1year' | 'lifetime' | 'custom';
 
-export default function RevenueChart({ invoices, targetCurrency = 'USD', profile }: Props) {
+export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD', profile }: Props) {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [rangeType, setRangeType] = useState<RangeType>('30days');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  useEffect(() => {
+    async function fetchInvoices() {
+      try {
+        setIsLoading(true);
+        // Supabase client can be created per request inside the component or globally, but since this is a client component, we import it.
+        // Wait, we need to import createClient from @/lib/supabase/client
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        
+        let query = supabase
+          .from('invoices')
+          .select('amount, currency, payment_status, created_at, form_data->>dueDate')
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false });
+          
+        if (activeWorkspaceId) {
+          query = query.eq('workspace_id', activeWorkspaceId);
+        } else {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) query = query.eq('user_id', user.id);
+        }
+        
+        // Handle business filter if in URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const businessFilter = searchParams.get('business');
+        if (businessFilter) {
+          query = query.eq('business_profile_name', businessFilter);
+        }
+        
+        const { data } = await query;
+        if (data) setInvoices(data);
+      } catch (e) {
+        console.error("Failed to fetch invoices for chart", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchInvoices();
+  }, [activeWorkspaceId]);
 
   const currencies = useMemo(() => {
     const list = new Set<string>();
@@ -205,7 +247,7 @@ export default function RevenueChart({ invoices, targetCurrency = 'USD', profile
           if (inv.amount) amount = inv.amount;
           else if (inv.form_data?.items) {
             amount = inv.form_data.items.reduce((sum: number, item: any) => {
-              return sum + ((item.quantity || 0) * (item.rate || 0));
+              return sum + ((item.qty || 0) * (item.amount || 0));
             }, 0);
           }
 
@@ -309,6 +351,14 @@ export default function RevenueChart({ invoices, targetCurrency = 'USD', profile
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="glass-card flex flex-col items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card flex flex-col h-full bg-white border border-ink-100 rounded-2xl overflow-hidden shadow-sm">

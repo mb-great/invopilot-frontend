@@ -21,6 +21,8 @@ export type BusinessProfile = {
   bankName?: string;
   accountNo?: string;
   ifsc?: string;
+  paypalEmail?: string;
+  cryptoAddress?: string;
   createdAt?: string;
   deletedAt?: string;
 };
@@ -31,6 +33,7 @@ interface BusinessProfilesSectionProps {
   maxBusinesses: number | 'unlimited';
   canUploadLogo: boolean;
   isModal?: boolean;
+  activeWorkspace?: any;
 }
 
 export default function BusinessProfilesSection({
@@ -38,7 +41,8 @@ export default function BusinessProfilesSection({
   userId,
   maxBusinesses,
   canUploadLogo,
-  isModal = false
+  isModal = false,
+  activeWorkspace
 }: BusinessProfilesSectionProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -46,8 +50,8 @@ export default function BusinessProfilesSection({
   const [isAdding, setIsAdding] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  const businesses: BusinessProfile[] = Array.isArray(profile?.defaults?.businesses)
-    ? profile.defaults.businesses
+  const businesses: BusinessProfile[] = Array.isArray(activeWorkspace?.businesses)
+    ? activeWorkspace.businesses
     : [];
 
   // Quota Count: Active profiles + profiles deleted within the last 30 days
@@ -78,6 +82,8 @@ export default function BusinessProfilesSection({
       bankName: '',
       accountNo: '',
       ifsc: '',
+      paypalEmail: '',
+      cryptoAddress: '',
       createdAt: new Date().toISOString()
     });
     setIsAdding(true);
@@ -205,15 +211,10 @@ export default function BusinessProfilesSection({
         updatedBusinesses = businesses.map(b => b.id === editingProfile.id ? editingProfile : b);
       }
 
-      const defaults = {
-        ...profile?.defaults,
-        businesses: updatedBusinesses
-      };
-
       const { error } = await supabase
-        .from('profiles')
-        .update({ defaults })
-        .eq('id', userId);
+        .from('workspaces')
+        .update({ businesses: updatedBusinesses })
+        .eq('id', activeWorkspace.id);
 
       if (error) throw error;
 
@@ -231,15 +232,10 @@ export default function BusinessProfilesSection({
     try {
       // Soft deletion: set deletedAt timestamp instead of removing from array
       const updatedBusinesses = businesses.map(b => b.id === id ? { ...b, deletedAt: new Date().toISOString() } : b);
-      const defaults = {
-        ...profile?.defaults,
-        businesses: updatedBusinesses
-      };
-
       const { error } = await supabase
-        .from('profiles')
-        .update({ defaults })
-        .eq('id', userId);
+        .from('workspaces')
+        .update({ businesses: updatedBusinesses })
+        .eq('id', activeWorkspace.id);
 
       if (error) throw error;
 
@@ -502,6 +498,34 @@ export default function BusinessProfilesSection({
                   onChange={e => setEditingProfile(prev => prev ? { ...prev, ifsc: e.target.value } : null)}
                   className="w-full rounded-lg px-4 py-2.5 border border-neutral-200 text-ink-900 focus:outline-none focus:border-brand-500 text-sm disabled:bg-neutral-50 disabled:text-neutral-400"
                   placeholder="HDFC0001234"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-ink-100 pt-4 mt-6">
+            <h5 className="font-bold text-xs uppercase text-ink-500 mb-3 tracking-widest">Alternative Payments (Optional)</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs uppercase font-bold text-muted mb-1 tracking-widest">PayPal Email / Link</label>
+                <input
+                  type="text"
+                  disabled={isProfileLocked}
+                  value={editingProfile.paypalEmail || ''}
+                  onChange={e => setEditingProfile(prev => prev ? { ...prev, paypalEmail: e.target.value } : null)}
+                  className="w-full rounded-lg px-4 py-2.5 border border-neutral-200 text-ink-900 focus:outline-none focus:border-brand-500 text-sm disabled:bg-neutral-50 disabled:text-neutral-400"
+                  placeholder="paypal.me/username"
+                />
+              </div>
+              <div>
+                <label className="block text-xs uppercase font-bold text-muted mb-1 tracking-widest">Crypto Wallet Address</label>
+                <input
+                  type="text"
+                  disabled={isProfileLocked}
+                  value={editingProfile.cryptoAddress || ''}
+                  onChange={e => setEditingProfile(prev => prev ? { ...prev, cryptoAddress: e.target.value } : null)}
+                  className="w-full rounded-lg px-4 py-2.5 border border-neutral-200 text-ink-900 focus:outline-none focus:border-brand-500 text-sm disabled:bg-neutral-50 disabled:text-neutral-400"
+                  placeholder="0x... (ERC20)"
                 />
               </div>
             </div>

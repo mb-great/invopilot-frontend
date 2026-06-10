@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -43,14 +44,40 @@ export async function GET(request: Request) {
     }
   }
 
+  const cookieStore = await cookies();
+  const activeWorkspaceId = cookieStore.get('invopilot_active_workspace')?.value;
+  let workspaceIdToQuery = activeWorkspaceId;
+
+  if (!workspaceIdToQuery && !targetUserId) {
+    const { data: defaultWs } = await supabase
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_id', user.id)
+      .eq('status', 'accepted')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+      
+    if (defaultWs) {
+      workspaceIdToQuery = defaultWs.workspace_id;
+    }
+  }
+
   // Logic: If any filter is active, we do an exact count for accurate pagination.
   const isFiltered = !!(search || status || currency || dateValue);
 
   let query = supabase
     .from('invoices')
-    .select('*', isFiltered ? { count: 'exact' } : {})
-    .eq('user_id', queryUserId)
+    .select('*, profiles(full_name, avatar_url, email)', isFiltered ? { count: 'exact' } : {})
     .is('deleted_at', null);
+    
+  if (targetUserId) {
+    query = query.eq('user_id', queryUserId);
+  } else if (workspaceIdToQuery) {
+    query = query.eq('workspace_id', workspaceIdToQuery);
+  } else {
+    query = query.eq('user_id', queryUserId); // fallback
+  }
 
   if (search) {
     query = query.or(`client_name.ilike.%${search}%,invoice_number.ilike.%${search}%,nickname.ilike.%${search}%,client_email.ilike.%${search}%,currency.ilike.%${search}%,form_data->>clientName.ilike.%${search}%,form_data->>invoiceNumber.ilike.%${search}%,form_data->>issueDate.ilike.%${search}%,form_data->>dueDate.ilike.%${search}%,form_data->>currency.ilike.%${search}%`);

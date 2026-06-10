@@ -5,6 +5,7 @@ import DashboardShell from '@/components/layout/DashboardShell'
 import InvoiceTable from '@/components/dashboard/InvoiceTable'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { resolvePlanAccess } from '@/lib/billing/tiers'
+import { getActiveWorkspaceId } from '@/lib/workspace'
 
 export default async function InvoicesPage() {
   const supabase = await createClient()
@@ -18,27 +19,32 @@ export default async function InvoicesPage() {
     .eq('id', user.id)
     .single()
 
+  const activeWorkspaceId = await getActiveWorkspaceId(user.id);
+
   // Get actual count of non-deleted invoices (NOT lifetime counter which includes deleted)
   const { count: actualInvoiceCount } = await supabase
     .from('invoices')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+    .eq('workspace_id', activeWorkspaceId)
+    .in('payment_status', ['draft', 'sent', 'paid'])
     .is('deleted_at', null)
 
   const { data: invoices } = await supabase
     .from('invoices')
-    .select('*')
-    .eq('user_id', user.id)
+    .select('*, profiles(full_name, avatar_url, email)')
+    .eq('workspace_id', activeWorkspaceId)
+    .in('payment_status', ['draft', 'sent', 'paid'])
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(0, 9)
 
-  const { data: metrics } = await supabase
-    .from('user_currency_metrics')
-    .select('currency')
-    .eq('user_id', user.id)
-
-  const availableCurrencies = metrics?.map(m => m.currency) || []
+  // Use RPC to get all currencies used in this workspace instead of user_currency_metrics
+  const { data: statsData } = await supabase.rpc('get_workspace_dashboard_stats', { workspace_id_param: activeWorkspaceId });
+  const stats = statsData || { top_currencies: [], other_currencies: [] };
+  const availableCurrencies = [
+    ...stats.top_currencies.map((c: any) => c.currency),
+    ...stats.other_currencies.map((c: any) => c.currency)
+  ]
   const access = resolvePlanAccess(profile);
   
   const totalCount = actualInvoiceCount ?? 0;
@@ -85,6 +91,7 @@ export default async function InvoicesPage() {
                 showHeader={false}
                 canUseQuotes={access.plan.canUseQuotes}
                 canExportCsv={access.plan.canExportCsv || access.isAdmin}
+                baseStatus="draft,sent,paid"
               />
             ) : (
               <EmptyState />

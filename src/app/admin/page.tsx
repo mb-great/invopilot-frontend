@@ -51,7 +51,7 @@ export default async function AdminPage({
     // 2. Fetch Active Users
     let userQuery = supabase
       .from('profiles')
-      .select('id, email, full_name, role, created_at, total_invoices_generated, tier, subscription_status', { count: 'exact' });
+      .select('id, email, full_name, role, created_at, total_invoices_generated, tier, subscription_status, subscription_period_start, subscription_period_end, subscription_source', { count: 'exact' });
 
     if (queryParam) {
       userQuery = userQuery.or(`email.ilike.%${queryParam}%,full_name.ilike.%${queryParam}%`);

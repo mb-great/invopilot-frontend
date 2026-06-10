@@ -1,8 +1,9 @@
 'use client';
 
 import { format } from 'date-fns';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X, Columns, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { flexRender, getCoreRowModel, useReactTable, ColumnDef, VisibilityState, SortingState } from '@tanstack/react-table';
 import { ShareDialog } from './ShareDialog';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { toast } from 'sonner';
@@ -24,6 +25,12 @@ interface Invoice {
   due_date?: string | null;
   client_name?: string | null;
   client_email?: string | null;
+  business_profile_name?: string | null;
+  profiles?: {
+    full_name: string | null;
+    email: string | null;
+    avatar_url: string | null;
+  } | null;
   form_data?: {
     [key: string]: any;
   };
@@ -169,7 +176,7 @@ export default function InvoiceTable({
   }, [search, fetchInvoices, mounted]);
 
   const handleUpdateStatus = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'paid' ? 'sent' : 'paid';
+    const newStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
     
     // 1. Optimistic update
     const prevInvoices = [...invoices];
@@ -270,116 +277,27 @@ export default function InvoiceTable({
     } finally {
       setConvertingId(null);
     }
-  };
+  };  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const [customExportDates, setCustomExportDates] = useState({ start: '', end: '' });
 
-  const handleExportCsv = () => {
+  const handleExportCsv = (range: string) => {
     if (!canExportCsv) {
       toast.error('Upgrade to Pro to export CSV');
       return;
     }
-    if (invoices.length === 0) {
-      toast.error('No invoices to export');
-      return;
+    
+    let url = `/api/invoices/export?range=${range}`;
+    if (range === 'custom') {
+      if (!customExportDates.start || !customExportDates.end) {
+        toast.error('Please select both start and end dates');
+        return;
+      }
+      url += `&start=${customExportDates.start}&end=${customExportDates.end}`;
     }
 
-    const escapeCsvValue = (val: any) => {
-      if (val === null || val === undefined) return '';
-      const str = String(val);
-      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    };
-
-    const headers = [
-      'Invoice #', 
-      'Client Name', 
-      'Client Email', 
-      'Amount', 
-      'Currency', 
-      'Status', 
-      'Payment Status', 
-      'Issue Date', 
-      'Due Date', 
-      'Generated Date', 
-      'PDF Link',
-      'Sender Name',
-      'Sender Email',
-      'Sender Address',
-      'Sender Tax ID',
-      'Client Address',
-      'Client Tax ID',
-      'Discount',
-      'Tax Rate (%)',
-      'Note',
-      'Bank Name',
-      'Account Number',
-      'Account Name',
-      'IFSC/Swift Code',
-      'UPI ID'
-    ];
-
-    const rows = invoices.map(inv => {
-      const fd = inv.form_data || {};
-      
-      const senderAddrParts = [
-        fd.yourAddress,
-        fd.yourCity,
-        fd.yourState,
-        fd.yourZip,
-        fd.yourCountry
-      ].filter(Boolean);
-      const senderAddress = senderAddrParts.join(', ');
-
-      const clientAddrParts = [
-        fd.address,
-        fd.city,
-        fd.state,
-        fd.zip,
-        fd.country
-      ].filter(Boolean);
-      const clientAddress = clientAddrParts.join(', ');
-
-      const row = [
-        inv.invoice_number || inv.id.slice(0, 8),
-        inv.client_name || fd.clientName || 'Unnamed',
-        inv.client_email || fd.clientEmail || '',
-        inv.amount || 0,
-        inv.currency || 'INR',
-        inv.status,
-        inv.payment_status,
-        inv.issue_date || fd.issueDate || '',
-        inv.due_date || fd.dueDate || '',
-        inv.created_at ? new Date(inv.created_at).toISOString().slice(0, 10) : '',
-        inv.share_slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/i/${inv.share_slug}` : '',
-        fd.yourName || '',
-        fd.yourEmail || '',
-        senderAddress,
-        fd.yourTaxId || '',
-        clientAddress,
-        fd.taxId || '',
-        fd.discount || 0,
-        fd.taxRate || 0,
-        fd.note || '',
-        fd.bankName || '',
-        fd.accountNumber || '',
-        fd.accountName || '',
-        fd.ifscCode || fd.swiftCode || '',
-        fd.upiId || ''
-      ];
-
-      return row.map(escapeCsvValue);
-    });
-
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('CSV downloaded');
+    // Trigger download
+    window.location.href = url;
+    setIsExportDropdownOpen(false);
   };
 
   const toggleSelectAll = () => {
@@ -399,7 +317,7 @@ export default function InvoiceTable({
   const getPaymentStatusClass = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-emerald-500 text-white border-emerald-600';
-      case 'sent': return 'bg-brand-500/10 text-brand-600 border-brand-500/20';
+      case 'unpaid': return 'bg-brand-500/10 text-brand-600 border-brand-500/20';
       case 'overdue': return 'bg-red-500/10 text-red-600 border-red-500/20';
       case 'draft': return 'bg-ink-100 text-ink-600 border-ink-200';
       case 'converted': return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
@@ -426,6 +344,197 @@ export default function InvoiceTable({
     if (isNaN(d.getTime())) return '—';
     return format(d, formatStr);
   };
+
+
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
+
+  // Load visibility from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('invoice_cols');
+      if (saved) setColumnVisibility(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save visibility to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && Object.keys(columnVisibility).length > 0) {
+      localStorage.setItem('invoice_cols', JSON.stringify(columnVisibility));
+    }
+  }, [columnVisibility]);
+
+  const columns = useMemo<ColumnDef<Invoice>[]>(() => [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <input 
+          type="checkbox" 
+          checked={invoices.length > 0 && selectedIds.length === invoices.length}
+          onChange={toggleSelectAll}
+          className="rounded border-ink-300 text-brand-500 focus:ring-brand-500"
+        />
+      ),
+      cell: ({ row }) => (
+        <input 
+          type="checkbox" 
+          checked={selectedIds.includes(row.original.id)}
+          onChange={() => toggleSelect(row.original.id)}
+          className="rounded border-ink-300 text-brand-500 focus:ring-brand-500"
+        />
+      ),
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'nickname',
+      header: 'Invoice Details',
+      cell: ({ row }) => {
+        const title = row.original.nickname || row.original.invoice_number || 'Unnamed Invoice';
+        const client = row.original.client_name || row.original.client_email;
+        const business = row.original.business_profile_name;
+
+        return (
+          <div className="flex flex-col min-w-0 max-w-[250px]">
+            <span className="truncate font-bold text-sm text-ink-900" title={title}>
+              {title}
+            </span>
+            
+            {client && (
+              <span className="text-[12px] text-ink-600 truncate mt-0.5" title={client}>
+                To: <span className="font-medium">{client}</span>
+              </span>
+            )}
+            
+            {business && (
+              <span className="text-[11px] text-ink-400 truncate mt-0.5" title={business}>
+                From: {business}
+              </span>
+            )}
+            
+            {row.original.nickname && row.original.invoice_number && (
+              <span className="text-[10px] text-ink-400 font-mono uppercase mt-0.5">
+                {row.original.invoice_number}
+              </span>
+            )}
+
+            {row.original.profiles?.full_name && (
+              <span className="text-[10px] text-brand-600 font-bold bg-brand-50 px-1.5 py-0.5 rounded-md mt-1 self-start">
+                Made by {row.original.profiles.full_name}
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      accessorKey: 'amount',
+      header: 'Amount',
+      cell: ({ row }) => (
+        <span className="font-bold text-ink-900 whitespace-nowrap">
+          {formatCurrency(row.original.amount || 0, row.original.currency)}
+        </span>
+      )
+    },
+    {
+      id: 'issueDate',
+      header: 'Issue Date',
+      accessorFn: row => row.issue_date || row.form_data?.issueDate,
+      cell: ({ getValue }) => <span className="text-[11px] font-medium text-ink-700 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
+    },
+    {
+      id: 'dueDate',
+      header: 'Due Date',
+      accessorFn: row => row.due_date || row.form_data?.dueDate,
+      cell: ({ getValue }) => <span className="text-[11px] font-medium text-ink-700 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
+    },
+    {
+      accessorKey: 'created_at',
+      header: 'Created',
+      cell: ({ getValue }) => <span className="text-[10px] font-medium text-ink-400 italic whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, p')}</span>
+    },
+    {
+      accessorKey: 'payment_status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <div className="flex flex-col items-center gap-1">
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border inline-block uppercase tracking-wider ${getPaymentStatusClass(row.original.payment_status)}`}>
+            {row.original.payment_status === 'paid' ? 'Paid' : row.original.payment_status === 'converted' ? 'Converted' : row.original.payment_status === 'draft' ? 'Draft' : row.original.payment_status === 'quote' ? 'Quote' : row.original.payment_status === 'overdue' ? 'Overdue' : 'Unpaid'}
+          </span>
+          {row.original.status !== 'done' && (
+            <span className="text-[9px] text-ink-400 italic">PDF: {row.original.status}</span>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'actions',
+      header: '',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const inv = row.original;
+        return (
+          <div className="flex justify-end items-center gap-1 flex-wrap min-w-[200px]">
+            {inv.status === 'done' ? (
+              <>
+                <a href={`/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
+                <a href={`/api/invoices/${inv.id}/download`} className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">Get</a>
+                <button onClick={() => handleShare(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Share</button>
+                {inv.payment_status === 'quote' && (
+                  <button
+                    onClick={() => canUseQuotes ? handleConvert(inv.id) : toast.error('Upgrade to Pro to convert quotes')}
+                    disabled={convertingId === inv.id}
+                    className={`text-[11px] font-bold px-2 py-1 transition-colors flex items-center gap-1 ${canUseQuotes ? 'text-purple-600 hover:text-purple-700' : 'text-ink-300 cursor-not-allowed'}`}
+                    title={canUseQuotes ? 'Convert to Invoice' : 'Pro+ required'}
+                  >
+                    {convertingId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRightLeft className="w-3 h-3" />}
+                    Convert
+                  </button>
+                )}
+                {showPaymentToggle && (
+                  <button 
+                    onClick={() => handleUpdateStatus(inv.id, inv.payment_status)}
+                    disabled={loadingId === inv.id}
+                    className={`text-[11px] font-bold px-2 py-1 transition-colors min-w-[75px] text-center ${inv.payment_status === 'paid' ? 'text-ink-400 hover:text-ink-600' : 'text-emerald-600 hover:text-emerald-700'}`}
+                  >
+                    {inv.payment_status === 'paid' ? 'Unmark' : 'Mark Paid'}
+                  </button>
+                )}
+                <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1" title="Delete">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            ) : inv.status === 'failed' ? (
+              <>
+                <div className="flex items-center gap-1.5 text-red-500 mr-2"><AlertCircle className="w-3 h-3" /><span className="text-[10px] font-bold uppercase tracking-tight">Failed</span></div>
+                <button onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Retry</button>
+                <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 text-ink-400 px-4"><Loader2 className="w-3 h-3 animate-spin" /><span className="text-[10px] font-medium uppercase tracking-tight">Processing</span></div>
+            )}
+          </div>
+        );
+      }
+    }
+  ], [invoices, selectedIds, convertingId, loadingId, canUseQuotes, showPaymentToggle]);
+
+  const table = useReactTable({
+    data: invoices,
+    columns,
+    state: {
+      sorting,
+      columnVisibility,
+    },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    // Perform sorting on the client side for the current page
+    getSortedRowModel: require('@tanstack/react-table').getSortedRowModel(),
+  });
+
+  // End TanStack Injection
+
 
   const renderPageNumbers = () => {
     const totalPages = meta.totalPages || 1;
@@ -458,7 +567,7 @@ export default function InvoiceTable({
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4 min-h-[65vh] flex flex-col">
       <ShareDialog 
         isOpen={shareData.isOpen} 
         onClose={() => setShareData({ ...shareData, isOpen: false })} 
@@ -505,9 +614,9 @@ export default function InvoiceTable({
       )}
 
       {/* Filters Toolbar */}
-      <div className="bg-ink-50/50 p-2 rounded-xl border border-ink-100">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px]">
+      <div className="bg-ink-50/50 p-2 rounded-xl border border-ink-100 relative z-[40]">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+          <div className="relative w-full md:flex-1 md:min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
             <input 
               type="text" 
@@ -518,7 +627,7 @@ export default function InvoiceTable({
             />
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             {availableCurrencies.length > 0 && (
               <select 
                 value={currencyFilter}
@@ -583,200 +692,122 @@ export default function InvoiceTable({
                 Clear
               </button>
             )}
+            
             {loading && <Loader2 className="w-4 h-4 animate-spin text-brand-600" />}
-            <button
-              onClick={handleExportCsv}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold transition-all border ${
-                canExportCsv
-                  ? 'bg-white border-ink-200 text-ink-600 hover:bg-ink-50'
-                  : 'bg-ink-50 border-ink-100 text-ink-300 cursor-not-allowed'
-              }`}
-              title={canExportCsv ? 'Export current view as CSV' : 'Pro+ required'}
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>CSV</span>
-              <PremiumBadge type="pro" />
-            </button>
+            
+            {/* TanStack Column Toggle */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold bg-white border border-ink-200 text-ink-600 hover:bg-ink-50 transition-all"
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span>View</span>
+              </button>
+              {isColumnDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white/80 backdrop-blur-xl border border-ink-200 rounded-xl shadow-xl z-50 p-2 text-sm flex flex-col gap-1">
+                  <div className="px-2 py-1 text-xs font-bold text-ink-400 uppercase tracking-widest border-b border-ink-100 mb-1">Visible Columns</div>
+                  {table.getAllLeafColumns().map(col => {
+                    if (col.id === 'select' || col.id === 'actions') return null;
+                    return (
+                      <label key={col.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-ink-50 rounded-lg cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={col.getIsVisible()}
+                          onChange={col.getToggleVisibilityHandler()}
+                          className="rounded border-ink-300 text-brand-500 focus:ring-brand-500"
+                        />
+                        <span className="text-ink-700 font-medium capitalize">{col.id.replace('_', ' ')}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+
+            {/* CSV Export Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold transition-all border ${
+                  canExportCsv
+                    ? 'bg-white border-ink-200 text-ink-600 hover:bg-ink-50'
+                    : 'bg-ink-50 border-ink-100 text-ink-300 cursor-not-allowed'
+                }`}
+                title={canExportCsv ? 'Export CSV Data' : 'Pro+ required'}
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>CSV</span>
+                <PremiumBadge type="pro" />
+              </button>
+
+              {isExportDropdownOpen && canExportCsv && (
+                <div className="absolute right-0 mt-2 w-56 bg-white/80 backdrop-blur-xl border border-ink-200 rounded-xl shadow-xl z-[100] p-2 text-sm flex flex-col gap-1">
+                  <div className="px-2 py-1 text-xs font-bold text-ink-400 uppercase tracking-widest border-b border-ink-100 mb-1">Export Range</div>
+                  
+                  <button onClick={() => handleExportCsv('7d')} className="text-left px-2 py-1.5 hover:bg-ink-50 rounded-lg text-ink-700 font-medium">Last 7 Days</button>
+                  <button onClick={() => handleExportCsv('30d')} className="text-left px-2 py-1.5 hover:bg-ink-50 rounded-lg text-ink-700 font-medium">Last 30 Days</button>
+                  <button onClick={() => handleExportCsv('month')} className="text-left px-2 py-1.5 hover:bg-ink-50 rounded-lg text-ink-700 font-medium">This Month</button>
+                  <button onClick={() => handleExportCsv('lifetime')} className="text-left px-2 py-1.5 hover:bg-ink-50 rounded-lg text-ink-700 font-medium text-brand-600">Lifetime Everything</button>
+                  
+                  <div className="border-t border-ink-100 my-1"></div>
+                  
+                  <div className="px-2 py-1 flex flex-col gap-2">
+                    <span className="text-[10px] uppercase font-bold text-ink-400">Custom Range</span>
+                    <input type="date" value={customExportDates.start} onChange={e => setCustomExportDates(p => ({ ...p, start: e.target.value }))} className="px-2 py-1 border border-ink-200 rounded text-xs outline-none focus:border-brand-500" />
+                    <input type="date" value={customExportDates.end} onChange={e => setCustomExportDates(p => ({ ...p, end: e.target.value }))} className="px-2 py-1 border border-ink-200 rounded text-xs outline-none focus:border-brand-500" />
+                    <button onClick={() => handleExportCsv('custom')} className="mt-1 w-full bg-ink-900 text-white rounded-lg py-1.5 text-xs font-bold hover:bg-ink-800 transition-colors">Download</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="w-full overflow-hidden">
-        <div className="overflow-x-auto pb-4 no-scrollbar">
-          <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
+      <div className="w-full flex-1 overflow-hidden">
+        <div className="overflow-x-auto pb-4 no-scrollbar min-h-[300px] max-w-[90vw] md:max-w-full">
+          
+          <table className="w-full text-left border-collapse min-w-[900px] table-auto">
             <thead>
-              <tr className="text-ink-400 text-[10px] uppercase tracking-widest border-b border-ink-100 bg-ink-50/30">
-                <th className="py-3 px-4 font-bold w-[40px]">
-                  <input 
-                    type="checkbox" 
-                    checked={invoices.length > 0 && selectedIds.length === invoices.length}
-                    onChange={toggleSelectAll}
-                    className="rounded border-ink-300 text-brand-500 focus:ring-brand-500"
-                  />
-                </th>
-                <th className="py-3 px-4 font-bold w-auto">Invoice</th>
-                <th className="py-3 px-4 font-bold w-[140px]">Amount</th>
-                <th className="py-3 px-4 font-bold w-[160px]">Dates</th>
-                <th className="py-3 px-4 font-bold w-[100px] text-center">Status</th>
-                <th className="py-3 px-4 font-bold w-[280px] text-right">Action</th>
-              </tr>
+              {table.getHeaderGroups().map(headerGroup => (
+                <tr key={headerGroup.id} className="text-ink-400 text-[10px] uppercase tracking-widest border-b border-ink-100 bg-ink-50/30">
+                  {headerGroup.headers.map(header => (
+                    <th 
+                      key={header.id} 
+                      className={`py-3 px-4 font-bold cursor-pointer hover:bg-ink-100/50 transition-colors ${header.column.getCanSort() ? 'select-none' : ''}`}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.getCanSort() && (
+                          <span className="text-ink-300 flex-shrink-0">
+                            {{
+                              asc: <ArrowUp className="w-3 h-3 text-brand-500" />,
+                              desc: <ArrowDown className="w-3 h-3 text-brand-500" />,
+                            }[header.column.getIsSorted() as string] ?? <ArrowUpDown className="w-3 h-3" />}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              ))}
             </thead>
             <tbody className="divide-y divide-ink-50">
-              {invoices.map((inv) => (
-                <tr key={inv.id} className={`group hover:bg-ink-50/50 transition-colors ${selectedIds.includes(inv.id) ? 'bg-brand-50/30' : ''}`}>
-                  <td className="py-2 px-4">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedIds.includes(inv.id)}
-                      onChange={() => toggleSelect(inv.id)}
-                      className="rounded border-ink-300 text-brand-500 focus:ring-brand-500"
-                    />
-                  </td>
-                  <td className="py-2 px-4 font-bold text-ink-900 truncate">
-                    <div className="flex flex-col min-w-0">
-                      <span className="truncate" title={inv.nickname || 'Unnamed Invoice'}>{inv.nickname || 'Unnamed Invoice'}</span>
-                      <span className="text-[10px] text-ink-400 font-mono uppercase mt-0.5">{inv.invoice_number || inv.id.slice(0, 8)}</span>
-                    </div>
-                  </td>
-                  <td className="py-2 px-4 font-bold text-ink-900 whitespace-nowrap">
-                    {formatCurrency(inv.amount || 0, inv.currency)}
-                  </td>
-                  <td className="py-2 px-4 text-ink-500 whitespace-nowrap">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] uppercase font-bold text-ink-300 w-8">Issue</span>
-                        <span className="text-[11px] font-medium text-ink-700">
-                          {safeDate(inv.issue_date || inv.form_data?.issueDate, 'MMM d, yyyy')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] uppercase font-bold text-ink-300 w-8">Due</span>
-                        <span className="text-[11px] font-medium text-ink-700">
-                          {safeDate(inv.due_date || inv.form_data?.dueDate, 'MMM d, yyyy')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] uppercase font-bold text-ink-300 w-8">Gen</span>
-                        <span className="text-[10px] font-medium text-ink-400 italic">
-                          {safeDate(inv.created_at, 'MMM d, p')}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-2 px-4 text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border inline-block uppercase tracking-wider ${getPaymentStatusClass(inv.payment_status)}`}>
-                        {inv.payment_status === 'paid' ? 'Paid' : inv.payment_status === 'converted' ? 'Converted' : inv.payment_status === 'draft' ? 'Draft' : inv.payment_status === 'quote' ? 'Quote' : 'Unpaid'}
-                      </span>
-                      {inv.status !== 'done' && (
-                        <span className="text-[9px] text-ink-400 italic">PDF: {inv.status}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-2 px-4 text-right">
-                    <div className="flex justify-end items-center gap-1 flex-wrap">
-                      {inv.status === 'done' ? (
-                        <>
-                          <a 
-                            href={`/api/invoices/${inv.id}/download?view=1`} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1"
-                          >
-                            View
-                          </a>
-                          <a 
-                            href={`/api/invoices/${inv.id}/download`} 
-                            className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1"
-                          >
-                            Get
-                          </a>
-                          
-                          <button 
-                            onClick={() => handleShare(inv.id)}
-                            className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1"
-                          >
-                            Share
-                          </button>
-
-                          {/* Convert Quote → Invoice */}
-                          {inv.payment_status === 'quote' && (
-                            <button
-                              onClick={() => canUseQuotes ? handleConvert(inv.id) : toast.error('Upgrade to Pro to convert quotes')}
-                              disabled={convertingId === inv.id}
-                              className={`text-[11px] font-bold px-2 py-1 transition-colors flex items-center gap-1 ${
-                                canUseQuotes
-                                  ? 'text-purple-600 hover:text-purple-700'
-                                  : 'text-ink-300 cursor-not-allowed'
-                              }`}
-                              title={canUseQuotes ? 'Convert to Invoice' : 'Pro+ required'}
-                            >
-                              {convertingId === inv.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <ArrowRightLeft className="w-3 h-3" />
-                              )}
-                              Convert
-                            </button>
-                          )}
-
-                          {showPaymentToggle && (
-                            <button 
-                              onClick={() => handleUpdateStatus(inv.id, inv.payment_status)}
-                              disabled={loadingId === inv.id}
-                              className={`text-[11px] font-bold px-2 py-1 transition-colors min-w-[75px] text-center ${
-                                inv.payment_status === 'paid' 
-                                ? 'text-ink-400 hover:text-ink-600' 
-                                : 'text-emerald-600 hover:text-emerald-700'
-                              }`}
-                            >
-                              {inv.payment_status === 'paid' ? 'Unmark' : 'Mark Paid'}
-                            </button>
-                          )}
-
-                          <button 
-                            onClick={() => setDeleteModal({ isOpen: true, id: inv.id })}
-                            disabled={loadingId === inv.id}
-                            className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      ) : inv.status === 'failed' ? (
-                        <div className="flex justify-end items-center gap-1 min-w-[200px]">
-                          <div className="flex items-center gap-1.5 text-red-500 mr-2">
-                            <AlertCircle className="w-3 h-3" />
-                            <span className="text-[10px] font-bold uppercase tracking-tight">Failed</span>
-                          </div>
-                          <button 
-                            onClick={() => handleRetry(inv.id)}
-                            disabled={loadingId === inv.id}
-                            className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1"
-                          >
-                            Retry
-                          </button>
-                          <button 
-                            onClick={() => setDeleteModal({ isOpen: true, id: inv.id })}
-                            disabled={loadingId === inv.id}
-                            className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-ink-400 px-4 min-w-[200px] justify-end">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span className="text-[10px] font-medium uppercase tracking-tight">Processing PDF</span>
-                        </div>
-                      )}
-                    </div>
-                  </td>
+              {table.getRowModel().rows.map(row => (
+                <tr key={row.id} className={`group hover:bg-ink-50/50 transition-colors ${selectedIds.includes(row.original.id) ? 'bg-brand-50/30' : ''}`}>
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id} className={`py-2 px-4 ${cell.column.id === 'actions' ? 'text-right' : ''}`}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
+
           {invoices.length === 0 && !loading && (
             <div className="py-20 text-center text-ink-400 text-sm">No invoices found.</div>
           )}

@@ -49,6 +49,8 @@ interface PaymentDetails {
   routingCode?: string | null;
   swiftCode?: string | null;
   ifscCode?: string | null;
+  paypalEmail?: string | null;
+  cryptoAddress?: string | null;
   upiId?: string | null;
   upiLockAmount?: boolean;
   showUpiQr?: boolean;
@@ -60,3 +62,21 @@ type InvoiceData = PaymentDetails &
   InvoiceItemDetails &
   YourDetails &
   CompanyDetails;
+
+interface Workspace {
+  id: string;
+  name: string;
+  owner_id: string;
+  businesses: any[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface WorkspaceMember {
+  id: string;
+  workspace_id: string | Workspace;
+  user_id: string | null;
+  invited_email: string | null;
+  role: 'owner' | 'admin' | 'member';
+  status: 'pending' | 'accepted';
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Copy, MessageCircle, Share2, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -42,6 +42,7 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
       <DialogContent className="sm:max-w-md bg-white rounded-2xl w-[95vw] mx-auto p-6 border-none shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-ink-900 mb-4">Share Invoice</DialogTitle>
+          <DialogDescription className="sr-only">Choose a platform to share your invoice</DialogDescription>
         </DialogHeader>
         
         <div className="grid grid-cols-4 gap-4 pb-4">

@@ -1,60 +1,68 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import DashboardShell from '@/components/layout/DashboardShell'
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import DashboardShell from '@/components/layout/DashboardShell';
+import ClientsClient from '@/components/dashboard/ClientsClient';
+import { getActiveWorkspaceId } from '@/lib/workspace';
 
 type ClientInvoiceRow = {
-  client_name: string | null
-  client_email: string | null
-  amount: number | null
-  currency: string | null
-  payment_status: string | null
-}
-
-type ClientSummary = {
-  name: string
-  email: string | null
-  totalBilled: number
-  invoiceCount: number
-  paidCount: number
-  outstandingAmount: number
-  healthScore: number
-  currency: string
-  status: string
-}
+  id: string;
+  client_name: string | null;
+  client_email: string | null;
+  amount: number | null;
+  currency: string | null;
+  payment_status: string | null;
+  form_data: any;
+};
 
 export default async function ClientsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect('/login')
+  if (!user) redirect('/login');
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end')
+    .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end, defaults')
     .eq('id', user.id)
-    .single()
+    .single();
 
-  // Fetch all invoices to derive clients
+  const activeWorkspaceId = await getActiveWorkspaceId(user.id);
+
+  // 1. Fetch saved clients for the active workspace
+  const { data: dbClientsData } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('workspace_id', activeWorkspaceId)
+    .is('deleted_at', null)
+    .order('name', { ascending: true });
+
+  const savedClients = dbClientsData || [];
+
+  // 2. Fetch recent invoices to aggregate billing stats, potential clients, and mismatches
   const { data: invoices } = await supabase
     .from('invoices')
-    .select('client_name, client_email, amount, currency, payment_status')
-    .eq('user_id', user.id)
+    .select('id, client_name, client_email, amount, currency, payment_status, form_data')
+    .eq('workspace_id', activeWorkspaceId)
     .is('deleted_at', null)
-    .not('client_name', 'is', null);
+    .not('client_name', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(100);
 
-  // Filter and group by client_name
-  const clientsMap = ((invoices || []) as ClientInvoiceRow[]).reduce<Record<string, ClientSummary>>((acc, inv) => {
+  // Group invoices for billing stats by client name
+  const billingStats = ((invoices || []) as ClientInvoiceRow[]).reduce<Record<string, {
+    totalBilled: number;
+    invoiceCount: number;
+    paidCount: number;
+    outstandingAmount: number;
+    healthScore: number;
+    currency: string;
+    status: string;
+  }>>((acc, inv) => {
     const name = inv.client_name?.trim();
-    
-    // Skip if name is empty or explicitly 'Unknown' (case insensitive)
-    if (!name || name.toLowerCase() === 'unknown' || name.toLowerCase() === 'unknown client') {
-      return acc;
-    }
+    if (!name) return acc;
 
     if (!acc[name]) {
       acc[name] = {
-        name,
-        email: inv.client_email,
         totalBilled: 0,
         invoiceCount: 0,
         paidCount: 0,
@@ -62,30 +70,118 @@ export default async function ClientsPage() {
         healthScore: 0,
         currency: inv.currency || 'INR',
         status: inv.payment_status || 'draft'
+      };
+    }
+    acc[name].totalBilled += inv.amount || 0;
+    acc[name].invoiceCount += 1;
+    if (inv.payment_status === 'paid') {
+      acc[name].paidCount += 1;
+    } else {
+      acc[name].outstandingAmount += inv.amount || 0;
+    }
+    return acc;
+  }, {});
+
+  // Calculate health scores
+  Object.keys(billingStats).forEach(name => {
+    const s = billingStats[name];
+    s.healthScore = s.invoiceCount > 0 ? Math.round((s.paidCount / s.invoiceCount) * 100) : 0;
+  });
+
+  // 3. Extract unique unsaved, non-dismissed potential clients (limit to top 5)
+  const dismissedClients = profile?.defaults?.dismissed_clients || [];
+  const potentialClientsMap: Record<string, { name: string; email: string | null }> = {};
+
+  (invoices || []).forEach(inv => {
+    const name = inv.client_name?.trim();
+    const email = inv.client_email?.trim() || null;
+    if (!name || name.toLowerCase() === 'unknown' || name.toLowerCase() === 'unknown client') return;
+
+    // Check if already in clients list (strict name match)
+    const isSaved = savedClients.some(c => c.name.toLowerCase() === name.toLowerCase());
+
+    // Check if dismissed in profile defaults
+    const isDismissed = dismissedClients.some((d: string) => d.toLowerCase() === name.toLowerCase());
+
+    if (!isSaved && !isDismissed) {
+      if (!potentialClientsMap[name]) {
+        potentialClientsMap[name] = { name, email };
       }
     }
-    acc[name].totalBilled += inv.amount || 0
-    acc[name].invoiceCount += 1
-    if (inv.payment_status === 'paid') {
-      acc[name].paidCount += 1
-    } else {
-      acc[name].outstandingAmount += inv.amount || 0
+  });
+
+  const potentialClients = Object.values(potentialClientsMap).slice(0, 5);
+
+  // 4. Discover new details for existing saved clients (field mismatches)
+  const dismissedUpdates = profile?.defaults?.dismissed_updates || [];
+  const mismatches: {
+    clientId: string;
+    clientName: string;
+    field: string;
+    fieldName: string;
+    oldVal: string;
+    newVal: string;
+    invoiceId: string;
+    invoiceNumber: string;
+  }[] = [];
+
+  savedClients.forEach(client => {
+    // Find matching invoices
+    const matchingInvoices = ((invoices || []) as ClientInvoiceRow[]).filter(inv => {
+      const name = inv.client_name?.trim();
+      return name && name.toLowerCase() === client.name.toLowerCase();
+    });
+
+    if (matchingInvoices.length > 0) {
+      const latestInvoice = matchingInvoices[0];
+      const formData = latestInvoice.form_data || {};
+
+      const invoiceEmail = formData.email?.trim() || latestInvoice.client_email?.trim() || '';
+      const invoiceCompanyName = formData.companyName?.trim() || '';
+      const invoiceTaxId = formData.companyTaxId?.trim() || '';
+      const invoiceAddress = [
+        formData.companyAddress || '',
+        formData.companyCity || '',
+        formData.companyState || '',
+        formData.companyZip || '',
+        formData.companyCountry || ''
+      ].map(s => s.trim()).filter(Boolean).join(', ');
+
+      const storedEmail = client.email?.trim() || '';
+      const storedCompanyName = client.company_name?.trim() || '';
+      const storedTaxId = client.vat_gstin?.trim() || '';
+      const storedAddress = client.address?.trim() || '';
+
+      const checks = [
+        { key: 'email', name: 'Email', old: storedEmail, new: invoiceEmail },
+        { key: 'company_name', name: 'Company Name', old: storedCompanyName, new: invoiceCompanyName },
+        { key: 'vat_gstin', name: 'Tax ID', old: storedTaxId, new: invoiceTaxId },
+        { key: 'address', name: 'Address', old: storedAddress, new: invoiceAddress }
+      ];
+
+      checks.forEach(c => {
+        if (c.new && c.new.toLowerCase() !== c.old.toLowerCase()) {
+          const updateKey = `${client.id}:${c.key}:${c.new}`;
+          const isDismissed = dismissedUpdates.includes(updateKey);
+
+          if (!isDismissed) {
+            mismatches.push({
+              clientId: client.id,
+              clientName: client.name,
+              field: c.key,
+              fieldName: c.name,
+              oldVal: c.old || '—',
+              newVal: c.new,
+              invoiceId: latestInvoice.id,
+              invoiceNumber: formData.invoiceNumber || 'recent invoice'
+            });
+          }
+        }
+      });
     }
-    return acc
-  }, {})
+  });
 
-  const clients: ClientSummary[] = Object.values(clientsMap).map(c => ({
-    ...c,
-    healthScore: c.invoiceCount > 0 ? Math.round((c.paidCount / c.invoiceCount) * 100) : 0
-  }))
-
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: currency || 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const latestMismatches = mismatches.slice(0, 5);
 
   return (
     <DashboardShell 
@@ -97,76 +193,14 @@ export default async function ClientsPage() {
       subscriptionStatus={profile?.subscription_status}
       subscriptionPeriodEnd={profile?.subscription_period_end}
     >
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-ink-900">Clients</h1>
-          <p className="text-ink-500 mt-1">Directory of clients derived from your invoice history.</p>
-        </div>
-      </div>
-
-      <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="text-ink-400 text-xs uppercase tracking-widest border-b border-ink-100 bg-ink-50/30">
-                <th className="py-4 px-6 font-bold">Client Name</th>
-                <th className="py-4 px-6 font-bold">Total Billed</th>
-                <th className="py-4 px-6 font-bold text-center">Invoices</th>
-                <th className="py-4 px-6 font-bold text-center">Health</th>
-                <th className="py-4 px-6 font-bold text-right">Outstanding</th>
-                <th className="py-4 px-6 font-bold text-right">Latest Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink-50">
-              {clients.length > 0 ? (
-                clients.map((client) => (
-                  <tr key={client.name} className="group hover:bg-ink-50/50 transition-colors">
-                    <td className="py-5 px-6">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-ink-900">{client.name}</span>
-                        <span className="text-xs text-ink-400">{client.email || 'No email provided'}</span>
-                      </div>
-                    </td>
-                    <td className="py-5 px-6 font-bold text-ink-900">
-                      {formatCurrency(client.totalBilled, client.currency)}
-                    </td>
-                    <td className="py-5 px-6 text-center text-ink-500 font-medium">
-                      {client.invoiceCount}
-                    </td>
-                    <td className="py-5 px-6 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
-                        client.healthScore >= 80 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                        client.healthScore >= 50 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                        'bg-red-500/10 text-red-600 border-red-500/20'
-                      }`}>
-                        {client.healthScore}%
-                      </span>
-                    </td>
-                    <td className="py-5 px-6 text-right font-medium text-ink-700">
-                      {client.outstandingAmount > 0 ? formatCurrency(client.outstandingAmount, client.currency) : '—'}
-                    </td>
-                    <td className="py-5 px-6 text-right">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
-                        client.status === 'paid' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                        client.status === 'overdue' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
-                        'bg-brand-500/10 text-brand-600 border-brand-500/20'
-                      }`}>
-                        {client.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="py-20 text-center italic text-ink-400">
-                    No clients found. Generate an invoice to see them here.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ClientsClient
+        initialClients={savedClients}
+        potentialClients={potentialClients}
+        potentialUpdates={latestMismatches}
+        billingStats={billingStats}
+        userTier={profile?.tier || 'free'}
+        userId={user.id}
+      />
     </DashboardShell>
-  )
+  );
 }

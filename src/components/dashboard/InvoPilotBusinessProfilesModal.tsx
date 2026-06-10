@@ -11,6 +11,7 @@ interface InvoPilotBusinessProfilesModalProps {
   userId: string;
   maxBusinesses: number | 'unlimited';
   canUploadLogo: boolean;
+  activeWorkspace?: any;
 }
 
 export default function InvoPilotBusinessProfilesModal({
@@ -19,7 +20,8 @@ export default function InvoPilotBusinessProfilesModal({
   profile,
   userId,
   maxBusinesses,
-  canUploadLogo
+  canUploadLogo,
+  activeWorkspace
 }: InvoPilotBusinessProfilesModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -60,8 +62,15 @@ export default function InvoPilotBusinessProfilesModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-ink-100 shrink-0 bg-ink-50/20">
           <div>
-            <h3 className="font-bold text-lg text-ink-900">Manage Business Profiles</h3>
-            <p className="text-xs text-ink-400 font-medium">Configure multiple sender profiles and details</p>
+            <h3 className="font-bold text-lg text-ink-900 flex items-center gap-2">
+              Manage Business Profiles
+              {activeWorkspace?.name && (
+                <span className="text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded-md truncate max-w-[200px]">
+                  {activeWorkspace.name}
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-ink-400 font-medium">Configure multiple sender profiles and details for this workspace</p>
           </div>
           <button 
             onClick={onClose}
@@ -80,6 +89,7 @@ export default function InvoPilotBusinessProfilesModal({
             maxBusinesses={maxBusinesses}
             canUploadLogo={canUploadLogo}
             isModal={true}
+            activeWorkspace={activeWorkspace}
           />
         </div>
       </div>

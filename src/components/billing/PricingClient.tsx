@@ -28,21 +28,7 @@ export default function PricingClient({ profile }: Props) {
   const access = useMemo(() => resolvePlanAccess(profile), [profile]);
   const [interval, setInterval] = useState<BillingInterval>('month');
   const [loadingTier, setLoadingTier] = useState<PaidBillingTier | null>(null);
-  const [showResetModal, setShowResetModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-
-
-  const handleDevReset = async () => {
-    try {
-      const res = await fetch('/api/billing/dev-reset', { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to reset');
-      setShowResetModal(false);
-      toast.success('Tier reset to free!');
-      router.refresh();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    }
-  };
 
   const handleCancelSubscription = async () => {
     try {
@@ -124,17 +110,6 @@ export default function PricingClient({ profile }: Props) {
   return (
     <div className="space-y-8">
       <ConfirmationModal
-        isOpen={showResetModal}
-        onClose={() => setShowResetModal(false)}
-        onConfirm={handleDevReset}
-        title="Hard Reset Tier? (DEV ONLY)"
-        message="Are you sure you want to completely wipe your subscription status? This will instantly revert your account to the Free tier and delete any active subscription IDs. This is for local development testing only."
-        confirmLabel="Nuke Tier"
-        isDestructive={true}
-        requirePassword={false}
-      />
-      
-      <ConfirmationModal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         onConfirm={handleCancelSubscription}
@@ -186,15 +161,6 @@ export default function PricingClient({ profile }: Props) {
         </div>
         
         <div className="flex items-center gap-2">
-          {process.env.NODE_ENV === 'development' && (
-            <button
-              type="button"
-              onClick={() => setShowResetModal(true)}
-              className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 transition-colors whitespace-nowrap"
-            >
-              Nuke Tier (Dev)
-            </button>
-          )}
 
           {access.effectiveTier !== 'free' && !access.isAdmin && !access.isExpired && !profile?.cancel_requested_at && (
             <button
@@ -253,7 +219,7 @@ export default function PricingClient({ profile }: Props) {
                 {isCurrent ? 'Current plan' : plan.tier === 'free' ? 'Free default' : plan.cta}
               </button>
 
-              <div className="mt-5 grid grid-cols-2 gap-2 border-y border-ink-100 py-4 text-xs font-bold text-ink-500">
+              <div className="mt-5 grid grid-cols-3 gap-2 border-y border-ink-100 py-4 text-xs font-bold text-ink-500">
                 <div>
                   <span className="block text-ink-400">Invoices</span>
                   {formatPlanLimit(plan.maxInvoices)}
@@ -261,6 +227,10 @@ export default function PricingClient({ profile }: Props) {
                 <div>
                   <span className="block text-ink-400">Clients</span>
                   {formatPlanLimit(plan.maxClients)}
+                </div>
+                <div>
+                  <span className="block text-ink-400">Storage</span>
+                  {plan.maxStorageBytes >= 1024 * 1024 * 1024 ? `${plan.maxStorageBytes / (1024 * 1024 * 1024)} GB` : `${plan.maxStorageBytes / (1024 * 1024)} MB`}
                 </div>
               </div>
 

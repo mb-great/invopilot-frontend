@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 import DashboardShell from '@/components/layout/DashboardShell';
 import AvatarUpload from '@/components/dashboard/AvatarUpload';
 import PasswordSettings from '@/components/dashboard/PasswordSettings';
@@ -24,6 +25,34 @@ export default async function SettingsPage() {
     .select('*')
     .eq('id', user.id)
     .single();
+
+  const cookieStore = await cookies();
+  const activeWorkspaceId = cookieStore.get('invopilot_active_workspace')?.value;
+  let activeWorkspace = null;
+
+  if (activeWorkspaceId) {
+    const { data: wsData } = await supabase
+      .from('workspaces')
+      .select('*')
+      .eq('id', activeWorkspaceId)
+      .single();
+    if (wsData) activeWorkspace = wsData;
+  }
+
+  if (!activeWorkspace) {
+    const { data: defaultWs } = await supabase
+      .from('workspace_members')
+      .select('workspaces(*)')
+      .eq('user_id', user.id)
+      .eq('status', 'accepted')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+    
+    if (defaultWs?.workspaces) {
+      activeWorkspace = Array.isArray(defaultWs.workspaces) ? defaultWs.workspaces[0] : defaultWs.workspaces;
+    }
+  }
 
   async function updateProfile(formData: FormData) {
     'use server';
@@ -112,6 +141,7 @@ export default async function SettingsPage() {
                     userId={user.id}
                     maxBusinesses={access.plan.maxBusinesses}
                     canUploadLogo={access.plan.canUploadLogo}
+                    activeWorkspace={activeWorkspace}
                   />
                   <NotificationSettingsSection profile={profile} />
                 </>

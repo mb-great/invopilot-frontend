@@ -5,6 +5,7 @@ import DashboardShell from '@/components/layout/DashboardShell'
 import InvoiceTable from '@/components/dashboard/InvoiceTable'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { resolvePlanAccess } from '@/lib/billing/tiers'
+import { getActiveWorkspaceId } from '@/lib/workspace'
 import { ArrowRightLeft } from 'lucide-react'
 
 export default async function QuotesPage() {
@@ -19,29 +20,31 @@ export default async function QuotesPage() {
     .eq('id', user.id)
     .single()
 
+  const activeWorkspaceId = await getActiveWorkspaceId(user.id);
+
   // Get actual count of non-deleted quotes
   const { count: actualQuoteCount } = await supabase
     .from('invoices')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+    .eq('workspace_id', activeWorkspaceId)
     .in('payment_status', ['quote', 'converted'])
     .is('deleted_at', null)
 
   const { data: quotes } = await supabase
     .from('invoices')
-    .select('*')
-    .eq('user_id', user.id)
+    .select('*, profiles(full_name, avatar_url, email)')
+    .eq('workspace_id', activeWorkspaceId)
     .in('payment_status', ['quote', 'converted'])
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(0, 9)
 
-  const { data: metrics } = await supabase
-    .from('user_currency_metrics')
-    .select('currency')
-    .eq('user_id', user.id)
-
-  const availableCurrencies = metrics?.map(m => m.currency) || []
+  const { data: statsData } = await supabase.rpc('get_workspace_dashboard_stats', { workspace_id_param: activeWorkspaceId });
+  const stats = statsData || { top_currencies: [], other_currencies: [] };
+  const availableCurrencies = [
+    ...stats.top_currencies.map((c: any) => c.currency),
+    ...stats.other_currencies.map((c: any) => c.currency)
+  ]
   const access = resolvePlanAccess(profile);
   
   const totalCount = actualQuoteCount ?? 0;

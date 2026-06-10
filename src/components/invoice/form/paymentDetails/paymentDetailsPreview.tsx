@@ -15,6 +15,8 @@ export const PaymentDetailsPreview: React.FC<
   routingCode,
   swiftCode,
   ifscCode,
+  paypalEmail,
+  cryptoAddress,
   upiId,
   upiLockAmount,
   showUpiQr,
@@ -59,9 +61,11 @@ export const PaymentDetailsPreview: React.FC<
     }
   }, [upiId, upiLockAmount, showUpiQr, totalAmount, companyDetails.companyName]);
 
+  const hasBankDetails = !!(bankName?.trim() || accountNumber?.trim() || accountName?.trim() || swiftCode?.trim() || routingCode?.trim() || ifscCode?.trim());
+
   return (
     <div
-      className={`grid grid-cols-2 relative h-full ${onClick ? 'group cursor-pointer' : 'cursor-default'}`}
+      className={`grid ${hasBankDetails ? 'grid-cols-2' : 'grid-cols-1'} relative h-full ${onClick ? 'group cursor-pointer' : 'cursor-default'}`}
       onClick={() => onClick && onClick("4")}
     >
       {!!onClick && (
@@ -73,40 +77,42 @@ export const PaymentDetailsPreview: React.FC<
         </>
       )}
       
-      {/* Left Column: Bank Details */}
-      <div className="py-3 pl-5 pr-3 border-r border-neutral-100 flex flex-col justify-between">
-        <div>
-          <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-2">
-            Bank Details
-          </p>
-          <div className="space-y-2">
-            {[
-              { label: "Bank Name", value: bankName },
-              { label: "Account Number", value: accountNumber },
-              { label: "Account Name", value: accountName },
-              { label: "Swift Code", value: swiftCode },
-              ...(routingCode ? [{ label: "Routing Code", value: routingCode }] : []),
-              ...(ifscCode ? [{ label: "IFSC Code", value: ifscCode }] : []),
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-[8px] text-gray-400 font-semibold uppercase tracking-wider leading-none">
-                  {label}
-                </p>
-                {value ? (
-                  <p className="text-[10px] font-bold text-gray-700 leading-tight break-all mt-0.5">
-                    {value}
+      {/* Left Column: Bank Details (Conditionally Rendered) */}
+      {hasBankDetails && (
+        <div className="py-3 pl-5 pr-3 border-r border-neutral-100 flex flex-col justify-between">
+          <div>
+            <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-2">
+              Bank Details
+            </p>
+            <div className="space-y-2">
+              {[
+                { label: "Bank Name", value: bankName },
+                { label: "Account Number", value: accountNumber },
+                { label: "Account Name", value: accountName },
+                { label: "Swift Code", value: swiftCode },
+                ...(routingCode ? [{ label: "Routing Code", value: routingCode }] : []),
+                ...(ifscCode ? [{ label: "IFSC Code", value: ifscCode }] : []),
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[8px] text-gray-400 font-semibold uppercase tracking-wider leading-none">
+                    {label}
                   </p>
-                ) : (
-                  <div className="rounded-[3px] bg-neutral-100 h-3 w-3/4 animate-pulse mt-0.5" />
-                )}
-              </div>
-            ))}
+                  {value ? (
+                    <p className="text-[10px] font-bold text-gray-700 leading-tight break-all mt-0.5">
+                      {value}
+                    </p>
+                  ) : (
+                    <div className="rounded-[3px] bg-neutral-100 h-3 w-3/4 animate-pulse mt-0.5" />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Right Column: Payable In & UPI QR Code */}
-      <div className="py-3 px-5 flex flex-col justify-between">
+      {/* Right Column: Payable In & Alt Payments */}
+      <div className="py-3 px-5 flex flex-col">
         <div>
           <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-2">
             Payable in
@@ -128,7 +134,7 @@ export const PaymentDetailsPreview: React.FC<
         </div>
 
         {/* UPI QR Section */}
-        {upiId && qrUrl && showUpiQr !== false && (
+        {upiId?.trim() && qrUrl && showUpiQr !== false && (
           <div className="mt-4 pt-4 border-t border-dashed border-neutral-100 flex flex-col items-start animate-in fade-in duration-200">
             <p className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider mb-1.5">
               Pay via UPI
@@ -138,6 +144,30 @@ export const PaymentDetailsPreview: React.FC<
             </div>
             <p className="text-[8px] font-bold text-gray-500 mt-1 uppercase tracking-tight break-all max-w-[120px]">
               {upiId}
+            </p>
+          </div>
+        )}
+
+        {/* PayPal Section */}
+        {paypalEmail?.trim() && (
+          <div className="mt-4 pt-4 border-t border-dashed border-neutral-100 flex flex-col items-start animate-in fade-in duration-200">
+            <p className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider mb-1.5">
+              Pay via PayPal
+            </p>
+            <p className="text-[10px] font-bold text-gray-700 leading-tight break-all">
+              {paypalEmail}
+            </p>
+          </div>
+        )}
+
+        {/* Crypto Section */}
+        {cryptoAddress?.trim() && (
+          <div className="mt-4 pt-4 border-t border-dashed border-neutral-100 flex flex-col items-start animate-in fade-in duration-200">
+            <p className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider mb-1.5">
+              Pay via Crypto
+            </p>
+            <p className="text-[10px] font-bold text-gray-700 leading-tight break-all">
+              {cryptoAddress}
             </p>
           </div>
         )}

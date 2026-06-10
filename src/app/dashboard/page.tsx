@@ -1,11 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import DashboardShell from '@/components/layout/DashboardShell'
+export const dynamic = 'force-dynamic';
 import Link from 'next/link'
 import InvoiceTable from '@/components/dashboard/InvoiceTable'
 import EmptyState from '@/components/dashboard/EmptyState'
 import StatCards from '@/components/dashboard/StatCards'
 import RightSidebar from '@/components/dashboard/RightSidebar'
 import BusinessProfileDropdown from '@/components/dashboard/BusinessProfileDropdown'
+import WorkspaceSwitcher from '@/components/dashboard/WorkspaceSwitcher'
+import PendingInvitesModal from '@/components/dashboard/PendingInvitesModal'
+import { cookies } from 'next/headers'
 import RevenueChart from '@/components/dashboard/RevenueChart'
 import StatusDonut from '@/components/dashboard/StatusDonut'
 import HelpPopover from '@/components/ui/HelpPopover'
@@ -38,55 +42,95 @@ export default async function DashboardPage({
     subscription_period_end: profile?.subscription_period_end,
   });
 
-  const businesses = (profile?.defaults?.businesses || []).filter((b: any) => !b.deletedAt);
+  // Await cookies since Next.js 15
+  const cookieStore = await cookies();
+  const activeWorkspaceCookie = cookieStore.get('invopilot_active_workspace')?.value;
+
+  // Fetch all workspaces user is a member of (accepted and pending)
+  const { data: allMemberships } = await supabase
+    .from('workspace_members')
+    .select('id, role, status, workspaces(id, name, owner_id, businesses)')
+    .eq('user_id', user.id);
+
+  const memberships = allMemberships?.filter(m => m.status === 'accepted') || [];
+  const pendingInvites = allMemberships?.filter(m => m.status === 'pending') || [];
+
+  const workspacesData = memberships
+    .map((m: any) => m.workspaces)
+    .filter(Boolean);
+
+  // Fetch profiles for the owners to correctly format workspace names
+  const ownerIds = [...new Set(workspacesData.map((w: any) => w.owner_id))];
+  const { data: ownersProfiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, company_name')
+    .in('id', ownerIds);
+
+  const workspaces = workspacesData.map((ws: any) => {
+    const ownerProfile = ownersProfiles?.find((p: any) => p.id === ws.owner_id);
+    let displayName = ws.name;
+    
+    if (ws.owner_id === user.id) {
+      // It's the user's own workspace
+      displayName = 'Personal Workspace';
+    } else if (ownerProfile) {
+      // It's an invited workspace
+      displayName = ownerProfile.company_name || (ownerProfile.full_name ? `${ownerProfile.full_name}'s Workspace` : ws.name);
+    }
+    
+    return { ...ws, displayName };
+  });
+
+  let activeWorkspace = workspaces.find((w: any) => w.id === activeWorkspaceCookie);
+  if (!activeWorkspace && workspaces.length > 0) {
+    activeWorkspace = workspaces.find((w: any) => w.owner_id === user.id) || workspaces[0];
+  }
+
+  const businesses = (activeWorkspace?.businesses || []).filter((b: any) => !b.deletedAt);
   const isMultiBusinessLocked = !access.plan.canUseQuotes && !access.isAdmin; // using Quotes access as proxy for Pro tier
 
-  // Fetch all invoices to compute charts and filtered stats
+  // Fetch only recent invoices to prevent node heap limit crashes (250MB)
   let query = supabase
     .from('invoices')
-    .select('*')
-    .eq('user_id', user.id)
+    .select('id, amount, currency, payment_status, created_at, nickname, invoice_number, share_slug, status, pdf_url, form_data->>dueDate')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+    .limit(10);
+    
+  if (activeWorkspace) {
+    query = query.eq('workspace_id', activeWorkspace.id);
+  } else {
+    query = query.eq('user_id', user.id);
+  }
 
   if (businessFilter && !isMultiBusinessLocked) {
     query = query.eq('business_profile_name', businessFilter)
   }
 
-  const { data: allInvoicesData } = await query
-  const allInvoices = allInvoicesData || []
+  const { data: recentInvoicesData } = await query
+  const recentInvoices = recentInvoicesData || []
 
-  // Fetch metrics data via RPC if no filter, otherwise compute manually
+  // Calculate global storage used (not affected by businessFilter)
+  let storageQuery = supabase
+    .from('invoices')
+    .select('pdf_size')
+    .is('deleted_at', null);
+    
+  if (activeWorkspace) {
+    storageQuery = storageQuery.eq('workspace_id', activeWorkspace.id);
+  } else {
+    storageQuery = storageQuery.eq('user_id', user.id);
+  }
+  
+  const { data: storageData } = await storageQuery;
+    
+  const currentStorageBytes = (storageData || []).reduce((sum, inv) => sum + Number(inv.pdf_size || 0), 0)
+
+  // Fetch metrics data via RPC (aggregated in Postgres to protect Node Heap)
   let stats;
-  if (businessFilter && !isMultiBusinessLocked) {
-    let topMap = new Map();
-    allInvoices.forEach(inv => {
-      let amt = 0;
-      if (inv.amount) amt = inv.amount;
-      else if (inv.form_data?.items) {
-        amt = inv.form_data.items.reduce((s: number, i: any) => s + ((i.quantity || 0) * (i.rate || 0)), 0);
-      }
-      const cur = inv.currency || inv.form_data?.currency || 'USD';
-      if (!topMap.has(cur)) topMap.set(cur, { currency: cur, outstanding: 0, paid: 0, overdue: 0, this_month: 0, total_volume: 0, invoice_count: 0 });
-      let curStats = topMap.get(cur);
-      curStats.invoice_count++;
-      curStats.total_volume += amt;
-      const status = inv.payment_status || 'draft';
-      if (status === 'paid') curStats.paid += amt;
-      if (status === 'sent' || status === 'overdue') curStats.outstanding += amt;
-      if (status === 'overdue') curStats.overdue += amt;
-      const date = new Date(inv.created_at);
-      const now = new Date();
-      if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
-        curStats.this_month += amt;
-      }
-    });
-    const sorted = Array.from(topMap.values()).sort((a, b) => b.total_volume - a.total_volume);
-    stats = {
-      top_currencies: sorted.slice(0, 3),
-      other_currencies: sorted.slice(3),
-      total_invoice_count: allInvoices.length
-    };
+  if (activeWorkspace) {
+    const { data: statsData } = await supabase.rpc('get_workspace_dashboard_stats', { workspace_id_param: activeWorkspace.id })
+    stats = statsData || { top_currencies: [], other_currencies: [], total_invoice_count: 0 }
   } else {
     const { data: statsData } = await supabase.rpc('get_dashboard_stats', { user_id_param: user.id })
     stats = statsData || { top_currencies: [], other_currencies: [], total_invoice_count: 0 }
@@ -96,8 +140,6 @@ export default async function DashboardPage({
     ...stats.top_currencies.map((c: any) => c.currency),
     ...stats.other_currencies.map((c: any) => c.currency)
   ]
-
-  const recentInvoices = allInvoices.slice(0, 10);
 
   const initialMeta = {
     total: stats.total_invoice_count,
@@ -116,9 +158,10 @@ export default async function DashboardPage({
       subscriptionStatus={profile?.subscription_status}
       subscriptionPeriodEnd={profile?.subscription_period_end}
     >
+      <PendingInvitesModal invites={pendingInvites as any[]} />
       <div className="flex flex-col space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between shrink-0">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between shrink-0 gap-4 md:gap-0">
           <div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-ink-900 flex items-center gap-3">
               Your <span className="headline-accent italic font-serif font-normal">dashboard</span>
@@ -150,7 +193,8 @@ export default async function DashboardPage({
             </h1>
             <p className="text-ink-500 mt-2 text-lg">Snapshot of your invoicing — outstanding, paid, and what&apos;s due next.</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <WorkspaceSwitcher workspaces={workspaces} activeWorkspaceId={activeWorkspace?.id} />
             <BusinessProfileDropdown 
               businesses={businesses} 
               isLocked={isMultiBusinessLocked} 
@@ -158,8 +202,9 @@ export default async function DashboardPage({
               userId={user.id}
               maxBusinesses={access.plan.maxBusinesses}
               canUploadLogo={access.plan.canUploadLogo || access.isAdmin}
+              activeWorkspace={activeWorkspace}
             />
-            <Link href="/invoices/new" className="btn-brand shadow-lg shadow-brand-500/20 flex items-center gap-2 px-6">
+            <Link href="/invoices/new" className="btn-brand shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2 px-6 py-2.5">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
               New invoice
             </Link>
@@ -178,10 +223,10 @@ export default async function DashboardPage({
         {access.effectiveTier !== 'free' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
             <div className="lg:col-span-2">
-              <RevenueChart invoices={allInvoices} targetCurrency={stats.top_currencies?.[0]?.currency || 'USD'} profile={profile} />
+              <RevenueChart activeWorkspaceId={activeWorkspace?.id} targetCurrency={stats.top_currencies?.[0]?.currency || 'USD'} profile={profile} />
             </div>
             <div className="lg:col-span-1">
-              <StatusDonut invoices={allInvoices} />
+              <StatusDonut activeWorkspaceId={activeWorkspace?.id} />
             </div>
           </div>
         )}
@@ -211,7 +256,12 @@ export default async function DashboardPage({
           </div>
 
           <div className="lg:col-span-1 flex flex-col">
-            <RightSidebar profile={profile} stats={stats} recentInvoices={recentInvoices || []} />
+            <RightSidebar 
+              profile={profile} 
+              stats={stats} 
+              recentInvoices={recentInvoices.slice(0, 5)} 
+              currentStorageBytes={currentStorageBytes} 
+            />
           </div>
         </div>
       </div>

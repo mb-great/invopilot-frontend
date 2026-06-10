@@ -75,6 +75,16 @@ export const PaymentDetailsForm = ({ profile }: { profile: any }) => {
         placeholder="HSBCINAA123"
         variableName="swiftCode"
       />
+      <CustomTextInput
+        label="PayPal Email / Link"
+        placeholder="paypal.me/username"
+        variableName="paypalEmail"
+      />
+      <CustomTextInput
+        label="Crypto Wallet Address"
+        placeholder="0x... (ERC20)"
+        variableName="cryptoAddress"
+      />
       
       <div className="border-t border-ink-100 my-6 pt-6">
         <h4 className="font-bold text-sm text-ink-900 mb-4 flex items-center gap-1.5">

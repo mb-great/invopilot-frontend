@@ -43,12 +43,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing quote id' }, { status: 400 });
   }
 
-  // Fetch original quote — must belong to this user and be a quote
   const { data: quote, error: fetchErr } = await supabase
     .from('invoices')
     .select('*')
     .eq('id', quoteId)
-    .eq('user_id', user.id)
     .is('deleted_at', null)
     .maybeSingle();
 
@@ -60,11 +58,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This quote has already been converted' }, { status: 409 });
   }
 
-  // Generate new invoice number
   const { count } = await supabase
     .from('invoices')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id);
+    .eq('workspace_id', quote.workspace_id);
 
   const nextNum = (count ?? 0) + 1;
   const newInvoiceNumber = `INV-${new Date().getFullYear()}-${String(nextNum).padStart(5, '0')}`;
@@ -80,6 +77,7 @@ export async function POST(request: Request) {
     .from('invoices')
     .insert({
       user_id: user.id,
+      workspace_id: quote.workspace_id,
       form_data: clonedFormData,
       status: 'queued',
       payment_status: 'draft',

@@ -19,6 +19,7 @@ export type BillingProfile = {
   total_invoices_generated?: number | null;
   razorpay_sub_id?: string | null;
   cancel_requested_at?: string | null;
+  over_limit_since?: string | null;
   notification_preferences?: any;
 };
 
@@ -35,6 +36,7 @@ export type PlanDefinition = {
   maxClients: PlanLimit;
   maxBusinesses: PlanLimit;
   maxTeamMembers: PlanLimit;
+  maxStorageBytes: number;
   canUseQuotes: boolean;
   canUploadLogo: boolean;
   canExportCsv: boolean;
@@ -56,6 +58,7 @@ export const PLANS: PlanDefinition[] = [
     maxClients: 5,
     maxBusinesses: 1,
     maxTeamMembers: 1,
+    maxStorageBytes: 50 * 1024 * 1024, // 50 MB
     canUseQuotes: false,
     canUploadLogo: false,
     canExportCsv: false,
@@ -68,6 +71,7 @@ export const PLANS: PlanDefinition[] = [
       'Save up to 5 invoices',
       'Basic invoice history',
       '5 clients max',
+      '50 MB PDF storage',
     ],
     excluded: [
       'Dashboard & charts',
@@ -90,6 +94,7 @@ export const PLANS: PlanDefinition[] = [
     maxClients: 20,
     maxBusinesses: 1,
     maxTeamMembers: 1,
+    maxStorageBytes: 500 * 1024 * 1024, // 500 MB
     canUseQuotes: false,
     canUploadLogo: false,
     canExportCsv: false,
@@ -104,6 +109,7 @@ export const PLANS: PlanDefinition[] = [
       'Email invoice to client',
       'Invoice status tracking (draft/sent/paid/overdue)',
       '1 business profile with autofill',
+      '500 MB PDF storage',
     ],
     excluded: [
       'Payment links (Razorpay)',
@@ -126,6 +132,7 @@ export const PLANS: PlanDefinition[] = [
     maxClients: 'unlimited',
     maxBusinesses: 3,
     maxTeamMembers: 1,
+    maxStorageBytes: 5 * 1024 * 1024 * 1024, // 5 GB
     canUseQuotes: true,
     canUploadLogo: true,
     canExportCsv: true,
@@ -144,6 +151,7 @@ export const PLANS: PlanDefinition[] = [
       'Custom logo + branding on invoice',
       'Multi-business (up to 3)',
       'Send invoice email with payment link',
+      '5 GB PDF storage',
     ],
     excluded: [],
   },
@@ -158,6 +166,7 @@ export const PLANS: PlanDefinition[] = [
     maxClients: 'unlimited',
     maxBusinesses: 10,
     maxTeamMembers: 5,
+    maxStorageBytes: 20 * 1024 * 1024 * 1024, // 20 GB
     canUseQuotes: true,
     canUploadLogo: true,
     canExportCsv: true,
@@ -171,6 +180,7 @@ export const PLANS: PlanDefinition[] = [
       'Annual GST export report',
       'API access (coming soon)',
       'Priority support',
+      '20 GB PDF storage',
     ],
     excluded: [],
   },
@@ -232,10 +242,12 @@ export function canCreateInvoice(
   profile: BillingProfile | null, 
   lifetimeGenerated: number, 
   periodGenerated: number | null, 
-  reservedPdfCount = 0
+  reservedPdfCount = 0,
+  currentStorageBytes = 0
 ) {
   const access = resolvePlanAccess(profile);
   const limit = access.plan.maxInvoices;
+  const storageLimit = access.plan.maxStorageBytes;
   
   // Guard: Ensure strict separation of lifetime vs period quotas
   let baseCount = 0;
@@ -258,15 +270,29 @@ export function canCreateInvoice(
     
   const used = baseCount + Math.max(0, reservedPdfCount);
 
-  if (access.isAdmin || isPlanUnlimited(limit)) {
-    return { allowed: true, access, remaining: null as number | null, used };
+  if (access.isAdmin) {
+    return { allowed: true, access, remaining: null as number | null, used, storageLimitExceeded: false };
+  }
+
+  // Check storage limit
+  const storageLimitExceeded = currentStorageBytes >= storageLimit;
+
+  if (isPlanUnlimited(limit)) {
+    return {
+      allowed: !storageLimitExceeded,
+      access,
+      remaining: null as number | null,
+      used,
+      storageLimitExceeded
+    };
   }
 
   const remaining = Math.max(limit - used, 0);
   return {
-    allowed: used < limit,
+    allowed: used < limit && !storageLimitExceeded,
     access,
     remaining,
     used,
+    storageLimitExceeded
   };
 }

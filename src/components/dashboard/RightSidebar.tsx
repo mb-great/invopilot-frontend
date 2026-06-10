@@ -8,11 +8,13 @@ import { format } from 'date-fns';
 export default function RightSidebar({ 
   profile, 
   stats, 
-  recentInvoices 
+  recentInvoices,
+  currentStorageBytes
 }: { 
   profile: any, 
   stats: any, 
-  recentInvoices: any[] 
+  recentInvoices: any[],
+  currentStorageBytes?: number
 }) {
   const access = resolvePlanAccess(profile);
   const used = stats?.total_invoice_count || 0;
@@ -23,11 +25,27 @@ export default function RightSidebar({
   const remaining = isUnlimited ? null : Math.max((limit as number) - used, 0);
   const percentage = isUnlimited ? 0 : Math.min((used / (limit as number)) * 100, 100);
 
+  // Calculate storage usage
+  const storageLimit = access.plan.maxStorageBytes;
+  const storageUsed = currentStorageBytes || 0;
+  const storagePercentage = Math.min((storageUsed / storageLimit) * 100, 100);
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const formattedStorageUsed = formatBytes(storageUsed);
+  const formattedStorageLimit = formatBytes(storageLimit);
+
   // Derive Insights (Overdue / Unpaid)
   const unpaidInvoices = recentInvoices.filter(i => i.payment_status !== 'paid');
   const overdueCount = unpaidInvoices.filter(i => {
-    if (!i.due_date && !i.form_data?.dueDate) return false;
-    const dueDate = new Date(i.due_date || i.form_data?.dueDate);
+    const dueDateValue = i.due_date || (i as any).dueDate || i.form_data?.dueDate;
+    if (!dueDateValue) return false;
+    const dueDate = new Date(dueDateValue);
     return dueDate.getTime() < new Date().getTime();
   }).length;
 
@@ -55,6 +73,29 @@ export default function RightSidebar({
               />
             </div>
           )}
+
+          <div className="flex justify-between text-xs font-bold mb-2 relative group cursor-help">
+            <span className="text-ink-500 flex items-center gap-1">
+              Storage Used
+              {storagePercentage >= 100 && <AlertCircle className="w-3 h-3 text-red-500 animate-pulse" />}
+            </span>
+            <span className={`${storagePercentage >= 100 ? 'text-red-600' : 'text-ink-900'}`}>
+              {formattedStorageUsed} / {formattedStorageLimit}
+            </span>
+            
+            {storagePercentage >= 100 && (
+              <div className="absolute right-0 top-6 w-56 p-3 bg-red-950 text-red-50 text-[11px] font-medium leading-relaxed rounded-xl shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none border border-red-900/50">
+                <strong className="block text-white mb-1">Storage Limit Reached</strong>
+                Generating a new invoice will automatically purge your oldest PDF to make room. Upgrade your plan for more space.
+              </div>
+            )}
+          </div>
+          <div className="w-full h-2 bg-ink-100 rounded-full overflow-hidden mb-4">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${storagePercentage >= 100 ? 'bg-red-500' : storagePercentage > 90 ? 'bg-amber-500' : 'bg-brand-500'}`}
+              style={{ width: `${storagePercentage}%` }}
+            />
+          </div>
           
           {access.effectiveTier === 'free' && (
             <Link href="/pricing" className="block w-full text-center py-2 rounded-lg bg-ink-900 text-white text-xs font-bold hover:bg-ink-800 transition-colors">

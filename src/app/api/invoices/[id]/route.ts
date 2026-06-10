@@ -16,7 +16,6 @@ export async function DELETE(
     .from('invoices')
     .select('id')
     .eq('id', id)
-    .eq('user_id', user.id)
     .is('deleted_at', null)
     .single();
 
@@ -26,8 +25,7 @@ export async function DELETE(
   const { error: deleteError } = await supabase
     .from('invoices')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', id)
-    .eq('user_id', user.id);
+    .eq('id', id);
 
   if (deleteError) {
     console.error('Soft delete error:', deleteError);

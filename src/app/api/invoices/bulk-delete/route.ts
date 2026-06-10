@@ -16,7 +16,6 @@ export async function POST(request: Request) {
   const { error } = await supabase
     .from('invoices')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('user_id', user.id)
     .in('id', ids);
 
   if (error) {

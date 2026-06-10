@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getActiveWorkspaceId } from '@/lib/workspace';
 import RecurringClient from './RecurringClient';
 import { getRecurringTemplates } from './actions';
 import Link from 'next/link';
@@ -25,10 +26,12 @@ export default async function RecurringTemplatesPage() {
     subscription_period_end: profile?.subscription_period_end,
   });
 
+  const activeWorkspaceId = await getActiveWorkspaceId(user.id);
+
   const { data: invoicesData } = await supabase
     .from('invoices')
     .select('id, nickname, form_data, created_at, invoice_number')
-    .eq('user_id', user.id)
+    .eq('workspace_id', activeWorkspaceId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
 

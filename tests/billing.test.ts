@@ -52,4 +52,22 @@ describe('billing tiers', () => {
     expect(gate.allowed).toBe(false);
     expect(gate.used).toBe(5);
   });
+
+  it('blocks invoice generation when cumulative PDF storage limit is exceeded', () => {
+    // Free tier storage limit: 50MB (52,428,800 bytes)
+    const gateExceeded = canCreateInvoice({ role: 'user', tier: 'free' }, 1, null, 0, 50 * 1024 * 1024);
+    expect(gateExceeded.allowed).toBe(false);
+    expect(gateExceeded.storageLimitExceeded).toBe(true);
+
+    const gateAllowed = canCreateInvoice({ role: 'user', tier: 'free' }, 1, null, 0, 49 * 1024 * 1024);
+    expect(gateAllowed.allowed).toBe(true);
+    expect(gateAllowed.storageLimitExceeded).toBe(false);
+  });
+
+  it('allows admins to bypass cumulative storage limits', () => {
+    // Admin role bypass
+    const gate = canCreateInvoice({ role: 'admin', tier: 'free' }, 1, null, 0, 100 * 1024 * 1024);
+    expect(gate.allowed).toBe(true);
+    expect(gate.storageLimitExceeded).toBe(false); // bypassed
+  });
 });

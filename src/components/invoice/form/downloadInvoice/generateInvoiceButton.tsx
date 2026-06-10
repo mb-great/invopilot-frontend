@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, FilePlus2, Loader2, Send } from "lucide-react";
+import { CheckCircle2, FilePlus2, Loader2, Send, AlertCircle } from "lucide-react";
 import { useData } from "@/hooks/useData";
 import { useEffect, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
@@ -26,6 +26,14 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   const [isRecurring, setIsRecurring] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const {
+    companyDetails,
+    invoiceDetails,
+    invoiceTerms,
+    paymentDetails,
+    yourDetails,
+  } = useData();
+
   // P0 fix: clear interval on unmount to prevent background polling leak
   useEffect(() => {
     return () => {
@@ -37,14 +45,6 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   useEffect(() => {
     setValue("generationStatus", status);
   }, [status, setValue]);
-
-  const {
-    companyDetails,
-    invoiceDetails,
-    invoiceTerms,
-    paymentDetails,
-    yourDetails,
-  } = useData();
 
   const handleGenerate = async () => {
     setStatus("generating");
@@ -151,13 +151,13 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   };
 
   return (
-    <div className="flex py-12 md:py-24 justify-center items-center px-4">
+    <div className="flex flex-col py-4 md:py-8 w-full max-w-md mx-auto">
       <ShareDialog 
         isOpen={isShareOpen} 
         onClose={() => setIsShareOpen(false)} 
         shareUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/i/${shareSlug}`} 
       />
-      <div className="w-full max-w-md text-center">
+      <div className="w-full text-center">
         <h1 className="text-4xl font-bold pb-4 text-ink-900">
           {status === "done" ? "Invoice Generated!" : "Your invoice is ready"}
         </h1>
@@ -233,9 +233,27 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         })()}
 
         {status === "error" && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-            {errorMsg}
-          </div>
+          errorMsg.includes("Storage limit") ? (
+            <div className="mb-6 p-5 bg-white border border-red-200 shadow-xl shadow-red-500/10 rounded-2xl text-center">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-ink-900 mb-2">Storage Limit Reached</h3>
+              <p className="text-sm text-ink-500 mb-4">{errorMsg}</p>
+              <div className="flex gap-3 justify-center">
+                <a href="/pricing" className="px-4 py-2 bg-brand-500 text-white font-bold rounded-lg hover:bg-brand-600 transition-colors">
+                  Upgrade Plan
+                </a>
+                <a href="/dashboard" className="px-4 py-2 bg-ink-50 text-ink-700 font-bold rounded-lg hover:bg-ink-100 transition-colors">
+                  Go to Dashboard
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+              {errorMsg}
+            </div>
+          )
         )}
 
         <button

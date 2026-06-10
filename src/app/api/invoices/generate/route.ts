@@ -4,6 +4,7 @@ import { rateLimit } from '@/lib/ratelimit';
 import { logger } from '@/lib/logger';
 import { canCreateInvoice, resolvePlanAccess } from '@/lib/billing/tiers';
 import { requireBillingProfile } from '@/lib/auth/guards';
+import { getActiveWorkspaceId } from '@/lib/workspace';
 
 const QUEUE_CAP = 100;
 const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
@@ -23,21 +24,14 @@ export async function POST(request: Request) {
   if (process.env.NODE_ENV !== 'development' && !rateLimit(ip, 10, 60_000))
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
-  // 2. One active job per user
-  const { data: active } = await supabase
-    .from('invoices').select('id')
-    .eq('user_id', user.id)
-    .in('status', ['queued', 'processing'])
-    .maybeSingle();
 
-  if (active)
-    return NextResponse.json({ error: 'Invoice already generating' }, { status: 429 });
 
   // 3. Tier gate — lifetime PDF cap + queued/processing reserve.
+  const workspaceId = await getActiveWorkspaceId(user.id);
   const { count: reservedPdfCount } = await supabase
     .from('invoices')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+    .eq('workspace_id', workspaceId)
     .in('status', ['queued', 'processing']);
 
   const lifetimeGenerated = profile.total_invoices_generated ?? 0;
@@ -52,19 +46,39 @@ export async function POST(request: Request) {
     const { count: periodCount } = await supabase
       .from('invoices')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('workspace_id', workspaceId)
       .gte('created_at', profile.subscription_period_start)
       .lte('created_at', profile.subscription_period_end);
       
     periodGenerated = periodCount ?? 0;
   }
 
-  const createGate = canCreateInvoice(profile, lifetimeGenerated, periodGenerated, reservedPdfCount ?? 0);
+  // Query cumulative storage usage in bytes
+  const { data: storageData } = await supabase
+    .from('invoices')
+    .select('pdf_size')
+    .eq('workspace_id', workspaceId)
+    .is('deleted_at', null);
+
+  const currentStorageBytes = (storageData || []).reduce((sum, inv) => sum + Number(inv.pdf_size || 0), 0);
+
+  const createGate = canCreateInvoice(
+    profile, 
+    lifetimeGenerated, 
+    periodGenerated, 
+    reservedPdfCount ?? 0, 
+    currentStorageBytes
+  );
+
   if (!createGate.allowed) {
+    let errorMsg = `${createGate.access.plan.name} ${createGate.access.effectiveTier === 'free' ? 'lifetime' : 'billing cycle'} PDF limit reached. Upgrade to keep generating invoices.`;
+    if (createGate.storageLimitExceeded) {
+      errorMsg = `Storage limit reached: You are using ${(currentStorageBytes / (1024 * 1024)).toFixed(1)}MB of your ${(createGate.access.plan.maxStorageBytes / (1024 * 1024)).toFixed(0)}MB limit. Please delete old invoices to free up space.`;
+    }
     return NextResponse.json(
       {
-        error: `${createGate.access.plan.name} ${createGate.access.effectiveTier === 'free' ? 'lifetime' : 'billing cycle'} PDF limit reached. Upgrade to keep generating invoices.`,
-        code: 'TIER_LIMIT_REACHED',
+        error: errorMsg,
+        code: createGate.storageLimitExceeded ? 'STORAGE_LIMIT_REACHED' : 'TIER_LIMIT_REACHED',
         tier: createGate.access.effectiveTier,
         limit: createGate.access.plan.maxInvoices,
         used: createGate.used,
@@ -107,6 +121,7 @@ export async function POST(request: Request) {
     .from('invoices')
     .insert({
       user_id: user.id,
+      workspace_id: workspaceId,
       form_data: formData,
       nickname: body.nickname || null,
       status: 'queued',
@@ -133,8 +148,7 @@ export async function POST(request: Request) {
 
   // 6. Send to isolated backend worker
   try {
-    const backendUrl = BACKEND_URL.replace('localhost', '127.0.0.1'); // Fix Node 18+ IPv6 fetch issue
-    const res = await fetch(`${backendUrl}/queue`, {
+    const res = await fetch(`${BACKEND_URL}/queue`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

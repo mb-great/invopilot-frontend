@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-type PaymentStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+type PaymentStatus = 'draft' | 'unpaid' | 'paid' | 'overdue' | 'cancelled';
 
 type UpdateInvoiceBody = {
   payment_status?: unknown;
@@ -43,7 +43,7 @@ export async function PATCH(
   const updateData: any = {};
 
   if (payment_status !== undefined) {
-    const allowedStatuses: PaymentStatus[] = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
+    const allowedStatuses: PaymentStatus[] = ['draft', 'unpaid', 'paid', 'overdue', 'cancelled'];
     if (typeof payment_status === 'string' && allowedStatuses.includes(payment_status as PaymentStatus)) {
       updateData.payment_status = payment_status;
       if (payment_status === 'paid') {
@@ -68,7 +68,6 @@ export async function PATCH(
     .from('invoices')
     .update(updateData)
     .eq('id', id)
-    .eq('user_id', user.id)
     .select('id, payment_status, share_expires_at, paid_at')
     .single();
 

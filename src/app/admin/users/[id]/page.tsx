@@ -6,6 +6,7 @@ import RecentActivity from '@/components/admin/RecentActivity'
 import UserStatusActions from '@/components/admin/UserStatusActions'
 import Link from 'next/link'
 import { ChevronLeft, Mail, Building, Landmark, MapPin, Hash } from 'lucide-react'
+import UserDetailsTabs from '@/components/admin/UserDetailsTabs'
 
 export default async function UserDetailPage({
   params,
@@ -112,21 +113,13 @@ export default async function UserDetailPage({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <section className="glass-card bg-white border border-ink-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-ink-100 bg-ink-50/30">
-              <h3 className="font-bold text-xl text-ink-900">User Invoices</h3>
-            </div>
-            <div className="p-2">
-              <InvoiceTable 
-                invoices={invoices || []} 
-                initialMeta={initialMeta}
-                showHeader={false}
-                showPaymentToggle={false} 
-                targetUserId={targetUser.id}
-              />
-            </div>
-          </section>
+        <div className="lg:col-span-2">
+          <UserDetailsTabs 
+            user={targetUser} 
+            invoices={invoices || []} 
+            initialMeta={initialMeta} 
+            currentUserRole={adminProfile.role} 
+          />
         </div>
 
         <div className="space-y-8">

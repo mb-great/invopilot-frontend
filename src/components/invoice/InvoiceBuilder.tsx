@@ -16,6 +16,7 @@ import { resolvePlanAccess } from "@/lib/billing/tiers";
 import InvoPilotBusinessProfilesModal from "@/components/dashboard/InvoPilotBusinessProfilesModal";
 import { toast } from "sonner";
 import { clearInvoiceDraft } from "@/lib/invoiceStorage";
+import ImportSelectionModal, { ImportItem } from "@/components/invoice/ImportSelectionModal";
 
 export default function InvoiceBuilder() {
   const methods = useForm();
@@ -23,8 +24,10 @@ export default function InvoiceBuilder() {
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isProfilesModalOpen, setIsProfilesModalOpen] = useState(false);
+  const [importModalType, setImportModalType] = useState<"business" | "client" | "template" | null>(null);
   const importRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -53,6 +56,19 @@ export default function InvoiceBuilder() {
       }
     }
     loadTemplates();
+  }, [profile]);
+
+  useEffect(() => {
+    async function loadClients() {
+      try {
+        const { getClients } = await import("@/app/dashboard/clients/actions");
+        const data = await getClients();
+        setClients(data || []);
+      } catch (err) {
+        console.error('Error loading clients in builder:', err);
+      }
+    }
+    loadClients();
   }, [profile]);
 
   useEffect(() => {
@@ -93,6 +109,33 @@ export default function InvoiceBuilder() {
     });
 
     toast.success(`Imported business profile "${biz.name}"`);
+    setIsImportOpen(false);
+  };
+
+  const handleImportClient = (client: any) => {
+    const mappings: { formField: string; val: any }[] = [
+      { formField: "companyName", val: client.company_name || client.name || "" },
+      { formField: "email", val: client.email || "" },
+      { formField: "companyAddress", val: client.address || "" },
+      { formField: "companyCity", val: "" },
+      { formField: "companyState", val: "" },
+      { formField: "companyZip", val: "" },
+      { formField: "companyCountry", val: "India" },
+      { formField: "companyTaxId", val: client.vat_gstin || "" },
+    ];
+
+    mappings.forEach(({ formField, val }) => {
+      methods.setValue(formField, val);
+      if (typeof window !== "undefined") {
+        if (val) {
+          localStorage.setItem(formField, val);
+        } else {
+          localStorage.removeItem(formField);
+        }
+      }
+    });
+
+    toast.success(`Imported client "${client.name}"`);
     setIsImportOpen(false);
   };
 
@@ -255,60 +298,53 @@ export default function InvoiceBuilder() {
                       </button>
 
                       {isImportOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-ink-150 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[350px] animate-in fade-in slide-in-from-top-1 duration-150">
-                          <div className="overflow-y-auto p-1 divide-y divide-ink-50">
-                            {/* Business Profiles Group */}
-                            <div className="py-1">
-                              <span className="block px-3 py-1 text-[9px] uppercase font-bold tracking-widest text-ink-400">Business Profiles</span>
-                              {businesses.length === 0 ? (
-                                <span className="block px-3 py-1.5 text-xs text-ink-400 italic">No profiles created</span>
-                              ) : (
-                                businesses.map((biz: any) => (
-                                  <button
-                                    key={biz.id}
-                                    onClick={() => handleImportBusiness(biz)}
-                                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-ink-50 transition-colors text-ink-700 truncate"
-                                  >
-                                    💼 {biz.name}
-                                  </button>
-                                ))
-                              )}
-                            </div>
+                        <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-ink-150 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
+                          <div className="p-1 divide-y divide-ink-50">
+                            
+                            <button
+                              onClick={() => {
+                                setIsImportOpen(false);
+                                setImportModalType("business");
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-ink-50 transition-colors text-ink-700 font-medium flex items-center gap-2"
+                            >
+                              💼 Import Business
+                            </button>
 
-                            {/* Recurring Templates Group */}
-                            <div className="py-1">
-                              <div className="flex items-center justify-between px-3 py-1">
-                                <span className="text-[9px] uppercase font-bold tracking-widest text-ink-400">Recurring Templates</span>
-                                {!canUseRecurring && <Lock className="w-2.5 h-2.5 text-amber-500" />}
-                              </div>
-                              {!canUseRecurring ? (
-                                <button
-                                  onClick={() => {
-                                    setIsImportOpen(false);
-                                    toast.error("Upgrade to Pro to load recurring templates.");
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-xs hover:bg-amber-50/50 transition-colors text-amber-600 font-medium flex items-center gap-1.5"
-                                >
-                                  <Sparkles className="w-3.5 h-3.5" />
-                                  Unlock Templates
-                                </button>
-                              ) : templates.length === 0 ? (
-                                <span className="block px-3 py-1.5 text-xs text-ink-400 italic">No templates saved</span>
-                              ) : (
-                                templates.map((t: any) => (
-                                  <button
-                                    key={t.id}
-                                    onClick={() => handleImportTemplate(t)}
-                                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-ink-50 transition-colors text-ink-700 truncate"
-                                  >
-                                    🔄 {t.nickname}
-                                  </button>
-                                ))
-                              )}
-                            </div>
+                            <button
+                              onClick={() => {
+                                setIsImportOpen(false);
+                                setImportModalType("client");
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-ink-50 transition-colors text-ink-700 font-medium flex items-center gap-2"
+                            >
+                              👤 Import Client
+                            </button>
 
-                            {/* Manage Link */}
-                            <div className="p-1">
+                            {!canUseRecurring ? (
+                              <button
+                                onClick={() => {
+                                  setIsImportOpen(false);
+                                  toast.error("Upgrade to Pro to load recurring templates.");
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50/50 transition-colors text-amber-600 font-medium flex items-center justify-between"
+                              >
+                                <span className="flex items-center gap-2">🔄 Load Template</span>
+                                <Lock className="w-3.5 h-3.5 text-amber-500" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setIsImportOpen(false);
+                                  setImportModalType("template");
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-ink-50 transition-colors text-ink-700 font-medium flex items-center gap-2"
+                              >
+                                🔄 Load Template
+                              </button>
+                            )}
+
+                            <div className="p-1 pt-2 mt-1">
                               <button
                                 onClick={() => {
                                   setIsImportOpen(false);
@@ -344,7 +380,7 @@ export default function InvoiceBuilder() {
               </div>
 
               {/* Scrollable Form Content */}
-              <div className="flex-1 overflow-y-auto px-6 md:px-10 lg:px-12 pb-12">
+              <div className="flex-1 overflow-y-auto px-6 md:px-10 lg:px-12 pb-32">
                 <UserInputFormWithGenerate profile={profile} />
               </div>
 
@@ -372,6 +408,36 @@ export default function InvoiceBuilder() {
               canUploadLogo={canUploadLogo}
             />
           )}
+
+          <ImportSelectionModal
+            isOpen={importModalType !== null}
+            onClose={() => setImportModalType(null)}
+            title={
+              importModalType === "business" ? "Import Business" :
+              importModalType === "client" ? "Import Client" :
+              importModalType === "template" ? "Load Template" : ""
+            }
+            items={
+              importModalType === "business" 
+                ? businesses.map((b: any) => ({ id: b.id, name: b.name, subtitle: b.email, icon: "💼", raw: b }))
+                : importModalType === "client"
+                ? clients.map((c: any) => ({ id: c.id, name: c.name || c.company_name, subtitle: c.email, icon: "👤", raw: c }))
+                : importModalType === "template"
+                ? templates.map((t: any) => ({ id: t.id, name: t.nickname, icon: "🔄", raw: t }))
+                : []
+            }
+            onSelect={(item) => {
+              if (importModalType === "business") handleImportBusiness(item);
+              else if (importModalType === "client") handleImportClient(item);
+              else if (importModalType === "template") handleImportTemplate(item);
+              setImportModalType(null);
+            }}
+            emptyStateMessage={
+              importModalType === "business" ? "No business profiles found. Go to Dashboard > Settings to add one." :
+              importModalType === "client" ? "No clients found. Go to Dashboard > Clients to add one." :
+              importModalType === "template" ? "No recurring templates saved." : ""
+            }
+          />
         </FormProvider>
       ) : (
         <div className="min-h-[100dvh] flex items-center justify-center">

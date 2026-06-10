@@ -7,7 +7,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: targetUserId } = await params;
-  const { action, duration, tier: grantTier } = await request.json();
+  const { action, duration, tier: grantTier, reason, sendEmail } = await request.json();
 
   const supabase = await createClient();
   const { data: { user: adminUser } } = await supabase.auth.getUser();
@@ -65,6 +65,15 @@ export async function PATCH(
       
     if (error) return NextResponse.json({ error: 'Failed to update subscription' }, { status: 500 });
 
+    await supabaseAdmin.from('audit_transactions').insert({
+      user_id: targetUserId,
+      action: 'tier_granted',
+      tier: selectedTier,
+      admin_id: adminUser.id,
+      reason: 'Admin Granted',
+      valid_until: periodEnd.toISOString()
+    });
+
   } else if (action === 'strip') {
     // Soft downgrade — keeps payment history fields intact
     const { error } = await supabaseAdmin
@@ -107,6 +116,20 @@ export async function PATCH(
       .eq('id', targetUserId);
 
     if (error) return NextResponse.json({ error: 'Failed to nuke subscription' }, { status: 500 });
+
+    await supabaseAdmin.from('audit_transactions').insert({
+      user_id: targetUserId,
+      action: 'tier_nuked',
+      tier: 'free',
+      admin_id: adminUser.id,
+      reason: reason || 'Nuked by admin'
+    });
+
+    await supabaseAdmin.from('activity_logs').insert({
+      user_id: targetUserId,
+      action: 'subscription_nuked',
+      metadata: { reason, sendEmail }
+    });
 
   } else {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

@@ -22,6 +22,11 @@ export const PreviewDetails = ({
 }) => (
   <div className="w-full h-full flex justify-center py-4 md:py-8 overflow-hidden">
     <div className="h-full w-auto aspect-[1/1.414] bg-white shadow-2xl rounded-sm border border-ink-100 flex flex-col overflow-y-auto">
+      {/* Top Terms Section */}
+      <div className="bg-ink-50/30">
+        <InvoiceTermsPreview {...invoiceTerms} onClick={onClick} />
+      </div>
+
       {/* Header section */}
       <div className="border-b grid grid-cols-2 border-ink-100">
         <div
@@ -51,13 +56,8 @@ export const PreviewDetails = ({
         </div>
         
         {/* Footer Section */}
-        <div className="mt-auto grid grid-cols-2 border-t border-ink-100">
-          <div className="border-r border-ink-100 bg-white">
-            <PaymentDetailsPreview {...paymentDetails} onClick={onClick} />
-          </div>
-          <div className="bg-ink-50/30">
-            <InvoiceTermsPreview {...invoiceTerms} onClick={onClick} />
-          </div>
+        <div className="mt-auto border-t border-ink-100 bg-white">
+          <PaymentDetailsPreview {...paymentDetails} onClick={onClick} />
         </div>
       </div>
     </div>

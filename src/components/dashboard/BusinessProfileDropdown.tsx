@@ -14,6 +14,7 @@ interface Props {
   userId?: string;
   maxBusinesses?: number | 'unlimited';
   canUploadLogo?: boolean;
+  activeWorkspace?: any;
 }
 
 export default function BusinessProfileDropdown({ 
@@ -22,7 +23,8 @@ export default function BusinessProfileDropdown({
   profile,
   userId,
   maxBusinesses = 1,
-  canUploadLogo = false
+  canUploadLogo = false,
+  activeWorkspace
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -128,6 +130,7 @@ export default function BusinessProfileDropdown({
           userId={userId}
           maxBusinesses={maxBusinesses}
           canUploadLogo={canUploadLogo}
+          activeWorkspace={activeWorkspace}
         />
       )}
     </div>

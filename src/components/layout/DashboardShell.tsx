@@ -25,6 +25,7 @@ const navLinks = [
   { name: 'Quotes', href: '/dashboard/quotes', icon: <FileText className="w-4 h-4" />, premiumBadge: 'pro' as const },
   { name: 'Recurring', href: '/dashboard/recurring', icon: <Repeat className="w-4 h-4" />, premiumBadge: 'pro' as const },
   { name: 'Clients', href: '/dashboard/clients', icon: <Users className="w-4 h-4" /> },
+  { name: 'Team', href: '/dashboard/members', icon: <Users className="w-4 h-4" />, premiumBadge: 'biz' as const },
   { name: 'Pricing', href: '/pricing', icon: <CreditCard className="w-4 h-4" /> },
   { name: 'Settings', href: '/dashboard/settings', icon: <Settings className="w-4 h-4" /> },
   { name: 'Admin', href: '/admin', adminOnly: true, icon: <ShieldCheck className="w-4 h-4" /> }
@@ -73,14 +74,14 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-ink-900/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-ink-900/50 z-[100] lg:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-[280px] bg-white border-r border-ink-200 flex flex-col transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
+        fixed inset-y-0 left-0 z-[110] w-[280px] bg-white border-r border-ink-200 flex flex-col transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between px-6 py-6 lg:py-8">
