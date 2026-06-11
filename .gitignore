@@ -50,4 +50,7 @@ docs/
 
 # Scratch and test files
 test-exhaustion.ts
+test-*.ts
+test-*.js
+refactor-*.ts
 /scripts/
