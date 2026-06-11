@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BusinessProfile } from '@/components/dashboard/BusinessProfilesSection';
 import LockedFeatureOverlay from '@/components/ui/LockedFeatureOverlay';
-import { ChevronDown, Building2, Lock, Settings } from 'lucide-react';
+import { ChevronDown, Building2, Lock, Settings, Search } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import InvoPilotBusinessProfilesModal from '@/components/dashboard/InvoPilotBusinessProfilesModal';
 
@@ -31,6 +31,7 @@ export default function BusinessProfileDropdown({
   const currentBusiness = searchParams.get('business');
   const [isOpen, setIsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,6 +56,10 @@ export default function BusinessProfileDropdown({
   };
 
   const selectedName = currentBusiness || 'All Businesses';
+
+  const filteredBusinesses = businesses.filter(b => 
+    b.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -87,21 +92,41 @@ export default function BusinessProfileDropdown({
             </div>
           ) : (
             <div className="py-1">
-              <button
-                onClick={() => handleSelect(null)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-ink-50 transition-colors ${!currentBusiness ? 'bg-brand-50 text-brand-700 font-medium' : 'text-ink-700'}`}
-              >
-                All Businesses
-              </button>
-              {businesses.map((biz) => (
+              <div className="px-3 pb-2 pt-1 border-b border-ink-100">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-400" />
+                  <input
+                    type="text"
+                    placeholder="Search businesses..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 bg-ink-50 border border-ink-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+              <div className="max-h-60 overflow-y-auto">
                 <button
-                  key={biz.id}
-                  onClick={() => handleSelect(biz.name)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-ink-50 transition-colors ${currentBusiness === biz.name ? 'bg-brand-50 text-brand-700 font-medium' : 'text-ink-700'}`}
+                  onClick={() => handleSelect(null)}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-ink-50 transition-colors ${!currentBusiness ? 'bg-brand-50 text-brand-700 font-medium' : 'text-ink-700'}`}
                 >
-                  {biz.name}
+                  All Businesses
                 </button>
-              ))}
+                {filteredBusinesses.map((biz) => (
+                  <button
+                    key={biz.id}
+                    onClick={() => handleSelect(biz.name)}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-ink-50 transition-colors ${currentBusiness === biz.name ? 'bg-brand-50 text-brand-700 font-medium' : 'text-ink-700'}`}
+                  >
+                    {biz.name}
+                  </button>
+                ))}
+                {filteredBusinesses.length === 0 && (
+                  <div className="px-4 py-3 text-xs text-center text-ink-400">
+                    No businesses found
+                  </div>
+                )}
+              </div>
               {userId && profile && (
                 <>
                   <div className="border-t border-ink-100 my-1" />

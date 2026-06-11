@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,14 +11,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { workspaceId, email, role } = await req.json();
+    const { workspaceId, email } = await req.json();
 
-    if (!workspaceId || !email || !role) {
+    if (!workspaceId || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    if (!['admin', 'member', 'viewer'].includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
     // 1. Verify user is owner or admin of the workspace
@@ -35,20 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Check if the workspace is owned by a profile with a business/admin tier
-    const ownerId = Array.isArray(memberRecord.workspaces) 
-      ? memberRecord.workspaces[0]?.owner_id 
-      : (memberRecord.workspaces as any)?.owner_id;
-    if (!ownerId) {
-      return NextResponse.json({ error: 'Workspace owner not found' }, { status: 500 });
-    }
-
-    const { data: ownerProfile } = await supabase
-      .from('profiles')
-      .select('role, tier, subscription_status, subscription_period_end')
-      .eq('id', ownerId)
-      .single();
-
-    const access = resolvePlanAccess(ownerProfile);
+    const access = await getWorkspaceAccess(supabase, workspaceId);
 
     // Free users can't invite
     if (access.effectiveTier === 'free' && !access.isAdmin) {
@@ -73,7 +56,7 @@ export async function POST(req: NextRequest) {
     // 4. Insert into workspace_members (RLS will also double-check permissions)
     const newMemberData: any = {
       workspace_id: workspaceId,
-      role: role,
+      role: 'member', // Hardcoded role to simplify UI
       status: 'pending',
       invited_email: email
     };
@@ -82,17 +65,16 @@ export async function POST(req: NextRequest) {
       newMemberData.user_id = existingProfile.id;
     }
 
+    newMemberData.created_at = new Date().toISOString();
+
     const { data: insertData, error: insertError } = await supabase
       .from('workspace_members')
-      .insert(newMemberData)
+      .upsert(newMemberData, { onConflict: 'workspace_id,invited_email' })
       .select()
       .single();
 
     if (insertError) {
       console.error('Insert invite error:', insertError);
-      if (insertError.code === '23505') { // Unique violation
-        return NextResponse.json({ error: 'User is already in this workspace or has a pending invite' }, { status: 400 });
-      }
       return NextResponse.json({ error: 'Failed to invite user' }, { status: 500 });
     }
 

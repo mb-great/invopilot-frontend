@@ -6,6 +6,7 @@ import AdminTable from '@/components/admin/AdminTable'
 import RecentActivity from '@/components/admin/RecentActivity'
 import { Activity } from 'lucide-react'
 import Link from 'next/link'
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 
 export default async function AdminPage({
   searchParams,
@@ -16,6 +17,8 @@ export default async function AdminPage({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
+
+  const access = await getWorkspaceAccess(supabase);
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -102,14 +105,11 @@ export default async function AdminPage({
   const totalPages = Math.ceil((totalCount || 0) / limit);
 
   return (
-    <DashboardShell 
-      userEmail={user.email} 
-      userName={profile?.full_name} 
-      avatarUrl={profile?.avatar_url} 
-      isAdmin={true}
-      tier={profile?.tier}
-      subscriptionStatus={profile?.subscription_status}
-      subscriptionPeriodEnd={profile?.subscription_period_end}
+    <DashboardShell
+      userEmail={user.email}
+      userName={profile?.full_name}
+      avatarUrl={profile?.avatar_url}
+      access={access}
     >
       <div className="mb-12">
         <h1 className="text-4xl font-bold mb-3 tracking-tight text-ink-900" style={{ fontFamily: 'var(--font-display)' }}>

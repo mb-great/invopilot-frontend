@@ -4,19 +4,17 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Menu, X, LogOut, LayoutDashboard, FileText, Users, Settings, ShieldCheck, CreditCard, Repeat } from 'lucide-react'
+import { Menu, X, LogOut, LayoutDashboard, FileText, Users, Settings, ShieldCheck, CreditCard, Repeat, Code } from 'lucide-react'
 import { resolvePlanAccess } from '@/lib/billing/tiers'
 import PremiumBadge from '@/components/ui/PremiumBadge'
+import GlobalWorkspaceSwitcher from '@/components/layout/GlobalWorkspaceSwitcher'
 
 interface DashboardShellProps {
   children: React.ReactNode
   userEmail?: string
   userName?: string
   avatarUrl?: string | null
-  isAdmin?: boolean
-  tier?: string | null
-  subscriptionStatus?: string | null
-  subscriptionPeriodEnd?: string | null
+  access: ReturnType<typeof resolvePlanAccess>
 }
 
 const navLinks = [
@@ -26,18 +24,22 @@ const navLinks = [
   { name: 'Recurring', href: '/dashboard/recurring', icon: <Repeat className="w-4 h-4" />, premiumBadge: 'pro' as const },
   { name: 'Clients', href: '/dashboard/clients', icon: <Users className="w-4 h-4" /> },
   { name: 'Team', href: '/dashboard/members', icon: <Users className="w-4 h-4" />, premiumBadge: 'biz' as const },
+  { name: 'API', href: '/dashboard/api', icon: <Code className="w-4 h-4" />, premiumBadge: 'biz' as const },
   { name: 'Pricing', href: '/pricing', icon: <CreditCard className="w-4 h-4" /> },
   { name: 'Settings', href: '/dashboard/settings', icon: <Settings className="w-4 h-4" /> },
   { name: 'Admin', href: '/admin', adminOnly: true, icon: <ShieldCheck className="w-4 h-4" /> }
 ]
 
-export default function DashboardShell({ children, userEmail, userName, avatarUrl, isAdmin, tier, subscriptionStatus, subscriptionPeriodEnd }: DashboardShellProps) {
+export default function DashboardShell({ children, userEmail, userName, avatarUrl, access }: DashboardShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [imgError, setImgError] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
 
   const handleSignOut = async () => {
+    setIsLoggingOut(true)
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
   }
@@ -54,20 +56,14 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
   };
 
   const initials = getInitials(userName, userEmail);
-  const access = resolvePlanAccess({
-    role: isAdmin ? 'admin' : 'user',
-    tier,
-    subscription_status: subscriptionStatus,
-    subscription_period_end: subscriptionPeriodEnd,
-  });
-  const tierLabel = access.isAdmin ? 'Admin' : access.plan.name;
+  const tierLabel = access.isSuperAdmin ? 'Superadmin' : access.isAdmin ? 'Admin' : access.plan.name;
   const statusLabel = access.isExpired
     ? 'expired'
     : access.isAdmin
       ? 'bypass'
       : access.effectiveTier === 'free'
         ? 'free'
-        : subscriptionStatus || 'active';
+        : 'active';
 
   return (
     <div className="flex h-[100dvh] bg-ink-50 overflow-hidden">
@@ -97,9 +93,13 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
           </button>
         </div>
 
+        <div className="px-4 pb-4">
+          <GlobalWorkspaceSwitcher className="w-full" />
+        </div>
+
         <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
           {navLinks.map((link) => {
-            if (link.adminOnly && !isAdmin) return null;
+            if (link.adminOnly && !access.isAdmin) return null;
             const isActive = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href))
             return (
               <Link
@@ -125,8 +125,8 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
         <div className="border-t border-ink-200 p-6 bg-ink-50/30">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center text-white font-bold border border-brand-600 shadow-md overflow-hidden text-sm tracking-tighter">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={userName || 'User'} className="w-full h-full object-cover" />
+              {avatarUrl && !imgError ? (
+                <img src={avatarUrl} alt={userName || 'User'} referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={() => setImgError(true)} />
               ) : (
                 initials
               )}
@@ -161,12 +161,15 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
             <img src="/logo.png" alt="InvoPilot Logo" className="w-7 h-7 object-contain drop-shadow-sm" />
             <span className="font-bold text-md text-ink-900">InvoPilot</span>
           </div>
-          <button 
-            className="p-2 text-ink-600 hover:bg-ink-50 rounded-lg"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <GlobalWorkspaceSwitcher />
+            <button 
+              className="p-2 text-ink-600 hover:bg-ink-50 rounded-lg"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 overflow-auto relative">

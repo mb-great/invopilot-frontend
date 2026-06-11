@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { requireBillingProfile } from '@/lib/auth/guards';
 
 export const dynamic = 'force-dynamic';
@@ -20,15 +20,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
   const { user, profile } = auth;
-
-  // Tier gate
-  const access = resolvePlanAccess(profile);
-  if (!access.plan.canUseQuotes) {
-    return NextResponse.json(
-      { error: 'Quote conversion requires Pro or Business plan.' },
-      { status: 403 }
-    );
-  }
 
   // Parse body
   let body: { id?: string };
@@ -53,6 +44,17 @@ export async function POST(request: Request) {
   if (fetchErr || !quote) {
     return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
   }
+
+  // Tier gate (checking against workspace owner)
+  const access = await getWorkspaceAccess(supabase, quote.workspace_id);
+  if (!access.plan.canUseQuotes && !access.isAdmin) {
+    return NextResponse.json(
+      { error: 'Quote conversion requires Pro or Business plan.' },
+      { status: 403 }
+    );
+  }
+
+
 
   if (quote.payment_status === 'converted') {
     return NextResponse.json({ error: 'This quote has already been converted' }, { status: 409 });

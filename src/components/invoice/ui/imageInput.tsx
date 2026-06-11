@@ -27,31 +27,42 @@ export const ImageInput = ({ label, variableName, premium }: CustomNumberProps) 
     return ["image/png", "image/jpeg", "image/svg+xml", "image/webp"].includes(file.type);
   };
 
-  const compressToWebP = (file: File): Promise<string> => {
+  const compressAndResizeImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
-      if (file.type === "image/svg+xml") {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Failed to read SVG file"));
-        reader.readAsDataURL(file);
-        return;
-      }
-
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
           try {
             const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
+            let width = img.width;
+            let height = img.height;
+            const maxSize = 500;
+            
+            if (width > maxSize || height > maxSize) {
+              if (width > height) {
+                height = Math.round((height * maxSize) / width);
+                width = maxSize;
+              } else {
+                width = Math.round((width * maxSize) / height);
+                height = maxSize;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
             const ctx = canvas.getContext("2d");
             if (!ctx) {
               reject(new Error("Failed to get canvas context"));
               return;
             }
-            ctx.drawImage(img, 0, 0);
-            const dataUrl = canvas.toDataURL("image/webp", 0.8);
+            
+            // Draw image. Transparency is preserved automatically.
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Output as PNG! React-PDF strictly requires PNG or JPEG.
+            // SVGs/WebP will crash the PDF worker.
+            const dataUrl = canvas.toDataURL("image/png");
             resolve(dataUrl);
           } catch (err) {
             reject(err);
@@ -125,7 +136,7 @@ export const ImageInput = ({ label, variableName, premium }: CustomNumberProps) 
                 const file = e.target.files?.[0];
                 if (file && isAcceptedFileType(file)) {
                   try {
-                    const compressedUrl = await compressToWebP(file);
+                    const compressedUrl = await compressAndResizeImage(file);
                     const sizeBytes = getBase64SizeInBytes(compressedUrl);
                     if (sizeBytes > 2 * 1024 * 1024) {
                       toast.error("Image too large even after compression (limit 2MB)");

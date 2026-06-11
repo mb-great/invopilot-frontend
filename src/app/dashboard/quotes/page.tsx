@@ -4,7 +4,8 @@ import Link from 'next/link'
 import DashboardShell from '@/components/layout/DashboardShell'
 import InvoiceTable from '@/components/dashboard/InvoiceTable'
 import EmptyState from '@/components/dashboard/EmptyState'
-import { resolvePlanAccess } from '@/lib/billing/tiers'
+import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { getActiveWorkspaceId } from '@/lib/workspace'
 import { ArrowRightLeft } from 'lucide-react'
 
@@ -21,6 +22,22 @@ export default async function QuotesPage() {
     .single()
 
   const activeWorkspaceId = await getActiveWorkspaceId(user.id);
+
+  // Fetch active workspace owner profile for inherited access
+  let ownerProfile: any = profile;
+  if (activeWorkspaceId) {
+    const { data: wsData } = await supabase.from('workspaces').select('owner_id').eq('id', activeWorkspaceId).single();
+    if (wsData && wsData.owner_id !== user.id) {
+      const { data: ownerData } = await supabase
+        .from('profiles')
+        .select('role, tier, subscription_status, subscription_period_end')
+        .eq('id', wsData.owner_id)
+        .single();
+      if (ownerData) {
+        ownerProfile = ownerData;
+      }
+    }
+  }
 
   // Get actual count of non-deleted quotes
   const { count: actualQuoteCount } = await supabase
@@ -45,7 +62,7 @@ export default async function QuotesPage() {
     ...stats.top_currencies.map((c: any) => c.currency),
     ...stats.other_currencies.map((c: any) => c.currency)
   ]
-  const access = resolvePlanAccess(profile);
+  const access = await getWorkspaceAccess(supabase);
   
   const totalCount = actualQuoteCount ?? 0;
   const initialMeta = {
@@ -56,17 +73,14 @@ export default async function QuotesPage() {
   };
 
   return (
-    <DashboardShell 
-      userEmail={user.email} 
-      userName={profile?.full_name} 
-      avatarUrl={profile?.avatar_url} 
-      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
-      tier={profile?.tier}
-      subscriptionStatus={profile?.subscription_status}
-      subscriptionPeriodEnd={profile?.subscription_period_end}
+    <DashboardShell
+      userEmail={user.email}
+      userName={profile?.full_name}
+      avatarUrl={profile?.avatar_url}
+      access={access}
     >
       <div className="flex flex-col h-full space-y-6 md:space-y-8 min-h-0">
-        <div className="flex items-center justify-between shrink-0 px-1">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between shrink-0 gap-4 md:gap-0 px-1">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-ink-900">Quotes</h1>
             <p className="text-ink-500 mt-1">Manage quotes and convert them to invoices with one click.</p>
@@ -115,6 +129,7 @@ export default async function QuotesPage() {
                   canUseQuotes={access.plan.canUseQuotes || access.isAdmin}
                   canExportCsv={access.plan.canExportCsv || access.isAdmin}
                   baseStatus="quote,converted"
+                  activeWorkspaceId={activeWorkspaceId}
                 />
               ) : (
                 <EmptyState />

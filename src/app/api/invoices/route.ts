@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -18,6 +21,8 @@ export async function GET(request: Request) {
   const tzOffset = parseInt(searchParams.get('tzOffset') || '0');
   const sort = searchParams.get('sort') || 'created_at.desc';
   const targetUserId = searchParams.get('userId');
+  const targetWorkspaceId = searchParams.get('workspaceId');
+  const targetBusiness = searchParams.get('business');
 
   // Hard Cap: Prevent deep pagination queries that scan too many rows.
   const MAX_PAGE = 50;
@@ -44,27 +49,13 @@ export async function GET(request: Request) {
     }
   }
 
-  const cookieStore = await cookies();
-  const activeWorkspaceId = cookieStore.get('invopilot_active_workspace')?.value;
-  let workspaceIdToQuery = activeWorkspaceId;
-
-  if (!workspaceIdToQuery && !targetUserId) {
-    const { data: defaultWs } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', user.id)
-      .eq('status', 'accepted')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single();
-      
-    if (defaultWs) {
-      workspaceIdToQuery = defaultWs.workspace_id;
-    }
-  }
+  // Import dynamically to avoid circular dependencies if any, or just import at top.
+  // We'll require it here since it's a server context.
+  const { getActiveWorkspaceId } = await import('@/lib/workspace');
+  let workspaceIdToQuery = targetWorkspaceId || await getActiveWorkspaceId(queryUserId);
 
   // Logic: If any filter is active, we do an exact count for accurate pagination.
-  const isFiltered = !!(search || status || currency || dateValue);
+  const isFiltered = !!(search || status || currency || dateValue || targetBusiness);
 
   let query = supabase
     .from('invoices')
@@ -77,6 +68,10 @@ export async function GET(request: Request) {
     query = query.eq('workspace_id', workspaceIdToQuery);
   } else {
     query = query.eq('user_id', queryUserId); // fallback
+  }
+
+  if (targetBusiness) {
+    query = query.eq('business_profile_name', targetBusiness);
   }
 
   if (search) {

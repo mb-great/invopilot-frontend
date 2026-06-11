@@ -43,7 +43,7 @@ type ClientsClientProps = {
   potentialClients: { name: string; email: string | null }[];
   potentialUpdates: PotentialUpdate[];
   billingStats: Record<string, ClientStats>;
-  userTier: string;
+  clientLimit: number;
   userId: string;
 };
 
@@ -52,7 +52,7 @@ export default function ClientsClient({
   potentialClients,
   potentialUpdates,
   billingStats,
-  userTier,
+  clientLimit,
   userId
 }: ClientsClientProps) {
   const [clients, setClients] = useState<ClientRow[]>(initialClients);
@@ -60,6 +60,10 @@ export default function ClientsClient({
   const [updates, setUpdates] = useState<PotentialUpdate[]>(potentialUpdates);
   const [selectedChoices, setSelectedChoices] = useState<Record<string, 'old' | 'new'>>({});
   
+  // Carousel states
+  const [potIndex, setPotIndex] = useState(0);
+  const [updIndex, setUpdIndex] = useState(0);
+
   // Modal states
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -75,9 +79,6 @@ export default function ClientsClient({
   const [address, setAddress] = useState('');
   const [vatGstin, setVatGstin] = useState('');
 
-  const isFree = userTier === 'free';
-  const isStarter = userTier === 'starter';
-  const clientLimit = isFree ? 5 : (isStarter ? 20 : Infinity);
   const reachedLimit = clients.length >= clientLimit;
 
   const resetForm = () => {
@@ -320,39 +321,62 @@ export default function ClientsClient({
               <Sparkles className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <h2 className="font-bold text-ink-900 text-lg">New Client suggestions found</h2>
-              <p className="text-sm text-ink-500 mt-1 max-w-lg">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="font-bold text-ink-900 text-lg">New Client suggestions found</h2>
+                <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-ink-150 text-xs font-bold text-ink-500">
+                  <button 
+                    onClick={() => setPotIndex(Math.max(0, potIndex - 1))}
+                    disabled={potIndex === 0}
+                    className="p-1 hover:bg-ink-50 rounded disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <span>{Math.min(potIndex + 1, potentials.length)} / {potentials.length}</span>
+                  <button 
+                    onClick={() => setPotIndex(Math.min(potentials.length - 1, potIndex + 1))}
+                    disabled={potIndex === potentials.length - 1}
+                    className="p-1 hover:bg-ink-50 rounded disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm text-ink-500 mt-1 max-w-lg mb-4">
                 We found unique client contacts in your recent invoices. Save them to your directory for 1-click invoice imports.
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {potentials.map((pot) => (
-                  <div
-                    key={pot.name}
-                    className="flex items-center gap-3 bg-white border border-ink-100 rounded-xl px-4 py-2 text-xs shadow-sm hover:border-brand-300 transition-colors"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-bold text-ink-900">{pot.name}</span>
-                      {pot.email && <span className="text-[10px] text-ink-400">{pot.email}</span>}
+              
+              {potentials[potIndex] && (() => {
+                const pot = potentials[potIndex];
+                return (
+                  <div className="flex items-center justify-between gap-4 bg-white border border-brand-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-brand-400" />
+                    <div className="flex flex-col pl-2">
+                      <span className="font-bold text-ink-900 text-base">{pot.name}</span>
+                      {pot.email ? <span className="text-sm text-ink-500">{pot.email}</span> : <span className="text-xs text-amber-500 italic">No email</span>}
                     </div>
-                    <div className="flex gap-1.5 ml-2 border-l pl-3 border-ink-100">
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => handleSavePotential(pot.name, pot.email)}
-                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
-                        title="Save to directory"
+                        onClick={() => {
+                          handleSavePotential(pot.name, pot.email);
+                          if (potIndex > 0 && potIndex === potentials.length - 1) setPotIndex(potIndex - 1);
+                        }}
+                        className="px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
                       >
-                        <Check className="w-3.5 h-3.5" />
+                        <Check className="w-4 h-4" /> Save
                       </button>
                       <button
-                        onClick={() => handleDismissPotential(pot.name)}
-                        className="p-1 text-ink-400 hover:bg-ink-100 rounded-md transition-colors"
-                        title="Dismiss"
+                        onClick={() => {
+                          handleDismissPotential(pot.name);
+                          if (potIndex > 0 && potIndex === potentials.length - 1) setPotIndex(potIndex - 1);
+                        }}
+                        className="px-4 py-2 bg-ink-50 text-ink-500 hover:bg-ink-100 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-4 h-4" /> Ignore
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -383,111 +407,138 @@ export default function ClientsClient({
         });
 
         const groups = Object.values(groupedUpdatesMap);
+        const group = groups[updIndex];
 
         return (
           <div className="mb-6 bg-amber-50/70 border border-amber-100/50 rounded-2xl p-6 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="flex gap-4">
-              <div className="p-3 bg-amber-500/10 text-amber-600 rounded-xl self-start">
+              <div className="p-3 bg-amber-500/10 text-amber-600 rounded-xl self-start hidden sm:block">
                 <ShieldAlert className="w-6 h-6" />
               </div>
-              <div className="flex-1">
-                <h2 className="font-bold text-ink-900 text-lg">New client details detected</h2>
-                <p className="text-sm text-ink-500 mt-1">
+              <div className="flex-1 w-full overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-2">
+                  <h2 className="font-bold text-ink-900 text-lg flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-amber-500 sm:hidden" />
+                    New client details detected
+                  </h2>
+                  <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-ink-150 text-xs font-bold text-ink-500 self-start sm:self-auto shrink-0">
+                    <button 
+                      onClick={() => setUpdIndex(Math.max(0, updIndex - 1))}
+                      disabled={updIndex === 0}
+                      className="p-1 hover:bg-ink-50 rounded disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <span>{Math.min(updIndex + 1, groups.length)} / {groups.length}</span>
+                    <button 
+                      onClick={() => setUpdIndex(Math.min(groups.length - 1, updIndex + 1))}
+                      disabled={updIndex === groups.length - 1}
+                      className="p-1 hover:bg-ink-50 rounded disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-ink-500 mt-1 mb-4">
                   We detected different details in your recent invoices for saved clients. Compare and update your directory.
                 </p>
 
-                <div className="mt-4 space-y-4 max-w-4xl">
-                  {groups.map((group) => (
-                    <div
-                      key={group.clientId}
-                      className="bg-white border border-ink-150 rounded-2xl p-5 shadow-sm space-y-4 animate-in fade-in duration-200"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink-100 pb-3">
-                        <div>
-                          <span className="font-bold text-ink-900 text-base">{group.clientName}</span>
-                          <span className="text-[10px] bg-amber-500/10 text-amber-700 border border-amber-200/50 px-2 py-0.5 rounded ml-2 font-medium">
-                            New Details Available
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-ink-400 bg-ink-50 px-2.5 py-1 rounded-md border border-ink-100 self-start sm:self-auto">
-                          Invoice: {group.invoiceNumber}
+                {group && (
+                  <div
+                    key={group.clientId}
+                    className="bg-white border border-ink-150 rounded-2xl p-5 shadow-sm space-y-4 animate-in fade-in duration-200 w-full"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink-100 pb-3">
+                      <div>
+                        <span className="font-bold text-ink-900 text-base">{group.clientName}</span>
+                        <span className="text-[10px] bg-amber-500/10 text-amber-700 border border-amber-200/50 px-2 py-0.5 rounded ml-2 font-medium">
+                          New Details Available
                         </span>
                       </div>
-
-                      <div className="space-y-4">
-                        {group.items.map((item) => {
-                          const choice = getChoice(group.clientId, item.field);
-                          return (
-                            <div
-                              key={item.field}
-                              className="flex flex-col md:grid md:grid-cols-[120px_1fr] gap-2 md:gap-4 border-b border-ink-50 pb-4 last:border-b-0 last:pb-0"
-                            >
-                              <span className="text-xs font-bold text-ink-400 uppercase tracking-wider self-center md:py-2">
-                                {item.fieldName}
-                              </span>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {/* Current (Old) Value Option */}
-                                <button
-                                  type="button"
-                                  onClick={() => setChoice(group.clientId, item.field, 'old')}
-                                  className={`text-left p-3.5 rounded-xl border transition-all text-xs flex flex-col gap-1 relative overflow-hidden ${
-                                    choice === 'old'
-                                      ? 'bg-red-50/70 border-red-200 text-red-950 ring-2 ring-red-100/50'
-                                      : 'bg-white border-ink-150 text-ink-400 hover:border-ink-200 hover:text-ink-600'
-                                  }`}
-                                >
-                                  <span className={`text-[9px] font-bold uppercase tracking-wider block ${
-                                    choice === 'old' ? 'text-red-600' : 'text-ink-400'
-                                  }`}>
-                                    Current Value (Keep)
-                                  </span>
-                                  <span className="font-medium break-all">{item.oldVal}</span>
-                                </button>
-
-                                {/* New Value Option */}
-                                <button
-                                  type="button"
-                                  onClick={() => setChoice(group.clientId, item.field, 'new')}
-                                  className={`text-left p-3.5 rounded-xl border transition-all text-xs flex flex-col gap-1 relative overflow-hidden ${
-                                    choice === 'new'
-                                      ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950 ring-2 ring-emerald-100/50'
-                                      : 'bg-white border-ink-150 text-ink-400 hover:border-ink-200 hover:text-ink-600'
-                                  }`}
-                                >
-                                  <span className={`text-[9px] font-bold uppercase tracking-wider block ${
-                                    choice === 'new' ? 'text-emerald-600' : 'text-ink-400'
-                                  }`}>
-                                    New Value (Update)
-                                  </span>
-                                  <span className="font-medium break-all">{item.newVal}</span>
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="flex gap-3 pt-3 border-t border-ink-100 justify-end">
-                        <button
-                          onClick={() => handleDismissGroup(group.clientId, group.items)}
-                          className="flex items-center gap-1.5 px-4 h-10 border border-ink-200 hover:bg-ink-50 text-ink-500 font-bold text-xs rounded-xl transition-colors"
-                          title="Dismiss Updates"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                          Dismiss
-                        </button>
-                        <button
-                          onClick={() => handleUpdateGroup(group.clientId, group.items)}
-                          className="flex items-center gap-1.5 px-5 h-10 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-brand-500/10"
-                          title="Apply Selections"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          Apply Selections
-                        </button>
-                      </div>
+                      <span className="text-[10px] text-ink-400 bg-ink-50 px-2.5 py-1 rounded-md border border-ink-100 self-start sm:self-auto">
+                        Invoice: {group.invoiceNumber}
+                      </span>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="space-y-4">
+                      {group.items.map((item) => {
+                        const choice = getChoice(group.clientId, item.field);
+                        return (
+                          <div
+                            key={item.field}
+                            className="flex flex-col md:grid md:grid-cols-[120px_1fr] gap-2 md:gap-4 border-b border-ink-50 pb-4 last:border-b-0 last:pb-0"
+                          >
+                            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider self-center md:py-2">
+                              {item.fieldName}
+                            </span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                              {/* Current (Old) Value Option */}
+                              <button
+                                type="button"
+                                onClick={() => setChoice(group.clientId, item.field, 'old')}
+                                className={`text-left p-3.5 rounded-xl border transition-all text-xs flex flex-col gap-1 relative overflow-hidden ${
+                                  choice === 'old'
+                                    ? 'bg-red-50/70 border-red-200 text-red-950 ring-2 ring-red-100/50'
+                                    : 'bg-white border-ink-150 text-ink-400 hover:border-ink-200 hover:text-ink-600'
+                                }`}
+                              >
+                                <span className={`text-[9px] font-bold uppercase tracking-wider block ${
+                                  choice === 'old' ? 'text-red-600' : 'text-ink-400'
+                                }`}>
+                                  Current Value (Keep)
+                                </span>
+                                <span className="font-medium break-all">{item.oldVal}</span>
+                              </button>
+
+                              {/* New Value Option */}
+                              <button
+                                type="button"
+                                onClick={() => setChoice(group.clientId, item.field, 'new')}
+                                className={`text-left p-3.5 rounded-xl border transition-all text-xs flex flex-col gap-1 relative overflow-hidden ${
+                                  choice === 'new'
+                                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950 ring-2 ring-emerald-100/50'
+                                    : 'bg-white border-ink-150 text-ink-400 hover:border-ink-200 hover:text-ink-600'
+                                }`}
+                              >
+                                <span className={`text-[9px] font-bold uppercase tracking-wider block ${
+                                  choice === 'new' ? 'text-emerald-600' : 'text-ink-400'
+                                }`}>
+                                  New Value (Update)
+                                </span>
+                                <span className="font-medium break-all">{item.newVal}</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex gap-3 pt-3 border-t border-ink-100 justify-end">
+                      <button
+                        onClick={() => {
+                          handleDismissGroup(group.clientId, group.items);
+                          if (updIndex > 0 && updIndex === groups.length - 1) setUpdIndex(updIndex - 1);
+                        }}
+                        className="flex items-center gap-1.5 px-4 h-10 border border-ink-200 hover:bg-ink-50 text-ink-500 font-bold text-xs rounded-xl transition-colors"
+                        title="Dismiss Updates"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Dismiss
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleUpdateGroup(group.clientId, group.items);
+                          if (updIndex > 0 && updIndex === groups.length - 1) setUpdIndex(updIndex - 1);
+                        }}
+                        className="flex items-center gap-1.5 px-5 h-10 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-brand-500/10"
+                        title="Apply Selections"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        Update Client
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -516,7 +567,7 @@ export default function ClientsClient({
 
       {/* Directory Table */}
       <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto max-w-[90vw] md:max-w-full">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="text-ink-400 text-xs uppercase tracking-widest border-b border-ink-100 bg-ink-50/30">

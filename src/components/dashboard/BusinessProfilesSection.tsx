@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Check, X, ShieldAlert, Image as ImageIcon, Upload, Lock } from 'lucide-react';
 import PremiumBadge from '@/components/ui/PremiumBadge';
+import BusinessTable from './BusinessTable';
 
 export type BusinessProfile = {
   id: string;
@@ -533,70 +534,11 @@ export default function BusinessProfilesSection({
         </form>
       ) : (
         <div className="space-y-4">
-          {activeBusinesses.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-ink-200 rounded-xl bg-ink-50/20">
-              <p className="text-ink-400 font-medium">No active business profiles created yet.</p>
-              <p className="text-xs text-neutral-400 mt-1">Add one to quickly fill invoice forms.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeBusinesses.map(biz => {
-                const isLocked = biz.createdAt && (Date.now() - new Date(biz.createdAt).getTime() > 48 * 60 * 60 * 1000);
-                return (
-                  <div
-                    key={biz.id}
-                    className="border border-ink-150 rounded-xl p-4 bg-white hover:border-brand-300 transition-colors shadow-sm flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      {biz.logoUrl ? (
-                        <div className="w-12 h-12 rounded-lg border bg-ink-50 overflow-hidden flex items-center justify-center p-1 shadow-sm">
-                          <img src={biz.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg border border-dashed border-ink-300 bg-ink-50/30 flex items-center justify-center text-ink-300">
-                          <ImageIcon className="w-5 h-5" />
-                        </div>
-                      )}
-                      <div>
-                        <h4 className="font-bold text-ink-900 text-sm leading-tight flex items-center gap-1.5">
-                          {biz.name}
-                          {isLocked && <span title="Profile locked from further edits"><Lock className="w-3.5 h-3.5 text-neutral-400" /></span>}
-                        </h4>
-                        <p className="text-xs text-ink-400 mt-0.5">{biz.email || 'No email'}</p>
-                        {biz.gstin && (
-                          <span className="inline-block text-[10px] uppercase font-bold text-muted mt-1 bg-ink-50 px-1.5 py-0.5 rounded border border-ink-100">
-                            {biz.gstin}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(biz)}
-                        className={`p-2 rounded-lg border transition-colors ${
-                          isLocked 
-                            ? 'border-neutral-100 text-neutral-300 hover:bg-neutral-50 cursor-pointer' 
-                            : 'border-ink-100 text-ink-500 hover:text-brand-500 hover:bg-brand-50'
-                        }`}
-                        title={isLocked ? "View Details (Locked)" : "Edit Profile"}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(biz.id)}
-                        className="p-2 rounded-lg border border-ink-100 text-ink-500 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        title="Delete Profile"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <BusinessTable
+            businesses={activeBusinesses}
+            onEdit={handleOpenEdit}
+            onDelete={handleDelete}
+          />
         </div>
       )}
     </section>

@@ -7,6 +7,7 @@ import UserStatusActions from '@/components/admin/UserStatusActions'
 import Link from 'next/link'
 import { ChevronLeft, Mail, Building, Landmark, MapPin, Hash } from 'lucide-react'
 import UserDetailsTabs from '@/components/admin/UserDetailsTabs'
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 
 export default async function UserDetailPage({
   params,
@@ -22,6 +23,7 @@ export default async function UserDetailPage({
   const offset = (page - 1) * limit;
 
   const supabase = await createClient()
+  const access = await getWorkspaceAccess(supabase);
   const { data: { user: adminUser } } = await supabase.auth.getUser()
   if (!adminUser) redirect('/login')
 
@@ -62,14 +64,11 @@ export default async function UserDetailPage({
   };
 
   return (
-    <DashboardShell 
-      userEmail={adminUser.email} 
-      userName={adminProfile?.full_name} 
-      avatarUrl={adminProfile?.avatar_url} 
-      isAdmin={true}
-      tier={adminProfile?.tier}
-      subscriptionStatus={adminProfile?.subscription_status}
-      subscriptionPeriodEnd={adminProfile?.subscription_period_end}
+    <DashboardShell
+      userEmail={adminUser.email}
+      userName={adminProfile?.full_name}
+      avatarUrl={adminProfile?.avatar_url}
+      access={access}
     >
       <div className="mb-8">
         <Link 

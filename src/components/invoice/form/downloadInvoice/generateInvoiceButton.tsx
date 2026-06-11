@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { clearInvoiceDraft } from "@/lib/invoiceStorage";
 
 export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
-  const { setValue } = useFormContext();
+  const { setValue, getValues } = useFormContext();
   const [status, setStatus] = useState<
     "ready" | "generating" | "polling" | "done" | "error"
   >("ready");
@@ -53,24 +53,30 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
     setShareSlug(null);
 
     // Build full formData matching backend RawInvoiceData contract
+    // Merge live react-hook-form values to prevent submitting stale/empty DataContext state
+    const liveFormValues = getValues();
+    
+    const itemsList = liveFormValues.items?.length > 0 ? liveFormValues.items : invoiceDetails.items;
+    
     const formData = {
       ...yourDetails,
       ...companyDetails,
       ...invoiceTerms,
       ...paymentDetails,
-      items: invoiceDetails.items,
-      note: invoiceDetails.note,
-      discount: invoiceDetails.discount,
-      taxRate: invoiceDetails.taxRate,
-      currency: invoiceDetails.currency,
-      amount: invoiceDetails.items.reduce((sum, item) => {
+      ...liveFormValues, // Live data takes precedence
+      items: itemsList,
+      note: liveFormValues.note !== undefined ? liveFormValues.note : invoiceDetails.note,
+      discount: liveFormValues.discount !== undefined ? liveFormValues.discount : invoiceDetails.discount,
+      taxRate: liveFormValues.taxRate !== undefined ? liveFormValues.taxRate : invoiceDetails.taxRate,
+      currency: liveFormValues.currency || invoiceDetails.currency,
+      amount: itemsList.reduce((sum: number, item: any) => {
         const qty = item.qty || 1;
         const amt = item.amount || 0;
         return sum + qty * amt;
       }, 0),
-      clientName: companyDetails.companyName || "",
-      clientEmail: companyDetails.email || "",
-      invoiceNumber: invoiceTerms.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+      clientName: liveFormValues.companyName || companyDetails.companyName || "",
+      clientEmail: liveFormValues.email || companyDetails.email || "",
+      invoiceNumber: liveFormValues.invoiceNumber || invoiceTerms.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
     };
 
     if (isRecurring) {

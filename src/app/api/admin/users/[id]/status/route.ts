@@ -31,8 +31,8 @@ export async function PATCH(
     .eq('id', targetUserId)
     .single();
 
-  if (targetProfileAuth?.role === 'superadmin' && adminProfile?.role !== 'superadmin') {
-    return NextResponse.json({ error: 'Forbidden — cannot modify superadmin' }, { status: 403 });
+  if (targetProfileAuth?.role === 'superadmin') {
+    return NextResponse.json({ error: 'Forbidden — Superadmins cannot be banned or deleted via the UI.' }, { status: 403 });
   }
 
   const supabaseAdmin = createSupabaseClient(
@@ -70,11 +70,13 @@ export async function PATCH(
       reason: 'Admin-initiated deletion'
     });
 
-    // 3. Wipe Data
-    await supabaseAdmin.from('invoices').delete().eq('user_id', targetUserId);
+    // 3. Wipe Data via Soft Deletion
+    await supabaseAdmin.from('invoices').update({ deleted_at: new Date().toISOString() }).eq('user_id', targetUserId);
 
-    // 4. Hard Delete Account
-    await supabaseAdmin.auth.admin.deleteUser(targetUserId);
+    // 4. Soft Delete Account
+    // We ban the user to revoke access and mark the profile as deleted. A 90-day retention worker will handle the hard delete.
+    await supabaseAdmin.auth.admin.updateUserById(targetUserId, { ban_duration: '8760h' });
+    await supabaseAdmin.from('profiles').update({ is_banned: true, deleted_at: new Date().toISOString() }).eq('id', targetUserId);
   }
 
   return NextResponse.json({ success: true });

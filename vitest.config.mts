@@ -11,6 +11,11 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     alias: {
       '@': srcPath
+    },
+    server: {
+      deps: {
+        inline: [/@csstools/, /@asamuzakjp/]
+      }
     }
   }
 })

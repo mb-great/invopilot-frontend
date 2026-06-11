@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import MembersClient from '@/components/dashboard/MembersClient';
@@ -72,13 +73,13 @@ export default async function MembersPage() {
     .eq('id', activeWorkspace.owner_id)
     .single();
 
-  const access = resolvePlanAccess(ownerProfile);
+  const access = await getWorkspaceAccess(supabase);
   const isBusinessOrAdmin = access.effectiveTier === 'business' || access.isAdmin;
 
   // Fetch all members for this workspace
   const { data: members } = await supabase
     .from('workspace_members')
-    .select('id, user_id, invited_email, role, status, profiles(full_name, avatar_url, email)')
+    .select('id, user_id, invited_email, role, status, created_at, profiles(full_name, avatar_url, email)')
     .eq('workspace_id', activeWorkspace.id);
 
   // Fetch recent activity (invoices created by members)
@@ -91,14 +92,11 @@ export default async function MembersPage() {
     .limit(10);
 
   return (
-    <DashboardShell 
-      userEmail={user.email} 
-      userName={profile?.full_name} 
-      avatarUrl={profile?.avatar_url} 
-      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
-      tier={profile?.tier}
-      subscriptionStatus={profile?.subscription_status}
-      subscriptionPeriodEnd={profile?.subscription_period_end}
+    <DashboardShell
+      userEmail={user.email}
+      userName={profile?.full_name}
+      avatarUrl={profile?.avatar_url}
+      access={access}
     >
       <div className="max-w-6xl w-full mx-auto pb-12">
         <div className="mb-12 flex flex-col md:flex-row items-start md:items-center justify-between shrink-0 gap-4 md:gap-0">
@@ -112,36 +110,14 @@ export default async function MembersPage() {
           </div>
         </div>
 
-        {!isBusinessOrAdmin ? (
-          <div className="relative overflow-hidden rounded-3xl border border-ink-150 bg-white">
-            <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent pointer-events-none" />
-            <div className="p-8 md:p-12 lg:p-16 text-center max-w-2xl mx-auto relative z-10">
-              <div className="w-16 h-16 bg-brand-100 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
-                <ShieldAlert className="w-8 h-8 text-brand-600" />
-              </div>
-              <h2 className="text-3xl font-bold tracking-tight text-ink-900 mb-4">
-                Team Collaboration is a Business feature
-              </h2>
-              <p className="text-ink-600 text-lg mb-8 leading-relaxed">
-                Upgrade to the Business plan to invite team members, assign roles, and track team activity across your workspaces.
-              </p>
-              <Link 
-                href="/pricing"
-                className="inline-flex items-center justify-center h-12 px-8 rounded-xl bg-brand-500 text-white font-bold hover:bg-brand-600 transition-colors shadow-sm hover:shadow"
-              >
-                Upgrade to Business
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <MembersClient 
-            workspaceId={activeWorkspace.id} 
-            workspaceName={activeWorkspace.name}
-            userRole={userWorkspaceRole}
-            members={(members as any) || []}
-            recentInvoices={(recentInvoices as any) || []}
-          />
-        )}
+        <MembersClient 
+          workspaceId={activeWorkspace.id} 
+          workspaceName={activeWorkspace.name}
+          userRole={userWorkspaceRole}
+          members={(members as any) || []}
+          recentInvoices={(recentInvoices as any) || []}
+          isBusinessTier={isBusinessOrAdmin}
+        />
       </div>
     </DashboardShell>
   );

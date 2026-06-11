@@ -3,6 +3,8 @@ import PricingClient from '@/components/billing/PricingClient';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
+
 export default async function PricingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -17,15 +19,14 @@ export default async function PricingPage() {
     .eq('id', user.id)
     .single();
 
+  const access = await getWorkspaceAccess(supabase);
+
   return (
     <DashboardShell
       userEmail={user.email}
       userName={profile?.full_name}
       avatarUrl={profile?.avatar_url}
-      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
-      tier={profile?.tier}
-      subscriptionStatus={profile?.subscription_status}
-      subscriptionPeriodEnd={profile?.subscription_period_end}
+      access={access}
     >
       <PricingClient profile={profile} />
     </DashboardShell>

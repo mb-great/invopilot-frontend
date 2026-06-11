@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/ratelimit';
 import { logger } from '@/lib/logger';
 import { canCreateInvoice, resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { requireBillingProfile } from '@/lib/auth/guards';
 import { getActiveWorkspaceId } from '@/lib/workspace';
 
@@ -34,21 +35,21 @@ export async function POST(request: Request) {
     .eq('workspace_id', workspaceId)
     .in('status', ['queued', 'processing']);
 
-  const lifetimeGenerated = profile.total_invoices_generated ?? 0;
+  const access = await getWorkspaceAccess(supabase, workspaceId);
+  const ownerProfile = access.profile || profile;
+  const lifetimeGenerated = ownerProfile.total_invoices_generated ?? 0;
   
-  console.log(`[TIER DEBUG] user=${user.id} role=${profile.role} lifetime=${lifetimeGenerated} reserved=${reservedPdfCount} tier=${profile.tier}`);
+  console.log(`[TIER DEBUG] user=${user.id} role=${ownerProfile.role} lifetime=${lifetimeGenerated} reserved=${reservedPdfCount} tier=${ownerProfile.tier}`);
 
-  // Count invoices in current billing period (for paid tiers)
-  const access = resolvePlanAccess(profile);
   let periodGenerated: number | null = null;
   
-  if (access.effectiveTier === 'starter' && profile.subscription_period_start && profile.subscription_period_end) {
+  if (access.effectiveTier === 'starter' && ownerProfile.subscription_period_start && ownerProfile.subscription_period_end) {
     const { count: periodCount } = await supabase
       .from('invoices')
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId)
-      .gte('created_at', profile.subscription_period_start)
-      .lte('created_at', profile.subscription_period_end);
+      .gte('created_at', ownerProfile.subscription_period_start)
+      .lte('created_at', ownerProfile.subscription_period_end);
       
     periodGenerated = periodCount ?? 0;
   }
@@ -126,11 +127,11 @@ export async function POST(request: Request) {
       nickname: body.nickname || null,
       status: 'queued',
       // Phase 12: Extract indexed columns for fast queries
-      amount: parseFloat(formData.amount) || 0,
+      amount: typeof formData.amount === 'number' ? formData.amount : (parseFloat(formData.amount || body.amount) || 0),
       currency: formData.currency || 'INR',
-      client_name: formData.clientName || '',
-      client_email: formData.clientEmail || '',
-      business_profile_name: formData.yourCompanyName || formData.yourName || '',
+      client_name: body.clientName || formData.companyName || '',
+      client_email: formData.email || formData.companyEmail || '',
+      business_profile_name: formData.yourName || formData.yourCompanyName || '',
       payment_status: body.payment_status === 'quote' ? 'quote' : 'draft',
       invoice_number: formData.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
       issue_date: issueDate,

@@ -59,28 +59,23 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
         const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
         
-        let query = supabase
-          .from('invoices')
-          .select('amount, currency, payment_status, created_at, form_data->>dueDate')
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false });
-          
-        if (activeWorkspaceId) {
-          query = query.eq('workspace_id', activeWorkspaceId);
-        } else {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) query = query.eq('user_id', user.id);
-        }
-        
-        // Handle business filter if in URL
+        const { data: { user } } = await supabase.auth.getUser();
+        let targetUser = user?.id;
+
         const searchParams = new URLSearchParams(window.location.search);
         const businessFilter = searchParams.get('business');
-        if (businessFilter) {
-          query = query.eq('business_profile_name', businessFilter);
-        }
+
+        // Fetch pre-aggregated time-series data to protect 250MB heap limit
+        const { data } = await supabase.rpc('get_revenue_chart_series', {
+          target_workspace_id: activeWorkspaceId || null,
+          target_user_id: !activeWorkspaceId ? targetUser : null,
+          start_date: null,
+          end_date: null,
+          group_by: 'day', // Daily granularity allows client to group into weeks/months
+          target_business: businessFilter || null
+        });
         
-        const { data } = await query;
-        if (data) setInvoices(data);
+        if (data) setInvoices(data as any);
       } catch (e) {
         console.error("Failed to fetch invoices for chart", e);
       } finally {
@@ -92,9 +87,8 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
 
   const currencies = useMemo(() => {
     const list = new Set<string>();
-    invoices.forEach(inv => {
-      const cur = inv.currency || inv.form_data?.currency;
-      if (cur) list.add(cur.toUpperCase());
+    invoices.forEach((point: any) => {
+      if (point.currency) list.add(point.currency.toUpperCase());
     });
     const arr = Array.from(list);
     return arr.length > 0 ? arr : ['USD'];
@@ -163,7 +157,7 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
       // Dynamic monthly labels from earliest invoice to now
       let earliest = new Date(now.getFullYear(), now.getMonth() - 11, 1, 0, 0, 0);
       if (invoices.length > 0) {
-        const dates = invoices.map(i => new Date(i.created_at).getTime());
+        const dates = invoices.map((i: any) => new Date(i.date).getTime());
         const minDate = new Date(Math.min(...dates));
         earliest = new Date(minDate.getFullYear(), minDate.getMonth(), 1, 0, 0, 0);
       }
@@ -240,20 +234,11 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
     // Sum revenues
     labelUnits.forEach(unit => {
       let revenue = 0;
-      invoices.forEach(inv => {
-        const invDate = new Date(inv.created_at);
-        if (invDate.getTime() >= unit.start.getTime() && invDate.getTime() < unit.end.getTime()) {
-          let amount = 0;
-          if (inv.amount) amount = inv.amount;
-          else if (inv.form_data?.items) {
-            amount = inv.form_data.items.reduce((sum: number, item: any) => {
-              return sum + ((item.qty || 0) * (item.amount || 0));
-            }, 0);
-          }
-
-          const invCurrency = inv.currency || inv.form_data?.currency || 'USD';
-          if (invCurrency.toUpperCase() === selectedCurrency.toUpperCase() && inv.payment_status !== 'draft' && inv.payment_status !== 'cancelled') {
-            revenue += amount;
+      invoices.forEach((point: any) => {
+        const pointDate = new Date(point.date);
+        if (pointDate.getTime() >= unit.start.getTime() && pointDate.getTime() < unit.end.getTime()) {
+          if (point.currency.toUpperCase() === selectedCurrency.toUpperCase()) {
+            revenue += (point.paid + point.overdue + point.outstanding);
           }
         }
       });

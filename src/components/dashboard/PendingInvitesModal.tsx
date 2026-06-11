@@ -15,10 +15,11 @@ interface PendingInvite {
 
 interface PendingInvitesModalProps {
   invites: PendingInvite[];
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export default function PendingInvitesModal({ invites }: PendingInvitesModalProps) {
-  const [isOpen, setIsOpen] = useState(invites.length > 0);
+export default function PendingInvitesModal({ invites, isOpen, onClose }: PendingInvitesModalProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const router = useRouter();
 
@@ -30,7 +31,7 @@ export default function PendingInvitesModal({ invites }: PendingInvitesModalProp
       const res = await fetch('/api/workspaces/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId, action }),
+        body: JSON.stringify({ inviteId: workspaceId, action }),
       });
 
       if (!res.ok) {
@@ -42,7 +43,7 @@ export default function PendingInvitesModal({ invites }: PendingInvitesModalProp
       
       // If we accepted, we probably want to switch to it, but for now just refresh
       if (invites.length === 1) {
-        setIsOpen(false);
+        onClose();
       }
       router.refresh();
     } catch (err: any) {
@@ -69,7 +70,7 @@ export default function PendingInvitesModal({ invites }: PendingInvitesModalProp
           {invites.map((invite) => (
             <div key={invite.id} className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border border-ink-200 rounded-xl bg-ink-50">
               <div className="text-center sm:text-left">
-                <p className="font-bold text-ink-900">{invite.workspaces.name}</p>
+                <p className="font-bold text-ink-900">{Array.isArray(invite.workspaces) ? invite.workspaces[0]?.name : (invite.workspaces?.name || 'Unknown Workspace')}</p>
                 <p className="text-xs text-ink-500">Role: <span className="uppercase font-semibold">{invite.role}</span></p>
               </div>
               <div className="flex gap-2">
@@ -96,7 +97,7 @@ export default function PendingInvitesModal({ invites }: PendingInvitesModalProp
         
         <div className="p-4 bg-ink-50 border-t border-ink-100 text-center">
           <button 
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
             className="text-sm font-bold text-ink-500 hover:text-ink-700"
           >
             I'll review these later

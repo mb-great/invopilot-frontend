@@ -31,8 +31,8 @@ export async function PATCH(
     .eq('id', targetUserId)
     .single();
 
-  if (targetProfile?.role === 'superadmin' && callerProfile?.role !== 'superadmin') {
-    return NextResponse.json({ error: 'Forbidden — cannot modify superadmin' }, { status: 403 });
+  if (targetProfile?.role === 'superadmin') {
+    return NextResponse.json({ error: 'Forbidden — Superadmins cannot be demoted or modified via the UI.' }, { status: 403 });
   }
 
   // 3. Parse body

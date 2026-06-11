@@ -7,13 +7,12 @@ import EmptyState from '@/components/dashboard/EmptyState'
 import StatCards from '@/components/dashboard/StatCards'
 import RightSidebar from '@/components/dashboard/RightSidebar'
 import BusinessProfileDropdown from '@/components/dashboard/BusinessProfileDropdown'
-import WorkspaceSwitcher from '@/components/dashboard/WorkspaceSwitcher'
-import PendingInvitesModal from '@/components/dashboard/PendingInvitesModal'
 import { cookies } from 'next/headers'
 import RevenueChart from '@/components/dashboard/RevenueChart'
 import StatusDonut from '@/components/dashboard/StatusDonut'
 import HelpPopover from '@/components/ui/HelpPopover'
-import { resolvePlanAccess } from '@/lib/billing/tiers'
+import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { Lock, Sparkles } from 'lucide-react'
 export default async function DashboardPage({
   searchParams,
@@ -34,13 +33,6 @@ export default async function DashboardPage({
     .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end, cancel_requested_at, defaults')
     .eq('id', user.id)
     .single()
-
-  const access = resolvePlanAccess({
-    role: profile?.role,
-    tier: profile?.tier,
-    subscription_status: profile?.subscription_status,
-    subscription_period_end: profile?.subscription_period_end,
-  });
 
   // Await cookies since Next.js 15
   const cookieStore = await cookies();
@@ -81,10 +73,27 @@ export default async function DashboardPage({
     return { ...ws, displayName };
   });
 
-  let activeWorkspace = workspaces.find((w: any) => w.id === activeWorkspaceCookie);
+  // Get active workspace and its owner
+  const activeWorkspaceId = cookieStore.get('invopilot_active_workspace')?.value;
+  let activeWorkspace = workspaces.find((w: any) => w.id === activeWorkspaceId);
+  
   if (!activeWorkspace && workspaces.length > 0) {
     activeWorkspace = workspaces.find((w: any) => w.owner_id === user.id) || workspaces[0];
   }
+
+  let ownerProfile: any = profile;
+  if (activeWorkspace && activeWorkspace.owner_id !== user.id) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role, tier, subscription_status, subscription_period_end')
+      .eq('id', activeWorkspace.owner_id)
+      .single();
+    if (data) {
+      ownerProfile = { ...profile, ...data };
+    }
+  }
+
+  const access = await getWorkspaceAccess(supabase);
 
   const businesses = (activeWorkspace?.businesses || []).filter((b: any) => !b.deletedAt);
   const isMultiBusinessLocked = !access.plan.canUseQuotes && !access.isAdmin; // using Quotes access as proxy for Pro tier
@@ -93,6 +102,7 @@ export default async function DashboardPage({
   let query = supabase
     .from('invoices')
     .select('id, amount, currency, payment_status, created_at, nickname, invoice_number, share_slug, status, pdf_url, form_data->>dueDate')
+    .in('payment_status', ['draft', 'sent', 'paid', 'overdue'])
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(10);
@@ -110,21 +120,15 @@ export default async function DashboardPage({
   const { data: recentInvoicesData } = await query
   const recentInvoices = recentInvoicesData || []
 
-  // Calculate global storage used (not affected by businessFilter)
-  let storageQuery = supabase
-    .from('invoices')
-    .select('pdf_size')
-    .is('deleted_at', null);
-    
+  // Calculate global storage used via RPC (Safe for 250MB heap)
+  let currentStorageBytes = 0;
   if (activeWorkspace) {
-    storageQuery = storageQuery.eq('workspace_id', activeWorkspace.id);
+    const { data } = await supabase.rpc('get_workspace_storage_used', { target_workspace_id: activeWorkspace.id });
+    currentStorageBytes = Number(data || 0);
   } else {
-    storageQuery = storageQuery.eq('user_id', user.id);
+    const { data } = await supabase.rpc('get_user_storage_used', { target_user_id: user.id });
+    currentStorageBytes = Number(data || 0);
   }
-  
-  const { data: storageData } = await storageQuery;
-    
-  const currentStorageBytes = (storageData || []).reduce((sum, inv) => sum + Number(inv.pdf_size || 0), 0)
 
   // Fetch metrics data via RPC (aggregated in Postgres to protect Node Heap)
   let stats;
@@ -149,16 +153,12 @@ export default async function DashboardPage({
   };
 
   return (
-    <DashboardShell 
-      userEmail={user.email} 
-      userName={profile?.full_name} 
-      avatarUrl={profile?.avatar_url} 
-      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
-      tier={profile?.tier}
-      subscriptionStatus={profile?.subscription_status}
-      subscriptionPeriodEnd={profile?.subscription_period_end}
+    <DashboardShell
+      userEmail={user.email}
+      userName={profile?.full_name}
+      avatarUrl={profile?.avatar_url}
+      access={access}
     >
-      <PendingInvitesModal invites={pendingInvites as any[]} />
       <div className="flex flex-col space-y-4 md:space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between shrink-0 gap-4 md:gap-0">
@@ -194,7 +194,6 @@ export default async function DashboardPage({
             <p className="text-ink-500 mt-2 text-lg">Snapshot of your invoicing — outstanding, paid, and what&apos;s due next.</p>
           </div>
           <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-            <WorkspaceSwitcher workspaces={workspaces} activeWorkspaceId={activeWorkspace?.id} />
             <BusinessProfileDropdown 
               businesses={businesses} 
               isLocked={isMultiBusinessLocked} 
@@ -243,10 +242,13 @@ export default async function DashboardPage({
                 {recentInvoices && recentInvoices.length > 0 ? (
                   <InvoiceTable 
                     invoices={recentInvoices} 
+                    baseStatus="draft,sent,paid,overdue"
                     initialMeta={initialMeta}
                     showHeader={false} 
                     availableCurrencies={availableCurrencies}
                     canExportCsv={access.plan.canExportCsv || access.isAdmin}
+                    activeWorkspaceId={activeWorkspace?.id}
+                    businessFilter={businessFilter}
                   />
                 ) : (
                   <EmptyState />
@@ -257,7 +259,7 @@ export default async function DashboardPage({
 
           <div className="lg:col-span-1 flex flex-col">
             <RightSidebar 
-              profile={profile} 
+              profile={ownerProfile} 
               stats={stats} 
               recentInvoices={recentInvoices.slice(0, 5)} 
               currentStorageBytes={currentStorageBytes} 

@@ -10,7 +10,10 @@ import DeleteAccountSection from '@/components/dashboard/DeleteAccountSection';
 import BusinessProfilesSection from '@/components/dashboard/BusinessProfilesSection';
 import NotificationSettingsSection from '@/components/dashboard/NotificationSettingsSection';
 import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { logger } from '@/lib/logger';
+
+export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -53,6 +56,8 @@ export default async function SettingsPage() {
       activeWorkspace = Array.isArray(defaultWs.workspaces) ? defaultWs.workspaces[0] : defaultWs.workspaces;
     }
   }
+
+  const access = await getWorkspaceAccess(supabase);
 
   async function updateProfile(formData: FormData) {
     'use server';
@@ -101,14 +106,11 @@ export default async function SettingsPage() {
   }
 
   return (
-    <DashboardShell 
-      userEmail={user.email} 
-      userName={profile?.full_name} 
-      avatarUrl={profile?.avatar_url} 
-      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
-      tier={profile?.tier}
-      subscriptionStatus={profile?.subscription_status}
-      subscriptionPeriodEnd={profile?.subscription_period_end}
+    <DashboardShell
+      userEmail={user.email}
+      userName={profile?.full_name}
+      avatarUrl={profile?.avatar_url}
+      access={access}
     >
       <div className="max-w-4xl">
         <div className="mb-12">
@@ -132,10 +134,6 @@ export default async function SettingsPage() {
               />
             </section>
 
-            {(() => {
-              const access = resolvePlanAccess(profile);
-              return (
-                <>
                   <BusinessProfilesSection
                     profile={profile}
                     userId={user.id}
@@ -144,9 +142,6 @@ export default async function SettingsPage() {
                     activeWorkspace={activeWorkspace}
                   />
                   <NotificationSettingsSection profile={profile} />
-                </>
-              );
-            })()}
 
             <DeleteAccountSection />
           </div>

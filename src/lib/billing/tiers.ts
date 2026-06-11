@@ -6,7 +6,7 @@ export type BillingTier = (typeof BILLING_TIERS)[number];
 export type PaidBillingTier = Exclude<BillingTier, 'free'>;
 
 export type SubscriptionStatus = 'none' | 'trialing' | 'active' | 'expired' | 'canceled' | 'cancelled' | 'past_due' | 'halted';
-export type SubscriptionSource = 'none' | 'dummy' | 'stripe' | 'manual';
+export type SubscriptionSource = 'none' | 'dummy' | 'stripe' /* legacy */ | 'manual' | 'razorpay';
 
 export type BillingProfile = {
   role?: string | null;
@@ -211,13 +211,13 @@ export function formatPlanLimit(limit: PlanLimit) {
 }
 
 export function resolvePlanAccess(profile?: BillingProfile | null, now = new Date()) {
-  const role = profile?.role ?? 'user';
+  const system_role = profile?.role ?? 'user';
   const rawTier = profile?.tier ?? 'free';
   const tier = isBillingTier(rawTier) ? rawTier : 'free';
   const status = (profile?.subscription_status ?? 'none') as SubscriptionStatus;
   const periodEnd = profile?.subscription_period_end ? new Date(profile.subscription_period_end) : null;
-  const isAdmin = role === 'admin' || role === 'superadmin';
-  const isSuperAdmin = role === 'superadmin';
+  const isAdmin = system_role === 'admin' || system_role === 'superadmin';
+  const isSuperAdmin = system_role === 'superadmin';
   const hasActivePaidPeriod =
     tier !== 'free' &&
     (status === 'active' || status === 'trialing') &&
@@ -227,6 +227,7 @@ export function resolvePlanAccess(profile?: BillingProfile | null, now = new Dat
   const effectiveTier: BillingTier = isAdmin ? 'business' : hasActivePaidPeriod ? tier : 'free';
 
   return {
+    profile,
     tier,
     effectiveTier,
     plan: PLAN_BY_TIER[effectiveTier],

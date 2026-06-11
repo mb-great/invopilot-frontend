@@ -3,6 +3,10 @@ import { redirect } from 'next/navigation';
 import DashboardShell from '@/components/layout/DashboardShell';
 import ClientsClient from '@/components/dashboard/ClientsClient';
 import { getActiveWorkspaceId } from '@/lib/workspace';
+import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
+
+export const dynamic = 'force-dynamic';
 
 type ClientInvoiceRow = {
   id: string;
@@ -27,6 +31,23 @@ export default async function ClientsPage() {
     .single();
 
   const activeWorkspaceId = await getActiveWorkspaceId(user.id);
+
+  const { data: wsData } = await supabase
+    .from('workspaces')
+    .select('owner_id')
+    .eq('id', activeWorkspaceId)
+    .single();
+
+  const ownerId = wsData?.owner_id || user.id;
+
+  const { data: ownerProfile } = await supabase
+    .from('profiles')
+    .select('role, tier, subscription_status, subscription_period_end')
+    .eq('id', ownerId)
+    .single();
+
+  const access = await getWorkspaceAccess(supabase);
+  const clientLimit = access.plan.maxClients === 'unlimited' ? Infinity : (access.plan.maxClients as number);
 
   // 1. Fetch saved clients for the active workspace
   const { data: dbClientsData } = await supabase
@@ -184,21 +205,18 @@ export default async function ClientsPage() {
   const latestMismatches = mismatches.slice(0, 5);
 
   return (
-    <DashboardShell 
-      userEmail={user.email} 
-      userName={profile?.full_name} 
-      avatarUrl={profile?.avatar_url} 
-      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
-      tier={profile?.tier}
-      subscriptionStatus={profile?.subscription_status}
-      subscriptionPeriodEnd={profile?.subscription_period_end}
+    <DashboardShell
+      userEmail={user.email}
+      userName={profile?.full_name}
+      avatarUrl={profile?.avatar_url}
+      access={access}
     >
       <ClientsClient
         initialClients={savedClients}
         potentialClients={potentialClients}
         potentialUpdates={latestMismatches}
         billingStats={billingStats}
-        userTier={profile?.tier || 'free'}
+        clientLimit={clientLimit}
         userId={user.id}
       />
     </DashboardShell>

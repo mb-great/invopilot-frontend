@@ -53,7 +53,9 @@ export default function InvoiceTable({
   targetUserId,
   canUseQuotes = false,
   canExportCsv = false,
-  baseStatus
+  baseStatus,
+  activeWorkspaceId,
+  businessFilter
 }: { 
   invoices: Invoice[], 
   initialMeta?: Meta,
@@ -63,7 +65,9 @@ export default function InvoiceTable({
   targetUserId?: string,
   canUseQuotes?: boolean,
   canExportCsv?: boolean,
-  baseStatus?: string
+  baseStatus?: string,
+  activeWorkspaceId?: string,
+  businessFilter?: string | null
 }) {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [meta, setMeta] = useState<Meta>(initialMeta || { page: 1, limit: 10, totalPages: 1 });
@@ -132,6 +136,12 @@ export default function InvoiceTable({
       if (targetUserId) {
         params.append('userId', targetUserId);
       }
+      if (activeWorkspaceId) {
+        params.append('workspaceId', activeWorkspaceId);
+      }
+      if (businessFilter) {
+        params.append('business', businessFilter);
+      }
       const res = await fetch(`/api/invoices?${params}`);
       const result = await res.json();
       if (res.ok) {
@@ -157,7 +167,7 @@ export default function InvoiceTable({
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, currencyFilter, dateType, dateValue, sortBy, targetUserId, mounted]);
+  }, [page, search, statusFilter, currencyFilter, dateType, dateValue, sortBy, targetUserId, mounted, baseStatus, activeWorkspaceId, businessFilter]);
 
   useEffect(() => {
     if (mounted && typeof window !== 'undefined') {
@@ -767,7 +777,7 @@ export default function InvoiceTable({
       </div>
 
       <div className="w-full flex-1 overflow-hidden">
-        <div className="overflow-x-auto pb-4 no-scrollbar min-h-[300px] max-w-[90vw] md:max-w-full">
+        <div className="overflow-x-auto pb-4 no-scrollbar w-full">
           
           <table className="w-full text-left border-collapse min-w-[900px] table-auto">
             <thead>

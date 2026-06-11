@@ -43,23 +43,23 @@ export async function saveClient(clientData: {
 
   if (!user) throw new Error('Unauthorized');
 
-  // Load profile to check plan access
+  const workspaceId = await getActiveWorkspaceId(user.id);
+
+  // Load active workspace owner profile to check plan access
+  const { data: wsData } = await supabase.from('workspaces').select('owner_id').eq('id', workspaceId).single();
+  const ownerId = wsData?.owner_id || user.id;
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, tier, subscription_status, subscription_period_end')
-    .eq('id', user.id)
+    .eq('id', ownerId)
     .single();
 
-  const access = resolvePlanAccess({
-    role: profile?.role,
-    tier: profile?.tier,
-    subscription_status: profile?.subscription_status,
-    subscription_period_end: profile?.subscription_period_end,
-  });
+  const access = resolvePlanAccess(profile);
 
-  const maxClients = access.effectiveTier === 'free' ? 5 : (access.effectiveTier === 'starter' ? 20 : Infinity);
+  const maxClients = access.plan.maxClients === 'unlimited' ? Infinity : (access.plan.maxClients as number);
 
-  const workspaceId = await getActiveWorkspaceId(user.id);
+
 
   if (maxClients !== Infinity) {
     const { count } = await supabase

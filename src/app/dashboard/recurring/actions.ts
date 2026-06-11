@@ -12,10 +12,13 @@ export async function getRecurringTemplates() {
     throw new Error('Unauthorized');
   }
 
+  const { getActiveWorkspaceId } = await import('@/lib/workspace');
+  const workspaceId = await getActiveWorkspaceId(user.id);
+
   const { data, error } = await supabase
     .from('recurring_templates')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -37,19 +40,30 @@ export async function saveRecurringTemplate(templateData: {
 
   if (!user) throw new Error('Unauthorized');
 
-  // Check caps
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, tier, subscription_status, subscription_period_end')
     .eq('id', user.id)
     .single();
 
-  const access = resolvePlanAccess({
-    role: profile?.role,
-    tier: profile?.tier,
-    subscription_status: profile?.subscription_status,
-    subscription_period_end: profile?.subscription_period_end,
-  });
+  const { getActiveWorkspaceId } = await import('@/lib/workspace');
+  const workspaceId = await getActiveWorkspaceId(user.id);
+
+  const { data: activeWorkspace } = await supabase
+    .from('workspaces')
+    .select('owner_id')
+    .eq('id', workspaceId)
+    .single();
+
+  const ownerId = activeWorkspace?.owner_id || user.id;
+
+  const { data: ownerProfile } = await supabase
+    .from('profiles')
+    .select('role, tier, subscription_status, subscription_period_end')
+    .eq('id', ownerId)
+    .single();
+
+  const access = resolvePlanAccess(ownerProfile || profile);
 
   if (!access.plan.canUseRecurring && !access.isAdmin) {
     throw new Error('Please upgrade to Pro or Business to use recurring templates');
@@ -73,6 +87,7 @@ export async function saveRecurringTemplate(templateData: {
     .from('recurring_templates')
     .insert([{
       user_id: user.id,
+      workspace_id: workspaceId,
       nickname: templateData.nickname,
       form_data: templateData.form_data,
       frequency: templateData.frequency,

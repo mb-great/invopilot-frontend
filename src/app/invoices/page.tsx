@@ -4,7 +4,8 @@ import Link from 'next/link'
 import DashboardShell from '@/components/layout/DashboardShell'
 import InvoiceTable from '@/components/dashboard/InvoiceTable'
 import EmptyState from '@/components/dashboard/EmptyState'
-import { resolvePlanAccess } from '@/lib/billing/tiers'
+import { resolvePlanAccess } from '@/lib/billing/tiers';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { getActiveWorkspaceId } from '@/lib/workspace'
 
 export default async function InvoicesPage() {
@@ -21,19 +22,35 @@ export default async function InvoicesPage() {
 
   const activeWorkspaceId = await getActiveWorkspaceId(user.id);
 
+  // Fetch active workspace owner profile for inherited access
+  let ownerProfile: any = profile;
+  if (activeWorkspaceId) {
+    const { data: wsData } = await supabase.from('workspaces').select('owner_id').eq('id', activeWorkspaceId).single();
+    if (wsData && wsData.owner_id !== user.id) {
+      const { data: ownerData } = await supabase
+        .from('profiles')
+        .select('role, tier, subscription_status, subscription_period_end, total_invoices_generated')
+        .eq('id', wsData.owner_id)
+        .single();
+      if (ownerData) {
+        ownerProfile = ownerData;
+      }
+    }
+  }
+
   // Get actual count of non-deleted invoices (NOT lifetime counter which includes deleted)
   const { count: actualInvoiceCount } = await supabase
     .from('invoices')
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', activeWorkspaceId)
-    .in('payment_status', ['draft', 'sent', 'paid'])
+    .in('payment_status', ['draft', 'sent', 'paid', 'overdue'])
     .is('deleted_at', null)
 
   const { data: invoices } = await supabase
     .from('invoices')
     .select('*, profiles(full_name, avatar_url, email)')
     .eq('workspace_id', activeWorkspaceId)
-    .in('payment_status', ['draft', 'sent', 'paid'])
+    .in('payment_status', ['draft', 'sent', 'paid', 'overdue'])
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(0, 9)
@@ -45,7 +62,7 @@ export default async function InvoicesPage() {
     ...stats.top_currencies.map((c: any) => c.currency),
     ...stats.other_currencies.map((c: any) => c.currency)
   ]
-  const access = resolvePlanAccess(profile);
+  const access = await getWorkspaceAccess(supabase);
   
   const totalCount = actualInvoiceCount ?? 0;
   const initialMeta = {
@@ -56,17 +73,14 @@ export default async function InvoicesPage() {
   };
 
   return (
-    <DashboardShell 
-      userEmail={user.email} 
-      userName={profile?.full_name} 
-      avatarUrl={profile?.avatar_url} 
-      isAdmin={profile?.role === 'admin' || profile?.role === 'superadmin'}
-      tier={profile?.tier}
-      subscriptionStatus={profile?.subscription_status}
-      subscriptionPeriodEnd={profile?.subscription_period_end}
+    <DashboardShell
+      userEmail={user.email}
+      userName={profile?.full_name}
+      avatarUrl={profile?.avatar_url}
+      access={access}
     >
       <div className="flex flex-col h-full space-y-6 md:space-y-8 min-h-0">
-        <div className="flex items-center justify-between shrink-0 px-1">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between shrink-0 gap-4 md:gap-0 px-1">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-ink-900">Invoices</h1>
             <p className="text-ink-500 mt-1">Manage and track all your generated invoices.</p>
@@ -92,6 +106,7 @@ export default async function InvoicesPage() {
                 canUseQuotes={access.plan.canUseQuotes}
                 canExportCsv={access.plan.canExportCsv || access.isAdmin}
                 baseStatus="draft,sent,paid"
+                activeWorkspaceId={activeWorkspaceId}
               />
             ) : (
               <EmptyState />

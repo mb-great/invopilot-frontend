@@ -151,7 +151,7 @@ export default function PricingClient({ profile }: Props) {
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
         <div>
-          Current access: {access.isAdmin ? 'Admin bypass' : PLAN_BY_TIER[access.effectiveTier].name}
+          Current access: {access.isSuperAdmin ? 'Superadmin bypass' : access.isAdmin ? 'Admin bypass' : PLAN_BY_TIER[access.effectiveTier].name}
           {access.periodEnd && !access.isAdmin ? (
             profile?.cancel_requested_at && !access.isExpired 
               ? ` (Cancelled, access remains until ${access.periodEnd.toLocaleDateString()})` 
