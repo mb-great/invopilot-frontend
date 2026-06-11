@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
 
 
-  if (quote.payment_status === 'converted') {
+  if (quote.payment_status === 'unpaid' || quote.payment_status === 'paid' || quote.payment_status === 'overdue') {
     return NextResponse.json({ error: 'This quote has already been converted' }, { status: 409 });
   }
 
@@ -68,46 +68,29 @@ export async function POST(request: Request) {
   const nextNum = (count ?? 0) + 1;
   const newInvoiceNumber = `INV-${new Date().getFullYear()}-${String(nextNum).padStart(5, '0')}`;
 
-  // Clone form_data, update invoice number
-  const clonedFormData = {
+  // Update form_data and invoice number
+  const updatedFormData = {
     ...(quote.form_data || {}),
     invoiceNumber: newInvoiceNumber,
   };
 
-  // Insert new draft invoice
-  const { data: newInvoice, error: insertErr } = await supabase
-    .from('invoices')
-    .insert({
-      user_id: user.id,
-      workspace_id: quote.workspace_id,
-      form_data: clonedFormData,
-      status: 'queued',
-      payment_status: 'draft',
-      nickname: quote.nickname ? `${quote.nickname} (from quote)` : 'Converted Quote',
-      amount: quote.amount,
-      currency: quote.currency,
-      invoice_number: newInvoiceNumber,
-    })
-    .select('id')
-    .single();
-
-  if (insertErr) {
-    return NextResponse.json({ error: 'Failed to create invoice: ' + insertErr.message }, { status: 500 });
-  }
-
-  // Mark original as converted
+  // Mutate existing row
   const { error: updateErr } = await supabase
     .from('invoices')
-    .update({ payment_status: 'converted' })
+    .update({
+      form_data: updatedFormData,
+      status: 'queued',
+      payment_status: 'unpaid',
+      invoice_number: newInvoiceNumber,
+      nickname: quote.nickname ? `${quote.nickname} (Converted)` : 'Converted Quote'
+    })
     .eq('id', quoteId);
 
   if (updateErr) {
-    // Rollback the insert if the update fails to ensure atomicity
-    await supabase.from('invoices').delete().eq('id', newInvoice.id);
     return NextResponse.json({ error: 'Failed to convert quote: ' + updateErr.message }, { status: 500 });
   }
 
-  // Notify backend queue to generate PDF
+  // Notify backend queue to regenerate PDF for the SAME ID
   try {
     const backendUrl = BACKEND_URL.replace('localhost', '127.0.0.1'); // Fix Node 18+ IPv6 fetch issue
     const res = await fetch(`${backendUrl}/queue`, {
@@ -117,8 +100,8 @@ export async function POST(request: Request) {
         'x-worker-secret': process.env.WORKER_SECRET || ''
       },
       body: JSON.stringify({
-        invoiceId: newInvoice.id,
-        formData: clonedFormData
+        invoiceId: quoteId,
+        formData: updatedFormData
       })
     });
     
@@ -126,14 +109,14 @@ export async function POST(request: Request) {
       const errText = await res.text();
       console.error(`[API] Failed to dispatch job to backend during quote conversion. Status: ${res.status}. Body: ${errText}`);
     } else {
-      console.log(`[API] Job successfully dispatched to backend for converted invoice ${newInvoice.id}`);
+      console.log(`[API] Job successfully dispatched to backend for converted invoice ${quoteId}`);
     }
   } catch (err) {
     console.error('[API] Fetch exception when dispatching job to backend during quote conversion:', err);
   }
 
   return NextResponse.json({
-    data: { id: newInvoice.id, invoiceNumber: newInvoiceNumber },
+    data: { id: quoteId, invoiceNumber: newInvoiceNumber },
     status: 200,
   });
 }

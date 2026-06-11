@@ -12,6 +12,7 @@ import { saveRecurringTemplate } from "@/app/dashboard/recurring/actions";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 import { toast } from "sonner";
 import { clearInvoiceDraft } from "@/lib/invoiceStorage";
+import { useSearchParams } from "next/navigation";
 
 export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   const { setValue, getValues } = useFormContext();
@@ -22,7 +23,8 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [isQuote, setIsQuote] = useState(false);
+  const searchParams = useSearchParams();
+  const [isQuote, setIsQuote] = useState(searchParams?.get("type") === "quote");
   const [isRecurring, setIsRecurring] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

@@ -124,3 +124,29 @@ export async function deleteRecurringTemplate(id: string) {
 
   revalidatePath('/dashboard/recurring');
 }
+
+export async function updateRecurringTemplate(
+  id: string,
+  updates: { nickname?: string; frequency?: string; reminder_date?: string | null; form_data?: any }
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error('Unauthorized');
+
+  const { data, error } = await supabase
+    .from('recurring_templates')
+    .update(updates)
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating template:', error);
+    throw new Error('Failed to update template');
+  }
+
+  revalidatePath('/dashboard/recurring');
+  return data;
+}

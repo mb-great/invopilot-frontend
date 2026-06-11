@@ -50,10 +50,6 @@ export async function PATCH(
         updateData.paid_at = new Date().toISOString();
       } else {
         updateData.paid_at = null;
-        // If unmarking paid, move back to draft to avoid automatic 'sent' status
-        if (payment_status === 'draft') {
-          updateData.payment_status = 'draft';
-        }
       }
     }
   }

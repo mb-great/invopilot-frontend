@@ -102,7 +102,7 @@ export default async function DashboardPage({
   let query = supabase
     .from('invoices')
     .select('id, amount, currency, payment_status, created_at, nickname, invoice_number, share_slug, status, pdf_url, form_data->>dueDate')
-    .in('payment_status', ['draft', 'sent', 'paid', 'overdue'])
+    .in('payment_status', ['draft', 'unpaid', 'paid', 'overdue'])
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(10);
@@ -214,7 +214,9 @@ export default async function DashboardPage({
         <div className="shrink-0">
           <StatCards 
             topCurrencies={stats.top_currencies} 
-            otherCurrencies={stats.other_currencies} 
+            otherCurrencies={stats.other_currencies}
+            businessFilter={businessFilter}
+            activeWorkspaceId={activeWorkspace?.id}
           />
         </div>
 
@@ -222,10 +224,10 @@ export default async function DashboardPage({
         {access.effectiveTier !== 'free' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
             <div className="lg:col-span-2">
-              <RevenueChart activeWorkspaceId={activeWorkspace?.id} targetCurrency={stats.top_currencies?.[0]?.currency || 'USD'} profile={profile} />
+              <RevenueChart activeWorkspaceId={activeWorkspace?.id} targetCurrency={stats.top_currencies?.[0]?.currency || 'USD'} profile={profile} businessFilter={businessFilter} />
             </div>
             <div className="lg:col-span-1">
-              <StatusDonut activeWorkspaceId={activeWorkspace?.id} />
+              <StatusDonut activeWorkspaceId={activeWorkspace?.id} businessFilter={businessFilter} />
             </div>
           </div>
         )}
@@ -242,7 +244,7 @@ export default async function DashboardPage({
                 {recentInvoices && recentInvoices.length > 0 ? (
                   <InvoiceTable 
                     invoices={recentInvoices} 
-                    baseStatus="draft,sent,paid,overdue"
+                    baseStatus="draft,unpaid,paid,overdue"
                     initialMeta={initialMeta}
                     showHeader={false} 
                     availableCurrencies={availableCurrencies}

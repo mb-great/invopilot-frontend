@@ -43,14 +43,14 @@ export default async function InvoicesPage() {
     .from('invoices')
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', activeWorkspaceId)
-    .in('payment_status', ['draft', 'sent', 'paid', 'overdue'])
+    .in('payment_status', ['draft', 'unpaid', 'paid', 'overdue'])
     .is('deleted_at', null)
 
   const { data: invoices } = await supabase
     .from('invoices')
     .select('*, profiles(full_name, avatar_url, email)')
     .eq('workspace_id', activeWorkspaceId)
-    .in('payment_status', ['draft', 'sent', 'paid', 'overdue'])
+    .in('payment_status', ['draft', 'unpaid', 'paid', 'overdue'])
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(0, 9)
@@ -105,7 +105,7 @@ export default async function InvoicesPage() {
                 showHeader={false}
                 canUseQuotes={access.plan.canUseQuotes}
                 canExportCsv={access.plan.canExportCsv || access.isAdmin}
-                baseStatus="draft,sent,paid"
+                baseStatus="draft,unpaid,paid,overdue"
                 activeWorkspaceId={activeWorkspaceId}
               />
             ) : (

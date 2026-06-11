@@ -39,11 +39,12 @@ interface Props {
   activeWorkspaceId?: string;
   targetCurrency?: string;
   profile?: any;
+  businessFilter?: string | null;
 }
 
 type RangeType = '30days' | '1year' | 'lifetime' | 'custom';
 
-export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD', profile }: Props) {
+export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD', profile, businessFilter }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [rangeType, setRangeType] = useState<RangeType>('30days');
@@ -54,24 +55,18 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
     async function fetchInvoices() {
       try {
         setIsLoading(true);
-        // Supabase client can be created per request inside the component or globally, but since this is a client component, we import it.
-        // Wait, we need to import createClient from @/lib/supabase/client
         const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
         
         const { data: { user } } = await supabase.auth.getUser();
         let targetUser = user?.id;
 
-        const searchParams = new URLSearchParams(window.location.search);
-        const businessFilter = searchParams.get('business');
-
-        // Fetch pre-aggregated time-series data to protect 250MB heap limit
         const { data } = await supabase.rpc('get_revenue_chart_series', {
           target_workspace_id: activeWorkspaceId || null,
           target_user_id: !activeWorkspaceId ? targetUser : null,
           start_date: null,
           end_date: null,
-          group_by: 'day', // Daily granularity allows client to group into weeks/months
+          group_by: 'day',
           target_business: businessFilter || null
         });
         
@@ -83,7 +78,7 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
       }
     }
     fetchInvoices();
-  }, [activeWorkspaceId]);
+  }, [activeWorkspaceId, businessFilter]);
 
   const currencies = useMemo(() => {
     const list = new Set<string>();

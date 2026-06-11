@@ -38,7 +38,30 @@ export default function InvoiceBuilder() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setProfile(data);
+        
+        // Fetch businesses from active workspace
+        const getCookie = (name: string) => document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))?.[2];
+        let activeWorkspaceId = getCookie('invopilot_active_workspace');
+        
+        let businesses: any[] = [];
+        if (activeWorkspaceId) {
+          const { data: ws } = await supabase.from('workspaces').select('businesses').eq('id', activeWorkspaceId).single();
+          if (ws && ws.businesses) businesses = ws.businesses;
+        } else {
+          // Fallback to personal workspace
+          const { data: wss } = await supabase.from('workspaces').select('businesses').eq('owner_id', user.id).limit(1);
+          if (wss && wss.length > 0 && wss[0].businesses) businesses = wss[0].businesses;
+        }
+        
+        const enhancedProfile = {
+          ...data,
+          defaults: {
+            ...data?.defaults,
+            businesses
+          }
+        };
+        
+        setProfile(enhancedProfile);
       } catch (err) {
         console.error('Error loading profile in builder:', err);
       }

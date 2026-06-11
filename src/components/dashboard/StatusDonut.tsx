@@ -18,9 +18,10 @@ interface Invoice {
 
 interface Props {
   activeWorkspaceId?: string;
+  businessFilter?: string | null;
 }
 
-export default function StatusDonut({ activeWorkspaceId }: Props) {
+export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,8 +44,6 @@ export default function StatusDonut({ activeWorkspaceId }: Props) {
           if (user) query = query.eq('user_id', user.id);
         }
         
-        const searchParams = new URLSearchParams(window.location.search);
-        const businessFilter = searchParams.get('business');
         if (businessFilter) {
           query = query.eq('business_profile_name', businessFilter);
         }
@@ -58,7 +57,7 @@ export default function StatusDonut({ activeWorkspaceId }: Props) {
       }
     }
     fetchInvoices();
-  }, [activeWorkspaceId]);
+  }, [activeWorkspaceId, businessFilter]);
   const chartData = useMemo(() => {
     let paid = 0;
     let outstanding = 0;
@@ -69,7 +68,7 @@ export default function StatusDonut({ activeWorkspaceId }: Props) {
       const status = inv.payment_status || 'draft';
       if (status === 'paid') paid++;
       else if (status === 'overdue') overdue++;
-      else if (status === 'sent') outstanding++;
+      else if (status === 'unpaid') outstanding++;
       else if (status === 'draft') draft++;
     });
 

@@ -466,16 +466,21 @@ export default function InvoiceTable({
     {
       accessorKey: 'payment_status',
       header: 'Status',
-      cell: ({ row }) => (
-        <div className="flex flex-col items-center gap-1">
-          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border inline-block uppercase tracking-wider ${getPaymentStatusClass(row.original.payment_status)}`}>
-            {row.original.payment_status === 'paid' ? 'Paid' : row.original.payment_status === 'converted' ? 'Converted' : row.original.payment_status === 'draft' ? 'Draft' : row.original.payment_status === 'quote' ? 'Quote' : row.original.payment_status === 'overdue' ? 'Overdue' : 'Unpaid'}
-          </span>
-          {row.original.status !== 'done' && (
-            <span className="text-[9px] text-ink-400 italic">PDF: {row.original.status}</span>
-          )}
-        </div>
-      )
+      cell: ({ row }) => {
+        const isPastDue = row.original.payment_status === 'unpaid' && row.original.due_date && new Date(row.original.due_date) < new Date();
+        const displayStatus = row.original.payment_status === 'overdue' || isPastDue ? 'overdue' : row.original.payment_status;
+        
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border inline-block uppercase tracking-wider ${getPaymentStatusClass(displayStatus)}`}>
+              {displayStatus === 'paid' ? 'Paid' : displayStatus === 'converted' ? 'Converted' : displayStatus === 'draft' ? 'Draft' : displayStatus === 'quote' ? 'Quote' : displayStatus === 'overdue' ? 'Overdue' : 'Unpaid'}
+            </span>
+            {row.original.status !== 'done' && (
+              <span className="text-[9px] text-ink-400 italic">PDF: {row.original.status}</span>
+            )}
+          </div>
+        );
+      }
     },
     {
       id: 'actions',

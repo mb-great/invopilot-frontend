@@ -108,7 +108,7 @@ export default function PricingClient({ profile }: Props) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ConfirmationModal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
@@ -143,7 +143,14 @@ export default function PricingClient({ profile }: Props) {
                   : 'text-ink-500 hover:bg-ink-50 hover:text-ink-900'
               }`}
             >
-              {value === 'month' ? 'Monthly' : 'Yearly'}
+              {value === 'month' ? 'Monthly' : (
+                <span className="relative inline-flex items-center">
+                  Yearly
+                  <span className={`absolute -right-5 -top-3.5 rounded px-1 py-0.5 text-[8px] font-black uppercase tracking-wider shadow-sm ${interval === value ? 'bg-brand-500 text-white' : 'bg-brand-100 text-brand-700'}`}>
+                    -20%
+                  </span>
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -174,7 +181,7 @@ export default function PricingClient({ profile }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         {PLANS.map((plan) => {
           const isCurrent = access.effectiveTier === plan.tier && !access.isAdmin;
           const isFeatured = plan.tier === 'pro';
@@ -183,23 +190,37 @@ export default function PricingClient({ profile }: Props) {
           return (
             <section
               key={plan.tier}
-              className={`flex min-h-[640px] flex-col rounded-xl border bg-white p-5 shadow-sm ${
+              className={`flex h-full flex-col rounded-xl border bg-white p-4 shadow-sm ${
                 isFeatured ? 'border-brand-500 ring-2 ring-brand-100' : 'border-ink-200'
               }`}
             >
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-black uppercase tracking-tight text-ink-900">{plan.name}</h2>
+                  <h2 className="text-lg font-black uppercase tracking-tight text-ink-900">{plan.name}</h2>
                   {isFeatured && (
-                    <span className="rounded-full bg-brand-100 px-3 py-1 text-[10px] font-black uppercase text-brand-700">
+                    <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[9px] font-black uppercase text-brand-700">
                       Volume seller
                     </span>
                   )}
                 </div>
-                <p className="min-h-10 text-sm text-ink-500">{plan.tagline}</p>
+                <p className="min-h-8 text-xs text-ink-500">{plan.tagline}</p>
                 <div>
-                  <span className="text-4xl font-black text-ink-900">${price}</span>
-                  <span className="ml-1 text-sm font-bold text-ink-400">/{interval === 'month' ? 'mo' : 'yr'}</span>
+                  <div className="flex items-baseline gap-2">
+                    {interval === 'year' && plan.monthlyPrice > 0 && (
+                      <span className="text-lg font-bold text-ink-300 line-through decoration-red-500/40">
+                        ${(plan.monthlyPrice * 12).toFixed(2)}
+                      </span>
+                    )}
+                    <span className="text-3xl font-black text-ink-900">${price.toFixed(price % 1 !== 0 ? 2 : 0)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm font-bold text-ink-400">/{interval === 'month' ? 'mo' : 'yr'}</span>
+                    {interval === 'year' && plan.monthlyPrice > 0 && (
+                      <span className="inline-flex items-center rounded bg-green-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700 ring-1 ring-inset ring-green-600/20">
+                        Save 20%
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -207,7 +228,7 @@ export default function PricingClient({ profile }: Props) {
                 type="button"
                 disabled={plan.tier === 'free' || isCurrent || !!loadingTier}
                 onClick={() => checkout(plan.tier as PaidBillingTier)}
-                className={`mt-5 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black transition-colors ${
+                className={`mt-4 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-black transition-colors ${
                   plan.tier === 'free' || isCurrent
                     ? 'cursor-default border border-ink-200 bg-ink-50 text-ink-400'
                     : isFeatured
@@ -219,7 +240,7 @@ export default function PricingClient({ profile }: Props) {
                 {isCurrent ? 'Current plan' : plan.tier === 'free' ? 'Free default' : plan.cta}
               </button>
 
-              <div className="mt-5 grid grid-cols-3 gap-2 border-y border-ink-100 py-4 text-xs font-bold text-ink-500">
+              <div className="mt-4 grid grid-cols-3 gap-1 border-y border-ink-100 py-3 text-[10px] font-bold text-ink-500">
                 <div>
                   <span className="block text-ink-400">Invoices</span>
                   {formatPlanLimit(plan.maxInvoices)}
@@ -234,17 +255,17 @@ export default function PricingClient({ profile }: Props) {
                 </div>
               </div>
 
-              <div className="mt-5 flex-1 space-y-2">
+              <div className="mt-4 flex-1 space-y-1.5">
                 {plan.included.map((feature) => (
-                  <div key={feature} className="flex gap-2 text-sm text-ink-700">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                    <span>{feature}</span>
+                  <div key={feature} className="flex gap-2 text-xs text-ink-700">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-600" />
+                    <span className="leading-snug">{feature}</span>
                   </div>
                 ))}
                 {plan.excluded.map((feature) => (
-                  <div key={feature} className="flex gap-2 text-sm text-ink-400">
-                    <X className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-                    <span>{feature}</span>
+                  <div key={feature} className="flex gap-2 text-xs text-ink-400">
+                    <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
+                    <span className="leading-snug">{feature}</span>
                   </div>
                 ))}
               </div>

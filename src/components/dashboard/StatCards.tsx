@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import HelpPopover from '@/components/ui/HelpPopover';
+import { createClient } from '@/lib/supabase/client';
 
 interface CurrencyStats {
   currency: string;
@@ -16,10 +17,60 @@ interface CurrencyStats {
 interface StatCardsProps {
   topCurrencies: CurrencyStats[];
   otherCurrencies: CurrencyStats[];
+  businessFilter?: string | null;
+  activeWorkspaceId?: string;
 }
 
-export default function StatCards({ topCurrencies, otherCurrencies }: StatCardsProps) {
+export default function StatCards({ topCurrencies, otherCurrencies, businessFilter, activeWorkspaceId }: StatCardsProps) {
   const [showAll, setShowAll] = useState(false);
+  const [businessStats, setBusinessStats] = useState<{ top: CurrencyStats[], other: CurrencyStats[] } | null>(null);
+
+  useEffect(() => {
+    async function loadBusinessStats() {
+      if (!businessFilter || !activeWorkspaceId) {
+        setBusinessStats(null);
+        return;
+      }
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('invoices')
+        .select('currency, payment_status, amount, created_at, due_date')
+        .eq('workspace_id', activeWorkspaceId)
+        .eq('business_profile_name', businessFilter)
+        .is('deleted_at', null);
+
+      if (!data) return;
+
+      const currencyMap = new Map<string, CurrencyStats>();
+      
+      data.forEach(inv => {
+        const c = inv.currency || 'INR';
+        if (!currencyMap.has(c)) {
+          currencyMap.set(c, { currency: c, outstanding: 0, paid: 0, overdue: 0, this_month: 0, total_volume: 0, invoice_count: 0 });
+        }
+        const s = currencyMap.get(c)!;
+        s.invoice_count++;
+        s.total_volume += inv.amount || 0;
+        
+        const isThisMonth = new Date(inv.created_at).getMonth() === new Date().getMonth() && new Date(inv.created_at).getFullYear() === new Date().getFullYear();
+        if (isThisMonth) s.this_month += inv.amount || 0;
+
+        if (inv.payment_status === 'paid') s.paid += inv.amount || 0;
+        if (inv.payment_status === 'unpaid') s.outstanding += inv.amount || 0;
+        if (inv.payment_status === 'overdue' || (inv.payment_status === 'unpaid' && inv.due_date && new Date(inv.due_date) < new Date())) {
+          s.overdue += inv.amount || 0;
+          if (inv.payment_status === 'overdue') s.outstanding += inv.amount || 0;
+        }
+      });
+
+      const allStats = Array.from(currencyMap.values()).sort((a, b) => b.total_volume - a.total_volume);
+      setBusinessStats({ top: allStats.slice(0, 3), other: allStats.slice(3) });
+    }
+    loadBusinessStats();
+  }, [businessFilter, activeWorkspaceId]);
+
+  const activeTopCurrencies = businessStats ? businessStats.top : topCurrencies;
+  const activeOtherCurrencies = businessStats ? businessStats.other : otherCurrencies;
 
   const formatCurrency = (amount: number, currency: string) => {
     try {
@@ -34,7 +85,7 @@ export default function StatCards({ topCurrencies, otherCurrencies }: StatCardsP
   };
 
   const renderMetricList = (type: 'outstanding' | 'paid' | 'overdue' | 'this_month') => {
-    const list = showAll ? [...topCurrencies, ...otherCurrencies] : topCurrencies;
+    const list = showAll ? [...activeTopCurrencies, ...activeOtherCurrencies] : activeTopCurrencies;
     
     if (list.length === 0) return <div className="text-3xl font-black text-ink-900">₹0</div>;
 

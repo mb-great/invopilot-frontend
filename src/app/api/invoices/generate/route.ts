@@ -132,7 +132,7 @@ export async function POST(request: Request) {
       client_name: body.clientName || formData.companyName || '',
       client_email: formData.email || formData.companyEmail || '',
       business_profile_name: formData.yourName || formData.yourCompanyName || '',
-      payment_status: body.payment_status === 'quote' ? 'quote' : 'draft',
+      payment_status: body.payment_status === 'quote' ? 'quote' : 'unpaid',
       invoice_number: formData.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
       issue_date: issueDate,
       due_date: dueDate,

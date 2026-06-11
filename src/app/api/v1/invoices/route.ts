@@ -33,6 +33,17 @@ function mapApiToFormData(apiData: any) {
   return mapped;
 }
 
+export async function OPTIONS(req: Request) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Bearer',
+    },
+  });
+}
+
 export async function GET(req: Request) {
   const auth = await verifyApiKey();
   if ('error' in auth) {
