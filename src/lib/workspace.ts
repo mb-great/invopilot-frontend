@@ -8,7 +8,7 @@ export async function getActiveWorkspaceId(userId: string): Promise<string> {
   const supabase = await createClient();
   const { data: memberships } = await supabase
     .from('workspace_members')
-    .select('workspaces(id, owner_id)')
+    .select('workspaces!inner(id, owner_id)')
     .eq('user_id', userId)
     .eq('status', 'accepted');
     

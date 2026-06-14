@@ -91,6 +91,7 @@ export async function POST(request: Request) {
   }
 
   // Notify backend queue to regenerate PDF for the SAME ID
+  let dispatchFailed = false;
   try {
     const backendUrl = BACKEND_URL.replace('localhost', '127.0.0.1'); // Fix Node 18+ IPv6 fetch issue
     const res = await fetch(`${backendUrl}/queue`, {
@@ -106,13 +107,28 @@ export async function POST(request: Request) {
     });
     
     if (!res.ok) {
+      dispatchFailed = true;
       const errText = await res.text();
       console.error(`[API] Failed to dispatch job to backend during quote conversion. Status: ${res.status}. Body: ${errText}`);
     } else {
       console.log(`[API] Job successfully dispatched to backend for converted invoice ${quoteId}`);
     }
   } catch (err) {
+    dispatchFailed = true;
     console.error('[API] Fetch exception when dispatching job to backend during quote conversion:', err);
+  }
+
+  // Rollback if dispatch fails so the user doesn't lose their quote forever
+  if (dispatchFailed) {
+    await supabase.from('invoices').update({
+      form_data: quote.form_data,
+      status: quote.status,
+      payment_status: quote.payment_status,
+      invoice_number: quote.invoice_number,
+      nickname: quote.nickname
+    }).eq('id', quoteId);
+
+    return NextResponse.json({ error: 'Worker dispatch failed. Quote conversion rolled back.' }, { status: 500 });
   }
 
   return NextResponse.json({

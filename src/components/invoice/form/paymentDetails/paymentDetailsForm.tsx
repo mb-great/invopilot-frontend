@@ -10,6 +10,7 @@ import { resolvePlanAccess } from "@/lib/billing/tiers";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import PaymentMethodManager from "@/components/dashboard/PaymentMethodManager";
 
 export const PaymentDetailsForm = ({ profile }: { profile: any }) => {
   const items = useItemParams();
@@ -75,17 +76,36 @@ export const PaymentDetailsForm = ({ profile }: { profile: any }) => {
         placeholder="HSBCINAA123"
         variableName="swiftCode"
       />
-      <CustomTextInput
-        label="PayPal Email / Link"
-        placeholder="paypal.me/username"
-        variableName="paypalEmail"
-      />
-      <CustomTextInput
-        label="Crypto Wallet Address"
-        placeholder="0x... (ERC20)"
-        variableName="cryptoAddress"
-      />
-      
+      <div className="border-t border-ink-100 my-6 pt-6">
+        <h4 className="font-bold text-sm text-ink-900 mb-4 flex items-center gap-1.5">
+          Other Payment Methods (Max 2)
+        </h4>
+        <Controller
+          name="selectedMethods"
+          defaultValue={JSON.parse(getInitialValue("selectedMethods", "[]"))}
+          render={({ field: { onChange, value } }) => {
+            const methods = Array.isArray(value) ? value : [];
+            const handleMethodsChange = (newMethods: any[]) => {
+              if (newMethods.length > 2) {
+                toast.error("You can only add a maximum of 2 payment methods per invoice.");
+                return;
+              }
+              onChange(newMethods);
+              localStorage.setItem("selectedMethods", JSON.stringify(newMethods));
+            };
+
+            return (
+              <PaymentMethodManager 
+                methods={methods} 
+                onChange={handleMethodsChange} 
+              />
+            );
+          }}
+        />
+        <span className="text-xs text-gray-500 mt-2 block">
+          These methods will be displayed below your Bank Details. Min 1, Max 2 recommended.
+        </span>
+      </div>
       <div className="border-t border-ink-100 my-6 pt-6">
         <h4 className="font-bold text-sm text-ink-900 mb-4 flex items-center gap-1.5">
           UPI Payment Settings

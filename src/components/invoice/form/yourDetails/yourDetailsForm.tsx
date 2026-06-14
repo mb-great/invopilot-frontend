@@ -12,6 +12,8 @@ type BusinessProfile = {
   id: string;
   name: string;
   logoUrl?: string;
+  signatureUrl?: string;
+  methods?: any[];
   email?: string;
   gstin?: string;
   address?: string;
@@ -40,10 +42,21 @@ export const YourDetailsForm = ({ profile }: { profile: any }) => {
       { formField: "yourCountry", val: biz.country || "India" },
       { formField: "yourTaxId", val: biz.gstin || "" },
       { formField: "yourLogo", val: biz.logoUrl || "" },
+      { formField: "signatureUrl", val: biz.signatureUrl || "" },
       { formField: "bankName", val: biz.bankName || "" },
       { formField: "accountNumber", val: biz.accountNo || "" },
       { formField: "ifscCode", val: biz.ifsc || "" },
     ];
+
+    // Handle methods array directly (not a simple string mapping)
+    setValue("availableMethods", biz.methods || []);
+    // Pre-select up to 2 methods automatically
+    const defaultSelected = (biz.methods || []).slice(0, 2);
+    setValue("selectedMethods", defaultSelected);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("availableMethods", JSON.stringify(biz.methods || []));
+      localStorage.setItem("selectedMethods", JSON.stringify(defaultSelected));
+    }
 
     mappings.forEach(({ formField, val }) => {
       setValue(formField, val);

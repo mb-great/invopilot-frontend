@@ -76,12 +76,12 @@ export async function GET(req: Request) {
 
   // Map to standardized output
   const mappedData = data.map(inv => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3002';
     return {
       ...inv,
       form_data: mapFormDataToApi(inv.form_data),
       pdf_download_url: inv.pdf_url ? `${backendUrl}/storage/v1/object/public/invoices/${inv.pdf_url}` : null,
-      view_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/view/${inv.id}`
+      view_url: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.FRONTEND_URL || 'http://localhost:3001'}/view/${inv.id}`
     };
   });
 
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
     }
 
     // Trigger PDF generation on backend
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3002';
     const workerSecret = process.env.WORKER_SECRET;
     
     fetch(`${backendUrl}/api/invoices/convert`, {

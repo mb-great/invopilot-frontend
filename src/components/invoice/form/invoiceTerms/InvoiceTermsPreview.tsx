@@ -5,7 +5,7 @@ export const InvoiceTermsPreview: React.FC<
   InvoiceTerms & { onClick?: (step: string) => void }
 > = ({ invoiceNumber, issueDate, dueDate, onClick }) => (
   <div
-    className={`border-b py-4 px-10 grid grid-cols-2 justify-between border-dashed relative ${onClick ? 'group cursor-pointer' : 'cursor-default'}`}
+    className="border-b py-4 px-10 grid grid-cols-2 justify-between border-dashed group cursor-pointer relative"
     onClick={() => onClick && onClick("5")}
   >
     {!!onClick && (

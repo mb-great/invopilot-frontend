@@ -9,6 +9,7 @@ import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { toast } from 'sonner';
 import PremiumBadge from '@/components/ui/PremiumBadge';
 import { clearInvoiceDraft } from '@/lib/invoiceStorage';
+import { SendInvoiceModal } from '@/components/invoice/SendInvoiceModal';
 
 interface Invoice {
   id: string;
@@ -81,6 +82,7 @@ export default function InvoiceTable({
   
   // Modal State
   const [shareData, setShareData] = useState<{ isOpen: boolean; url: string }>({ isOpen: false, url: '' });
+  const [sendEmailData, setSendEmailData] = useState<{ isOpen: boolean; id: string; email?: string; invoiceNumber?: string }>({ isOpen: false, id: '' });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; isBulk?: boolean }>({ isOpen: false, id: null });
 
   // Filters
@@ -236,6 +238,18 @@ export default function InvoiceTable({
     if (inv?.share_slug) {
       const url = `${window.location.origin}/i/${inv.share_slug}`;
       setShareData({ isOpen: true, url });
+    }
+  };
+
+  const handleSendEmail = (id: string) => {
+    const inv = invoices.find(i => i.id === id);
+    if (inv) {
+      setSendEmailData({
+        isOpen: true,
+        id: inv.id,
+        email: inv.client_email || '',
+        invoiceNumber: inv.invoice_number || undefined
+      });
     }
   };
 
@@ -493,8 +507,9 @@ export default function InvoiceTable({
             {inv.status === 'done' ? (
               <>
                 <a href={`/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
-                <a href={`/api/invoices/${inv.id}/download`} className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">Get</a>
+                <a href={`/api/invoices/${inv.id}/download`} className="p-1.5 text-ink-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></a>
                 <button onClick={() => handleShare(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Share</button>
+                <button onClick={() => handleSendEmail(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Email</button>
                 {inv.payment_status === 'quote' && (
                   <button
                     onClick={() => canUseQuotes ? handleConvert(inv.id) : toast.error('Upgrade to Pro to convert quotes')}
@@ -588,6 +603,16 @@ export default function InvoiceTable({
         onClose={() => setShareData({ ...shareData, isOpen: false })} 
         shareUrl={shareData.url} 
       />
+
+      {sendEmailData.isOpen && (
+        <SendInvoiceModal
+          isOpen={sendEmailData.isOpen}
+          onClose={() => setSendEmailData({ isOpen: false, id: '' })}
+          invoiceId={sendEmailData.id}
+          defaultEmail={sendEmailData.email}
+          invoiceNumber={sendEmailData.invoiceNumber}
+        />
+      )}
 
       <ConfirmationModal
         isOpen={deleteModal.isOpen}

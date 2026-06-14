@@ -51,6 +51,7 @@ interface PaymentDetails {
   ifscCode?: string | null;
   paypalEmail?: string | null;
   cryptoAddress?: string | null;
+  selectedMethods?: any[];
   upiId?: string | null;
   upiLockAmount?: boolean;
   showUpiQr?: boolean;

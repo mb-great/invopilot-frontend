@@ -4,9 +4,10 @@ import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Mail, Lock, User, ShieldCheck } from 'lucide-react'
-import { getBackendUrl } from '@/lib/url'
+import { getBackendUrl, getFrontendUrl } from '@/lib/url'
 
 const BACKEND_URL = getBackendUrl();
+const FRONTEND_URL = getFrontendUrl();
 
 function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
   const [email, setEmail] = useState('')
@@ -152,16 +153,26 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
     setLoading(true);
     setError(null);
     try {
+      // If the redirect doesn't happen within 6 seconds (e.g. blocked by mobile browser), reset it.
+      const fallbackTimer = setTimeout(() => {
+        setLoading(false);
+        setError("The connection to Google took too long or was blocked. Please try again.");
+      }, 6000);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: `${FRONTEND_URL}/api/auth/callback`,
           queryParams: {
             prompt: 'select_account'
           }
         }
       });
-      if (error) throw error;
+      if (error) {
+        clearTimeout(fallbackTimer);
+        throw error;
+      }
+      // If no error, we let the page redirect (spinner stays on until page unloads)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred during Google sign in');
       setLoading(false);

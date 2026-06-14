@@ -60,9 +60,9 @@ export const ImageInput = ({ label, variableName, premium }: CustomNumberProps) 
             // Draw image. Transparency is preserved automatically.
             ctx.drawImage(img, 0, 0, width, height);
             
-            // Output as PNG! React-PDF strictly requires PNG or JPEG.
-            // SVGs/WebP will crash the PDF worker.
-            const dataUrl = canvas.toDataURL("image/png");
+            // Output as WebP to save space in JSONB.
+            // The backend PDF worker will convert it back to PNG for React-PDF.
+            const dataUrl = canvas.toDataURL("image/webp", 0.8);
             resolve(dataUrl);
           } catch (err) {
             reject(err);

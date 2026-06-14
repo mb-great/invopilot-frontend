@@ -37,6 +37,27 @@ export default function InvoiceBuilder() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+        
+        // Draft Isolation & 12-Hour Expiry Check
+        const currentUserId = user.id;
+        const storedUserId = localStorage.getItem('invopilot_draft_user_id');
+        const draftTimestamp = localStorage.getItem('invopilot_draft_timestamp');
+        const isExpired = draftTimestamp && (Date.now() - parseInt(draftTimestamp, 10) > 12 * 60 * 60 * 1000);
+
+        if (storedUserId !== currentUserId || isExpired) {
+          clearInvoiceDraft();
+          methods.reset({
+            step: "1",
+            items: [{ itemDescription: "", qty: 1, amount: 0 }],
+            currency: "INR", taxRate: "0", discount: "0", yourCountry: "India", companyCountry: "India",
+            yourName: "", yourEmail: "", yourAddress: "", yourCity: "", yourState: "", yourZip: "", yourTaxId: "", yourLogo: "",
+            companyName: "", email: "", companyAddress: "", companyCity: "", companyState: "", companyZip: "", companyTaxId: "", companyLogo: "",
+            invoiceNumber: "", note: "", bankName: "", accountName: "", accountNumber: "", ifscCode: "", routingCode: "", swiftCode: ""
+          });
+        }
+        localStorage.setItem('invopilot_draft_user_id', currentUserId);
+        localStorage.setItem('invopilot_draft_timestamp', Date.now().toString());
+
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
         
         // Fetch businesses from active workspace
@@ -271,7 +292,16 @@ export default function InvoiceBuilder() {
   const handleDiscard = () => {
     if (typeof window !== "undefined") {
       clearInvoiceDraft();
-      router.push("/dashboard");
+      methods.reset({
+        step: "1",
+        items: [{ itemDescription: "", qty: 1, amount: 0 }],
+        currency: "INR", taxRate: "0", discount: "0", yourCountry: "India", companyCountry: "India",
+        yourName: "", yourEmail: "", yourAddress: "", yourCity: "", yourState: "", yourZip: "", yourTaxId: "", yourLogo: "",
+        companyName: "", email: "", companyAddress: "", companyCity: "", companyState: "", companyZip: "", companyTaxId: "", companyLogo: "",
+        invoiceNumber: "", note: "", bankName: "", accountName: "", accountNumber: "", ifscCode: "", routingCode: "", swiftCode: ""
+      });
+      setShowDiscardModal(false);
+      toast.success("Draft cleared successfully");
     }
   };
 
@@ -388,7 +418,7 @@ export default function InvoiceBuilder() {
                       className="flex items-center gap-2 text-ink-300 hover:text-red-500 transition-colors text-xs font-bold uppercase tracking-widest"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      Clear Draft
+                      Clear
                     </button>
                   </div>
                 </div>
@@ -414,9 +444,9 @@ export default function InvoiceBuilder() {
             </div>
 
             {/* Preview Side */}
-            <div className="flex-1 h-full bg-ink-50 relative flex justify-center items-center p-4 md:p-12 overflow-hidden">
-              <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]"></div>
-              <div className="h-full w-auto shadow-2xl shadow-ink-900/10 rounded-sm">
+            <div className="flex-1 h-full bg-[#f9fafb] relative flex justify-center items-center p-4 md:p-12 overflow-hidden">
+              <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+              <div className="h-full w-auto">
                 <UserDataPreview />
               </div>
             </div>

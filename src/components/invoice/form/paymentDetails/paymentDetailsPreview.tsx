@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import { currencyList } from "@/lib/currency";
 import { ChevronDown } from "lucide-react";
@@ -21,51 +19,44 @@ export const PaymentDetailsPreview: React.FC<
   upiLockAmount,
   showUpiQr,
   currency = "INR",
+  selectedMethods,
   onClick,
 }) => {
   const { companyDetails, invoiceDetails } = useData();
   const [qrUrl, setQrUrl] = useState<string>("");
 
   const currencyDetails = currencyList.find(
-    (currencyDetail) =>
-      currencyDetail.value.toLowerCase() === currency.toLowerCase()
+    (currencyDetails) =>
+      currencyDetails.value.toLowerCase() === currency.toLowerCase()
   )?.details;
 
   // Calculate total amount for UPI QR code amount lock
-  const subtotal = invoiceDetails.items.reduce((total: number, item: any) => {
+  const subtotal = invoiceDetails?.items?.reduce((total: number, item: any) => {
     const quantity = item.qty ? +item.qty : 1;
     const amount = item.amount ? +item.amount : 0;
     return total + quantity * amount;
-  }, 0);
-  const discountAmount = subtotal - (invoiceDetails.discount ? +invoiceDetails.discount : 0);
-  const taxAmount = discountAmount * ((invoiceDetails.taxRate ? +invoiceDetails.taxRate : 0) / 100);
+  }, 0) || 0;
+  const discountAmount = subtotal - (invoiceDetails?.discount ? +invoiceDetails.discount : 0);
+  const taxAmount = discountAmount * ((invoiceDetails?.taxRate ? +invoiceDetails.taxRate : 0) / 100);
   const totalAmount = discountAmount + taxAmount;
 
-  // Generate UPI QR code locally using open-source qrcode library
   useEffect(() => {
     if (upiId && showUpiQr !== false) {
-      let upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(companyDetails.companyName || 'Merchant')}&cu=INR`;
+      let upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(companyDetails?.companyName || 'Merchant')}&cu=INR`;
       if (upiLockAmount && totalAmount <= 100000) {
         upiUrl += `&am=${totalAmount.toFixed(2)}`;
       }
-      
-      QRCode.toDataURL(upiUrl, {
-        margin: 1,
-        width: 120,
-        color: { dark: "#000000", light: "#ffffff" }
-      })
+      QRCode.toDataURL(upiUrl, { margin: 1, width: 120, color: { dark: "#000000", light: "#ffffff" } })
         .then(url => setQrUrl(url))
-        .catch(err => console.error("Error rendering preview QR:", err));
+        .catch(err => console.error("Error rendering QR:", err));
     } else {
       setQrUrl("");
     }
-  }, [upiId, upiLockAmount, showUpiQr, totalAmount, companyDetails.companyName]);
-
-  const hasBankDetails = !!(bankName?.trim() || accountNumber?.trim() || accountName?.trim() || swiftCode?.trim() || routingCode?.trim() || ifscCode?.trim());
+  }, [upiId, upiLockAmount, showUpiQr, totalAmount, companyDetails?.companyName]);
 
   return (
     <div
-      className={`grid ${hasBankDetails ? 'grid-cols-2' : 'grid-cols-1'} relative h-full ${onClick ? 'group cursor-pointer' : 'cursor-default'}`}
+      className="grid grid-cols-2 group cursor-pointer relative"
       onClick={() => onClick && onClick("4")}
     >
       {!!onClick && (
@@ -76,67 +67,100 @@ export const PaymentDetailsPreview: React.FC<
           <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 -rotate-45 group-hover:block hidden absolute bottom-0 right-0 " />
         </>
       )}
-      
-      {/* Left Column: Bank Details (Conditionally Rendered) */}
-      {hasBankDetails && (
-        <div className="py-3 pl-5 pr-3 border-r border-neutral-100 flex flex-col justify-between">
-          <div>
-            <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-2">
-              Bank Details
+      <div className="py-4 pl-10 pr-3">
+        <p className="text-[11px] text-neutral-400 font-medium uppercase mb-3">
+          Bank Details
+        </p>
+        <div className="space-y-1">
+          <div className="grid grid-cols-2 items-center">
+            <p className="truncate text-xs font-medium text-gray-500">
+              Bank Name
             </p>
-            <div className="space-y-2">
-              {[
-                { label: "Bank Name", value: bankName },
-                { label: "Account Number", value: accountNumber },
-                { label: "Account Name", value: accountName },
-                { label: "Swift Code", value: swiftCode },
-                ...(routingCode ? [{ label: "Routing Code", value: routingCode }] : []),
-                ...(ifscCode ? [{ label: "IFSC Code", value: ifscCode }] : []),
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <p className="text-[8px] text-gray-400 font-semibold uppercase tracking-wider leading-none">
-                    {label}
-                  </p>
-                  {value ? (
-                    <p className="text-[10px] font-bold text-gray-700 leading-tight break-all mt-0.5">
-                      {value}
-                    </p>
-                  ) : (
-                    <div className="rounded-[3px] bg-neutral-100 h-3 w-3/4 animate-pulse mt-0.5" />
-                  )}
-                </div>
-              ))}
-            </div>
+            {bankName ? (
+              <p className="flex truncate text-xs font-medium text-gray-600">
+                {bankName}
+              </p>
+            ) : (
+              <div className="rounded-[3.5px] bg-neutral-100 h-4 w-full animate-pulse" />
+            )}
           </div>
-        </div>
-      )}
-
-      {/* Right Column: Payable In & Alt Payments */}
-      <div className="py-3 px-5 flex flex-col">
-        <div>
-          <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-2">
-            Payable in
-          </p>
-          {currencyDetails && (
-            <div className="flex gap-2 items-center w-full">
-              <currencyDetails.icon className="w-6 h-6 rounded-full flex-shrink-0" />
-              <div>
-                <p className="font-bold text-xs text-gray-800 leading-tight">
-                  {currencyDetails.currencyName}
-                </p>
-                <p className="text-[9px] font-bold text-neutral-400 mt-0.5">
-                  {currencyDetails.currencySymbol}{" "}
-                  {currencyDetails.currencyShortForm}
-                </p>
-              </div>
+          <div className="mb-2 grid grid-cols-2 items-center">
+            <p className="truncate text-xs font-medium text-gray-500">
+              Account Number
+            </p>
+            {accountNumber ? (
+              <p className="flex truncate text-xs font-medium text-gray-600">
+                {accountNumber}
+              </p>
+            ) : (
+              <div className="rounded-[3.5px] bg-neutral-100 h-4 w-full animate-pulse" />
+            )}
+          </div>
+          <div className="mb-2 grid grid-cols-2 items-center">
+            <p className="truncate text-xs font-medium text-gray-500">
+              Account Name
+            </p>
+            {accountName ? (
+              <p className="flex truncate text-xs font-medium text-gray-600">
+                {accountName}
+              </p>
+            ) : (
+              <div className="rounded-[3.5px] bg-neutral-100 h-4 w-full animate-pulse" />
+            )}
+          </div>
+          <div className="mb-2 grid grid-cols-2 items-center">
+            <p className="truncate text-xs font-medium text-gray-500">
+              Swift Code
+            </p>
+            {swiftCode ? (
+              <p className="flex truncate text-xs font-medium text-gray-600">
+                {swiftCode}
+              </p>
+            ) : (
+              <div className="rounded-[3.5px] bg-neutral-100 h-4 w-full animate-pulse" />
+            )}
+          </div>
+          {routingCode && (
+            <div className="mb-2 grid grid-cols-2 items-center">
+              <p className="truncate text-xs font-medium text-gray-500">
+                Routing Code
+              </p>
+              <p className="flex truncate text-xs font-medium text-gray-600">
+                {routingCode}
+              </p>
+            </div>
+          )}
+          {ifscCode && (
+            <div className="mb-2 grid grid-cols-2 items-center">
+              <p className="truncate text-xs font-medium text-gray-500">
+                IFSC Code
+              </p>
+              <p className="flex truncate text-xs font-medium text-gray-600">
+                {ifscCode}
+              </p>
             </div>
           )}
         </div>
+        {/* Selected Payment Methods (Middle) */}
+        {selectedMethods && selectedMethods.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-dashed border-neutral-200 flex flex-col gap-3 animate-in fade-in duration-200">
+            {selectedMethods.map((method: any, idx: number) => (
+              <div key={idx} className="flex flex-col items-start">
+                <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-1">
+                  Pay via {method.title || method.type}
+                </p>
+                <p className="text-[11px] font-medium text-gray-600 leading-tight break-all">
+                  {method.details}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
-        {/* UPI QR Section */}
+        {/* UPI QR Section (Bottom) */}
         {upiId?.trim() && qrUrl && showUpiQr !== false && (
-          <div className="mt-4 pt-4 border-t border-dashed border-neutral-100 flex flex-col items-start animate-in fade-in duration-200">
-            <p className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider mb-1.5">
+          <div className="mt-4 pt-4 border-t border-dashed border-neutral-200 flex flex-col items-start animate-in fade-in duration-200">
+            <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-2">
               Pay via UPI
             </p>
             <div className="border border-neutral-100 p-1 rounded-md bg-white shadow-sm flex items-center justify-center">
@@ -147,28 +171,25 @@ export const PaymentDetailsPreview: React.FC<
             </p>
           </div>
         )}
-
-        {/* PayPal Section */}
-        {paypalEmail?.trim() && (
-          <div className="mt-4 pt-4 border-t border-dashed border-neutral-100 flex flex-col items-start animate-in fade-in duration-200">
-            <p className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider mb-1.5">
-              Pay via PayPal
-            </p>
-            <p className="text-[10px] font-bold text-gray-700 leading-tight break-all">
-              {paypalEmail}
-            </p>
-          </div>
-        )}
-
-        {/* Crypto Section */}
-        {cryptoAddress?.trim() && (
-          <div className="mt-4 pt-4 border-t border-dashed border-neutral-100 flex flex-col items-start animate-in fade-in duration-200">
-            <p className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider mb-1.5">
-              Pay via Crypto
-            </p>
-            <p className="text-[10px] font-bold text-gray-700 leading-tight break-all">
-              {cryptoAddress}
-            </p>
+      </div>
+      <div className="py-4 px-10">
+        <p className="text-[11px] text-neutral-400 font-medium uppercase mb-3">
+          Payable in
+        </p>
+        {currencyDetails && (
+          <div className="flex gap-2 justify-between items-center w-full">
+            <div className="flex gap-3 items-center">
+              <currencyDetails.icon className="w-8 h-8 rounded-full" />
+              <div>
+                <p className="font-medium text-sm">
+                  {currencyDetails.currencyName}
+                </p>
+                <p className="text-xxs text-neutral-400">
+                  {currencyDetails.currencySymbol}{" "}
+                  {currencyDetails.currencyShortForm}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

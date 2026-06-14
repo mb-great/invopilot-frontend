@@ -3,6 +3,7 @@ import { InvoiceDetailsPreview } from "@/components/invoice/form/invoiceDetails/
 import { InvoiceTermsPreview } from "@/components/invoice/form/invoiceTerms/InvoiceTermsPreview";
 import { PaymentDetailsPreview } from "@/components/invoice/form/paymentDetails/paymentDetailsPreview";
 import { YourDetailsPreview } from "@/components/invoice/form/yourDetails/yourDetailsPreview";
+import { GeistSans } from "geist/font/sans";
 import { ChevronDown } from "lucide-react";
 
 export const PreviewDetails = ({
@@ -20,43 +21,44 @@ export const PreviewDetails = ({
   invoiceTerms: InvoiceTerms;
   onClick?: (step: string) => void;
 }) => (
-  <div className="w-full h-full flex justify-center py-4 md:py-8 overflow-hidden">
-    <div className="h-full w-auto aspect-[1/1.414] bg-white shadow-2xl rounded-sm border border-ink-100 flex flex-col overflow-y-auto">
-      {/* Top Terms Section */}
-      <div className="bg-ink-50/30">
-        <InvoiceTermsPreview {...invoiceTerms} onClick={onClick} />
-      </div>
-
-      {/* Header section */}
-      <div className="border-b grid grid-cols-2 border-ink-100">
+  <div className={`overflow-x-auto ${GeistSans.className}`}>
+    <div className="w-[595px] h-[842px] bg-white rounded-[10px] shadow-[0_0_20px_rgba(0,0,0,0.05)] justify-center items-center">
+      <InvoiceTermsPreview {...invoiceTerms} onClick={onClick} />
+      <div className="border-b  grid grid-cols-2 justify-between border-dashed">
         <div
-          className={`py-6 px-8 border-r border-ink-100 relative group transition-colors ${onClick ? 'cursor-pointer hover:bg-brand-50/30' : 'cursor-default'}`}
+          className="py-4 px-10 border-r border-dashed cursor-pointer relative group"
           onClick={() => onClick && onClick("1")}
         >
           {!!onClick && (
-            <div className="absolute inset-0 border-2 border-dashed border-brand-500/0 group-hover:border-brand-500/20 transition-all pointer-events-none" />
+            <>
+              <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 rotate-[135deg] group-hover:block hidden absolute top-0 left-0" />
+              <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 -rotate-[135deg] group-hover:block hidden absolute top-0 right-0" />
+              <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 rotate-45 group-hover:block hidden absolute bottom-0 left-0" />
+              <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 -rotate-45 group-hover:block hidden absolute bottom-0 right-0 " />
+            </>
           )}
           <YourDetailsPreview {...yourDetails} />
         </div>
         <div
-          className={`py-6 px-8 relative group transition-colors ${onClick ? 'cursor-pointer hover:bg-brand-50/30' : 'cursor-default'}`}
+          className="py-4 px-10 border-dashed cursor-pointer relative group"
           onClick={() => onClick && onClick("2")}
         >
           {!!onClick && (
-            <div className="absolute inset-0 border-2 border-dashed border-brand-500/0 group-hover:border-brand-500/20 transition-all pointer-events-none" />
+            <>
+              <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 rotate-[135deg] group-hover:block hidden absolute top-0 left-0" />
+              <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 -rotate-[135deg] group-hover:block hidden absolute top-0 right-0" />
+              <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 rotate-45 group-hover:block hidden absolute bottom-0 left-0" />
+              <ChevronDown className="animate-pulse w-5 h-5 text-orange-500 -rotate-45 group-hover:block hidden absolute bottom-0 right-0 " />
+            </>
           )}
           <CompanyDetailsPreview {...companyDetails} />
         </div>
       </div>
-      
-      {/* Items Section */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="border-b border-ink-100">
+      <div className="flex flex-col justify-between">
+        <div className="border-b justify-between border-dashed">
           <InvoiceDetailsPreview {...invoiceDetails} onClick={onClick} />
         </div>
-        
-        {/* Footer Section */}
-        <div className="mt-auto border-t border-ink-100 bg-white">
+        <div className="">
           <PaymentDetailsPreview {...paymentDetails} onClick={onClick} />
         </div>
       </div>

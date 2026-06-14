@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, FilePlus2, Loader2, Send, AlertCircle } from "lucide-react";
+import { CheckCircle2, FilePlus2, Loader2, Send, AlertCircle, Download } from "lucide-react";
 import { useData } from "@/hooks/useData";
 import { useEffect, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
@@ -311,7 +311,8 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
                 href={`/api/invoices/${activeInvoiceId}/download`}
                 className="h-12 rounded-lg bg-brand-500 text-white font-bold hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
               >
-                Download
+                <Download className="w-4 h-4" />
+                Download PDF
               </a>
             </div>
             

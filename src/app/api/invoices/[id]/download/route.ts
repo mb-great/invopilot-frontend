@@ -28,18 +28,26 @@ export async function GET(
     return NextResponse.redirect(invoice.pdf_url);
   }
 
-  // 2. Generate signed URL (expires in 60s)
-  // We use supabaseAdmin to bypass storage RLS
   const filename = `${invoice.nickname || invoice.invoice_number || 'invoice'}.pdf`.replace(/[^a-z0-9.]/gi, '_');
   
-  const { data: signedUrl, error: signedUrlError } = await supabaseAdmin
+  // 2. Fetch the file directly from storage using admin client to stream it
+  const { data: fileData, error: downloadError } = await supabaseAdmin
     .storage
     .from('invoices')
-    .createSignedUrl(invoice.pdf_url, 60, {
-      download: viewOnly ? false : filename
-    });
+    .download(invoice.pdf_url);
 
-  if (signedUrlError || !signedUrl) return NextResponse.json({ error: 'Could not generate URL' }, { status: 500 });
+  if (downloadError || !fileData) return NextResponse.json({ error: 'Could not download file' }, { status: 500 });
 
-  return NextResponse.redirect(signedUrl.signedUrl);
+  // 3. Stream the file to the client with appropriate headers
+  const headers = new Headers();
+  headers.set('Content-Type', 'application/pdf');
+  headers.set(
+    'Content-Disposition',
+    viewOnly ? 'inline' : `attachment; filename="${filename}"`
+  );
+
+  return new NextResponse(fileData, {
+    status: 200,
+    headers,
+  });
 }

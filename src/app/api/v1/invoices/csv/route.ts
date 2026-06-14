@@ -86,7 +86,7 @@ export async function GET(req: Request) {
           break;
         }
 
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3002';
 
         const rows = invoices.map((inv: any) => {
           const fd = inv.form_data || {};

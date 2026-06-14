@@ -17,7 +17,7 @@ export const InvoiceDetailsPreview: React.FC<
 
   return (
     <div
-      className={`relative ${onClick ? 'group cursor-pointer' : 'cursor-default'}`}
+      className="group cursor-pointer relative"
       onClick={() => onClick && onClick("3")}
     >
       {!!onClick && (
@@ -146,7 +146,7 @@ const calculateTotalAmount = (items: Item[]): number =>
   }, 0);
 
 const addCommasToNumber = (number: number): string => {
-  const numberString = number.toString();
+  let numberString = number.toString();
   const parts = numberString.split(".");
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return parts.join(".");
