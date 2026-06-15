@@ -47,148 +47,139 @@ export const PaymentDetailsForm = ({ profile }: { profile: any }) => {
   return (
     <div className="pt-4">
       <p className="text-2xl font-semibold pb-3">Payment Details</p>
-      <CustomTextInput
-        label="Bank name"
-        placeholder="HSBC"
-        variableName="bankName"
-      />
-      <CustomTextInput
-        label="Account number"
-        placeholder="8920804195"
-        variableName="accountNumber"
-      />
-      <CustomTextInput
-        label="Account Name"
-        placeholder="Account Name/Your Name"
-        variableName="accountName"
-      />
-      <CustomTextInput
-        label="IFSC code"
-        placeholder="HSBC0560002"
-        variableName="ifscCode"
-      />
-      <CustomTextInput
-        label="Routing number"
-        placeholder="0804189592"
-        variableName="routingCode"
-      />
-      <CustomTextInput
-        label="Swift code"
-        placeholder="HSBCINAA123"
-        variableName="swiftCode"
-      />
 
-      {/* UPI Section — grouped together */}
-      <div className="border-t border-ink-100 my-6 pt-6">
-        <h4 className="font-bold text-sm text-ink-900 mb-4 flex items-center gap-1.5">
-          UPI Payment
-          <PremiumBadge type="pro" />
-        </h4>
-        
+      {/* Bank Details + UPI — unified top section */}
+      <div className="space-y-1">
         <CustomTextInput
-          label="UPI ID"
-          placeholder="yourname@upi"
-          variableName="upiId"
-          disabled={!canUseUpiQr}
-          premium="pro"
+          label="Bank name"
+          placeholder="HSBC"
+          variableName="bankName"
+        />
+        <CustomTextInput
+          label="Account number"
+          placeholder="8920804195"
+          variableName="accountNumber"
+        />
+        <CustomTextInput
+          label="Account Name"
+          placeholder="Account Name/Your Name"
+          variableName="accountName"
+        />
+        <CustomTextInput
+          label="IFSC code"
+          placeholder="HSBC0560002"
+          variableName="ifscCode"
+        />
+        <CustomTextInput
+          label="Routing number"
+          placeholder="0804189592"
+          variableName="routingCode"
+        />
+        <CustomTextInput
+          label="Swift code"
+          placeholder="HSBCINAA123"
+          variableName="swiftCode"
         />
 
-        <div className="pt-4 pb-2 space-y-4">
-          <Controller
-            name="showUpiQr"
-            defaultValue={getInitialValue("showUpiQr", "true") === "true"}
-            render={({ field: { onChange, value } }) => {
-              const isChecked = canUseUpiQr ? value : false;
-              return (
-                <label className="flex items-start gap-3 cursor-pointer group relative">
-                  <div className="flex items-center h-5">
-                    <input
-                      type="checkbox"
-                      disabled={!canUseUpiQr}
-                      checked={isChecked}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        localStorage.setItem("showUpiQr", String(checked));
-                        onChange(checked);
-                      }}
-                      className="w-4 h-4 border-gray-300 rounded text-brand-600 focus:ring-brand-600 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className={`text-sm font-semibold flex items-center gap-1.5 ${!canUseUpiQr ? 'text-gray-400' : 'text-gray-700'}`}>
-                      Generate UPI QR code on invoice
-                    </span>
-                    <span className="text-xs text-gray-500 mt-0.5">
-                      Display a scan-to-pay QR code on your PDF.
-                    </span>
-                  </div>
-                  {!canUseUpiQr && (
-                    <div 
-                      className="absolute inset-0 z-10 cursor-not-allowed bg-transparent"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toast.error("Upgrade to Pro to enable UPI QR codes.");
-                      }}
-                    />
-                  )}
-                </label>
-              );
-            }}
+        {/* UPI — inline with bank details */}
+        <div className="pt-4">
+          <CustomTextInput
+            label="UPI ID"
+            placeholder="yourname@upi"
+            variableName="upiId"
+            disabled={!canUseUpiQr}
+            premium="pro"
           />
 
-          <Controller
-            name="upiLockAmount"
-            defaultValue={getInitialValue("upiLockAmount", "false") === "true"}
-            render={({ field: { onChange, value } }) => {
-              const isChecked = (isOverLimit || !canUseUpiQr) ? false : value;
-              return (
-                <label className="flex items-start gap-3 cursor-pointer group relative">
-                  <div className="flex items-center h-5">
-                    <input
-                      type="checkbox"
-                      disabled={isOverLimit || !canUseUpiQr}
-                      checked={isChecked}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        localStorage.setItem("upiLockAmount", String(checked));
-                        onChange(checked);
-                      }}
-                      className="w-4 h-4 border-gray-300 rounded text-brand-600 focus:ring-brand-600 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className={`text-sm font-semibold ${(!canUseUpiQr || isOverLimit) ? 'text-gray-400' : 'text-gray-700'}`}>
-                      Lock invoice amount in UPI QR
-                    </span>
-                    <span className="text-xs text-gray-500 mt-0.5">
-                      Payers cannot modify the amount while scanning.
-                    </span>
-                    {isOverLimit && canUseUpiQr && (
-                      <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-md">
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        <span>UPI limit exceeded (₹1,00,000+). Amount locking disabled.</span>
-                      </div>
+          <div className="pt-3 pb-2 space-y-3">
+            <Controller
+              name="showUpiQr"
+              defaultValue={getInitialValue("showUpiQr", "true") === "true"}
+              render={({ field: { onChange, value } }) => {
+                const isChecked = canUseUpiQr ? value : false;
+                return (
+                  <label className="flex items-start gap-3 cursor-pointer group relative">
+                    <div className="flex items-center h-5 mt-0.5">
+                      <input
+                        type="checkbox"
+                        disabled={!canUseUpiQr}
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          localStorage.setItem("showUpiQr", String(checked));
+                          onChange(checked);
+                        }}
+                        className="w-4 h-4 border-gray-300 rounded text-brand-600 focus:ring-brand-600 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-sm font-semibold ${!canUseUpiQr ? 'text-gray-400' : 'text-gray-700'}`}>
+                        Generate UPI QR code
+                      </span>
+                      <span className="text-xs text-gray-500 mt-0.5">
+                        Display scan-to-pay QR on PDF.
+                      </span>
+                    </div>
+                    {!canUseUpiQr && (
+                      <div 
+                        className="absolute inset-0 z-10 cursor-not-allowed bg-transparent"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toast.error("Upgrade to Pro to enable UPI QR."); }}
+                      />
                     )}
-                  </div>
-                  {!canUseUpiQr && (
-                    <div 
-                      className="absolute inset-0 z-10 cursor-not-allowed bg-transparent"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toast.error("Upgrade to Pro to lock UPI amounts.");
-                      }}
-                    />
-                  )}
-                </label>
-              );
-            }}
-          />
+                  </label>
+                );
+              }}
+            />
+
+            <Controller
+              name="upiLockAmount"
+              defaultValue={getInitialValue("upiLockAmount", "false") === "true"}
+              render={({ field: { onChange, value } }) => {
+                const isChecked = (isOverLimit || !canUseUpiQr) ? false : value;
+                return (
+                  <label className="flex items-start gap-3 cursor-pointer group relative">
+                    <div className="flex items-center h-5 mt-0.5">
+                      <input
+                        type="checkbox"
+                        disabled={isOverLimit || !canUseUpiQr}
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          localStorage.setItem("upiLockAmount", String(checked));
+                          onChange(checked);
+                        }}
+                        className="w-4 h-4 border-gray-300 rounded text-brand-600 focus:ring-brand-600 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-sm font-semibold ${(!canUseUpiQr || isOverLimit) ? 'text-gray-400' : 'text-gray-700'}`}>
+                        Lock amount in QR
+                      </span>
+                      <span className="text-xs text-gray-500 mt-0.5">
+                        Payers cannot modify amount while scanning.
+                      </span>
+                      {isOverLimit && canUseUpiQr && (
+                        <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-md">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span>UPI limit exceeded (₹1,00,000+).</span>
+                        </div>
+                      )}
+                    </div>
+                    {!canUseUpiQr && (
+                      <div 
+                        className="absolute inset-0 z-10 cursor-not-allowed bg-transparent"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toast.error("Upgrade to Pro to lock UPI amounts."); }}
+                      />
+                    )}
+                  </label>
+                );
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Other Payment Methods */}
+      {/* Other Payment Methods — separate section below */}
       <div className="border-t border-ink-100 my-6 pt-6">
         <h4 className="font-bold text-sm text-ink-900 mb-4 flex items-center gap-1.5">
           Other Payment Methods (Max 2)
