@@ -9,14 +9,15 @@ import { AlertCircle } from "lucide-react";
 import { resolvePlanAccess } from "@/lib/billing/tiers";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 import { toast } from "sonner";
-import { useEffect } from "react";
-import PaymentMethodManager from "@/components/dashboard/PaymentMethodManager";
+import { useEffect, useState } from "react";
+import PaymentMethodModal, { SelectedPaymentMethod } from "./PaymentMethodModal";
 
 export const PaymentDetailsForm = ({ profile }: { profile: any }) => {
   const items = useItemParams();
   const discount = useGetValue("discount", "0");
   const tax = useGetValue("tax", "0");
   const { setValue } = useFormContext();
+  const [showModal, setshowModal] = useState(false);
 
   const subtotal = items.reduce((total: number, item: any) => {
     const quantity = item.qty ? +item.qty : 1;
@@ -84,21 +85,61 @@ export const PaymentDetailsForm = ({ profile }: { profile: any }) => {
           name="selectedMethods"
           defaultValue={JSON.parse(getInitialValue("selectedMethods", "[]"))}
           render={({ field: { onChange, value } }) => {
-            const methods = Array.isArray(value) ? value : [];
-            const handleMethodsChange = (newMethods: any[]) => {
-              if (newMethods.length > 2) {
-                toast.error("You can only add a maximum of 2 payment methods per invoice.");
-                return;
-              }
-              onChange(newMethods);
-              localStorage.setItem("selectedMethods", JSON.stringify(newMethods));
+            const methods: SelectedPaymentMethod[] = Array.isArray(value) ? value : [];
+            const handleAdd = (method: SelectedPaymentMethod) => {
+              const next = [...methods, method];
+              onChange(next);
+              localStorage.setItem("selectedMethods", JSON.stringify(next));
+            };
+            const handleRemove = (index: number) => {
+              const next = [...methods];
+              next.splice(index, 1);
+              onChange(next);
+              localStorage.setItem("selectedMethods", JSON.stringify(next));
             };
 
             return (
-              <PaymentMethodManager 
-                methods={methods} 
-                onChange={handleMethodsChange} 
-              />
+              <div className="space-y-3">
+                {methods.map((m, i) => (
+                  <div
+                    key={`${m.id}-${i}`}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-[#161618] border border-[#262629]"
+                  >
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white shrink-0 text-xs"
+                      style={{ backgroundColor: m.color }}
+                    >
+                      {m.badge}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-[#f4f4f5] truncate">{m.title}</p>
+                      <p className="text-xs text-[#8b8b91] truncate">{m.value}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(i)}
+                      className="w-7 h-7 rounded-full bg-[#262629] flex items-center justify-center text-[#8b8b91] hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+                    >
+                      <span className="text-xs font-bold">×</span>
+                    </button>
+                  </div>
+                ))}
+                {methods.length < 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setshowModal(true)}
+                    className="w-full py-3 rounded-xl border border-dashed border-[#3a3a3e] text-[#8b8b91] text-sm font-semibold hover:border-[#f97316] hover:text-[#f97316] transition-colors"
+                  >
+                    + Add payment method
+                  </button>
+                )}
+                <PaymentMethodModal
+                  open={showModal}
+                  onClose={() => setshowModal(false)}
+                  onAdd={handleAdd}
+                  existingCount={methods.length}
+                />
+              </div>
             );
           }}
         />
