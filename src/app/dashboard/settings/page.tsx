@@ -9,6 +9,7 @@ import ProfileForm from '@/components/dashboard/ProfileForm';
 import DeleteAccountSection from '@/components/dashboard/DeleteAccountSection';
 import BusinessProfilesSection from '@/components/dashboard/BusinessProfilesSection';
 import NotificationSettingsSection from '@/components/dashboard/NotificationSettingsSection';
+import EmailSettings from '@/components/dashboard/settings/EmailSettings';
 import { resolvePlanAccess } from '@/lib/billing/tiers';
 import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { logger } from '@/lib/logger';
@@ -142,6 +143,7 @@ export default async function SettingsPage() {
                     activeWorkspace={activeWorkspace}
                   />
                   <NotificationSettingsSection profile={profile} />
+                  <EmailSettings />
 
             <DeleteAccountSection />
           </div>
