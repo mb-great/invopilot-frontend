@@ -30,7 +30,8 @@ type BusinessProfile = {
 export const YourDetailsForm = ({ profile }: { profile: any }) => {
   const { setValue, control } = useFormContext();
   const businesses = profile?.defaults?.businesses?.filter((b: any) => !b.deletedAt) || [];
-  const useCustomSignature = useWatch({ control, name: "useCustomSignature" });
+  const signatureMode = useWatch({ control, name: "signatureMode" });
+  const useCustomSignature = signatureMode === "custom";
 
   const handleImportBusiness = (biz: BusinessProfile) => {
     const mappings: { formField: string; val: any }[] = [
@@ -167,26 +168,37 @@ export const YourDetailsForm = ({ profile }: { profile: any }) => {
       
       <ImageInput label="Logo" variableName="yourLogo" premium="pro" />
 
-      <Controller
-        name="useCustomSignature"
-        defaultValue={false}
-        render={({ field: { onChange, value } }) => (
-          <div className="mt-4">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={!!value}
-                onChange={(e) => {
-                  onChange(e.target.checked);
-                  if (!e.target.checked) setValue("customSignatureUrl", "");
-                }}
-                className="w-4 h-4 rounded border-neutral-300 text-brand-500 focus:ring-brand-500"
-              />
-              <span className="text-sm font-medium text-gray-900">Use custom signature for this invoice</span>
-            </label>
-          </div>
-        )}
-      />
+      <div className="mt-4">
+        <p className="text-sm font-medium text-gray-900 mb-2">Signature</p>
+        <Controller
+          name="signatureMode"
+          defaultValue="default"
+          render={({ field: { onChange, value } }) => (
+            <div className="flex flex-col gap-2">
+              {[
+                { val: "default", label: "Use default signature (from business profile)" },
+                { val: "custom", label: "Use custom signature for this invoice" },
+                { val: "none", label: "No signature" },
+              ].map((opt) => (
+                <label key={opt.val} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="radio"
+                    name="signatureMode"
+                    value={opt.val}
+                    checked={value === opt.val}
+                    onChange={() => {
+                      onChange(opt.val);
+                      if (opt.val !== "custom") setValue("customSignatureUrl", "");
+                    }}
+                    className="w-4 h-4 border-neutral-300 text-brand-500 focus:ring-brand-500"
+                  />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        />
+      </div>
 
       {useCustomSignature && (
         <Controller

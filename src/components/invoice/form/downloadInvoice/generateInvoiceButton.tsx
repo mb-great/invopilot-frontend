@@ -85,8 +85,10 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
       clientName: liveFormValues.companyName || companyDetails.companyName || "",
       clientEmail: liveFormValues.email || companyDetails.email || "",
       invoiceNumber: liveFormValues.invoiceNumber || invoiceTerms.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
-      ...(liveFormValues.useCustomSignature && liveFormValues.customSignatureUrl
+      ...(liveFormValues.signatureMode === 'custom' && liveFormValues.customSignatureUrl
         ? { signatureUrl: liveFormValues.customSignatureUrl }
+        : liveFormValues.signatureMode === 'none'
+        ? { signatureUrl: null }
         : {}),
     };
 
@@ -178,7 +180,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         <h1 className="text-4xl font-bold pb-4 text-ink-900">
           {status === "done" 
             ? (effectiveIsQuote ? "Quote Generated!" : "Invoice Generated!") 
-            : "Your invoice is ready"}
+            : effectiveIsQuote ? "Your quote is ready" : "Your invoice is ready"}
         </h1>
         <p className="text-ink-500 text-lg pb-8">
           {status === "done"
@@ -344,12 +346,12 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
             <button
               onClick={() => {
                 clearInvoiceDraft();
-                window.location.href = '/invoices/new';
+                window.location.href = effectiveIsQuote ? '/invoices/new?type=quote' : '/invoices/new';
               }}
               className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 transition-colors mt-4 mx-auto"
             >
               <FilePlus2 className="w-4 h-4" />
-              New Invoice
+              {effectiveIsQuote ? 'New Quote' : 'New Invoice'}
             </button>
           </div>
         )}

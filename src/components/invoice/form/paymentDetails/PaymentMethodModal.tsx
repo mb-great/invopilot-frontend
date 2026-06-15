@@ -258,7 +258,7 @@ function PickerView({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ willChange: 'transform', WebkitOverflowScrolling: 'touch' }}>
         {filtered.length === 0 ? (
           <p className="text-sm text-[#8b8b91] text-center py-8">No methods found.</p>
         ) : (
