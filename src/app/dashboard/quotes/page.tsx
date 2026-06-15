@@ -86,7 +86,7 @@ export default async function QuotesPage() {
             <p className="text-ink-500 mt-1">Manage quotes and convert them to invoices with one click.</p>
           </div>
           <Link 
-            href="/invoices/new"
+            href="/invoices/new?type=quote"
             className="bg-purple-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20 flex items-center gap-2"
           >
             <ArrowRightLeft className="w-4 h-4" />
