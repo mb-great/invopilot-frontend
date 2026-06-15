@@ -79,6 +79,9 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
       clientName: liveFormValues.companyName || companyDetails.companyName || "",
       clientEmail: liveFormValues.email || companyDetails.email || "",
       invoiceNumber: liveFormValues.invoiceNumber || invoiceTerms.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+      ...(liveFormValues.useCustomSignature && liveFormValues.customSignatureUrl
+        ? { signatureUrl: liveFormValues.customSignatureUrl }
+        : {}),
     };
 
     if (isRecurring) {
