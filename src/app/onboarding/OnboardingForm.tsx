@@ -60,7 +60,7 @@ export default function OnboardingForm({
   return (
     <div className="w-full max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-2 mb-10">
-        <img src="/logo.png" alt="InvoPilot" className="w-10 h-10 object-contain drop-shadow-sm" />
+        <img src="/logo.webp" alt="InvoPilot" className="w-10 h-10 object-contain drop-shadow-sm" />
         <span className="font-bold text-xl tracking-tight text-ink-900">InvoPilot</span>
       </div>
 

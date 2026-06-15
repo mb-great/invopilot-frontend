@@ -51,7 +51,7 @@ function VerifyOtpContent() {
     <main className="min-h-[100dvh] bg-ink-50 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-12">
-          <img src="/logo.png" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
+          <img src="/logo.webp" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
           <span className="font-bold text-xl tracking-tight text-ink-900">InvoPilot</span>
         </div>
 

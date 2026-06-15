@@ -15,7 +15,7 @@ export default function Loading() {
       
       <div className="animate-zoom-out flex flex-col items-center gap-6">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="InvoPilot Logo" className="w-12 h-12 object-contain drop-shadow-sm" />
+          <img src="/logo.webp" alt="InvoPilot Logo" className="w-12 h-12 object-contain drop-shadow-sm" />
           <span className="font-bold text-2xl tracking-tight text-ink-900">InvoPilot</span>
         </div>
         

@@ -424,7 +424,7 @@ export default function InvoiceBuilder() {
                 </div>
 
                 <div className="flex gap-3 items-center mb-8">
-                  <img src="/logo.png" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
+                  <img src="/logo.webp" alt="InvoPilot Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
                   <div>
                     <p className="font-bold text-ink-900 leading-tight">InvoPilot</p>
                     <p className="text-brand-500 text-[10px] font-bold uppercase tracking-widest">Builder</p>
