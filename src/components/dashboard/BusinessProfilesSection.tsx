@@ -454,6 +454,9 @@ export default function BusinessProfilesSection({
                 <span className="text-[10px] text-neutral-400 text-center mt-2 leading-relaxed">
                   Transparent PNG or SVG recommended.
                 </span>
+                <p className="text-xs text-gray-400 text-center mt-1">
+                  Tip: Upload a PNG with transparent background for best results on invoices.
+                </p>
               </div>
             </div>
 
