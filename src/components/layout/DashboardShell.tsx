@@ -83,7 +83,7 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
       `}>
         <div className="flex items-center justify-between px-6 py-6 lg:py-8">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="InvoPilot Logo" className="w-8 h-8 object-contain drop-shadow-sm" />
+            <img src="/logo.webp" alt="InvoPilot Logo" className="w-8 h-8 object-contain drop-shadow-sm" />
             <span className="font-bold text-lg tracking-tight text-ink-900">InvoPilot</span>
           </div>
           <button 
@@ -159,7 +159,7 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
         {/* Mobile Header */}
         <header className="lg:hidden h-16 bg-white border-b border-ink-200 flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="InvoPilot Logo" className="w-7 h-7 object-contain drop-shadow-sm" />
+            <img src="/logo.webp" alt="InvoPilot Logo" className="w-7 h-7 object-contain drop-shadow-sm" />
             <span className="font-bold text-md text-ink-900">InvoPilot</span>
           </div>
           <div className="flex items-center gap-2">
