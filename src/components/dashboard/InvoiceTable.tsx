@@ -540,9 +540,13 @@ export default function InvoiceTable({
                 <button onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Retry</button>
                 <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
               </>
+            ) : inv.status === 'processing' ? (
+              <>
+                <div className="flex items-center gap-1.5 text-amber-500 mr-2"><Loader2 className="w-3 h-3 animate-spin" /><span className="text-[10px] font-bold uppercase tracking-tight">Processing</span></div>
+                <button onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Retry</button>
+                <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1" title="Delete"><Trash2 className="w-4 h-4" /></button>
+              </>
             ) : (
-              <div className="flex items-center gap-2 text-ink-400 px-4"><Loader2 className="w-3 h-3 animate-spin" /><span className="text-[10px] font-medium uppercase tracking-tight">Processing</span></div>
-            )}
           </div>
         );
       }
