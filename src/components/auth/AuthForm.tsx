@@ -40,6 +40,9 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
     setLoading(true)
     setError(null)
     
+    // Clear any existing session to prevent conflicts
+    await supabase.auth.signOut().catch(() => {});
+    
     try {
       const res = await fetch(`${BACKEND_URL}/api/auth/signup/initiate`, {
         method: 'POST',
@@ -77,7 +80,7 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
       const data = await res.json();
       if (!res.ok) {
         if (data.code === 'OTP_EXPIRED') {
-          throw new Error('Code expired. Please request a new one.');
+          throw new Error('Code expired or invalid. Please request a new one.');
         }
         throw new Error(data.error || 'Verification failed');
       }
