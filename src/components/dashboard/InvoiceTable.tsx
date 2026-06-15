@@ -546,7 +546,7 @@ export default function InvoiceTable({
                 <button onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Retry</button>
                 <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1" title="Delete"><Trash2 className="w-4 h-4" /></button>
               </>
-            ) : (
+            ) : null}
           </div>
         );
       }
