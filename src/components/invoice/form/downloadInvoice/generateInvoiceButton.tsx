@@ -3,7 +3,7 @@
 import { CheckCircle2, FilePlus2, Loader2, Send, AlertCircle, Download } from "lucide-react";
 import { useData } from "@/hooks/useData";
 import { useEffect, useRef, useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { ShareDialog } from "@/components/dashboard/ShareDialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ import { clearInvoiceDraft } from "@/lib/invoiceStorage";
 import { useSearchParams } from "next/navigation";
 
 export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
-  const { setValue, getValues } = useFormContext();
+  const { setValue, getValues, control } = useFormContext();
   const [status, setStatus] = useState<
     "ready" | "generating" | "polling" | "done" | "error"
   >("ready");
@@ -27,6 +27,12 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   const [isQuote, setIsQuote] = useState(searchParams?.get("type") === "quote");
   const [isRecurring, setIsRecurring] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  // Read isQuote from form context
+  const formIsQuote = useWatch({ control, name: "isQuote" });
+  
+  // Use form value if available, otherwise use search param
+  const effectiveIsQuote = formIsQuote !== undefined ? formIsQuote : isQuote;
 
   const {
     companyDetails,
@@ -107,8 +113,8 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           formData,
-          nickname: `${companyDetails.companyName || (isQuote ? "Quote" : "Invoice")} - ${invoiceTerms.invoiceNumber || ""}`.trim(),
-          payment_status: isQuote ? "quote" : "draft",
+          nickname: `${companyDetails.companyName || (effectiveIsQuote ? "Quote" : "Invoice")} - ${invoiceTerms.invoiceNumber || ""}`.trim(),
+          payment_status: effectiveIsQuote ? "quote" : "draft",
         }),
       });
 
@@ -170,7 +176,9 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
       />
       <div className="w-full text-center">
         <h1 className="text-4xl font-bold pb-4 text-ink-900">
-          {status === "done" ? "Invoice Generated!" : "Your invoice is ready"}
+          {status === "done" 
+            ? (effectiveIsQuote ? "Quote Generated!" : "Invoice Generated!") 
+            : "Your invoice is ready"}
         </h1>
         <p className="text-ink-500 text-lg pb-8">
           {status === "done"
@@ -274,7 +282,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         >
           {status === "ready" && (
             <>
-              <Send className="h-6 w-6" /> {isRecurring ? "Save Template" : `Generate ${isQuote ? "Quote" : "Invoice"}`}
+              <Send className="h-6 w-6" /> {isRecurring ? "Save Template" : `Generate ${effectiveIsQuote ? "Quote" : "Invoice"}`}
             </>
           )}
           {status === "generating" && (
