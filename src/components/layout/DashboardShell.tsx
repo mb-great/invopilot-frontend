@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Menu, X, LogOut, LayoutDashboard, FileText, Users, Settings, ShieldCheck, CreditCard, Repeat, Code } from 'lucide-react'
+import { Menu, X, LogOut, LayoutDashboard, FileText, Users, Settings, ShieldCheck, CreditCard, Repeat, Code, Wallet } from 'lucide-react'
 import { resolvePlanAccess } from '@/lib/billing/tiers'
 import PremiumBadge from '@/components/ui/PremiumBadge'
 import GlobalWorkspaceSwitcher from '@/components/layout/GlobalWorkspaceSwitcher'
@@ -23,6 +23,7 @@ const navLinks = [
   { name: 'Quotes', href: '/dashboard/quotes', icon: <FileText className="w-4 h-4" />, premiumBadge: 'pro' as const },
   { name: 'Recurring', href: '/dashboard/recurring', icon: <Repeat className="w-4 h-4" />, premiumBadge: 'pro' as const },
   { name: 'Clients', href: '/dashboard/clients', icon: <Users className="w-4 h-4" /> },
+  { name: 'Payment Methods', href: '/dashboard/payment-methods', icon: <Wallet className="w-4 h-4" />, premiumBadge: 'pro' as const },
   { name: 'Team', href: '/dashboard/members', icon: <Users className="w-4 h-4" />, premiumBadge: 'biz' as const },
   { name: 'API', href: '/dashboard/api', icon: <Code className="w-4 h-4" />, premiumBadge: 'biz' as const },
   { name: 'Pricing', href: '/pricing', icon: <CreditCard className="w-4 h-4" /> },
