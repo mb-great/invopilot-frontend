@@ -3,10 +3,10 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo",
-    "build": "next build",
+    "dev": "NODE_OPTIONS='--max-old-space-size=4096' next dev --turbo",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
-    "lint": "NODE_OPTIONS='--no-deprecation' next lint",
+    "lint": "NODE_OPTIONS='--max-old-space-size=4096 --no-deprecation' next lint",
     "test": "NODE_OPTIONS='--no-deprecation' vitest run"
   },
   "dependencies": {

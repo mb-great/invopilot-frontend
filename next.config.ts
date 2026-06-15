@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // @ts-ignore - Next.js 16 type definitions might be strict but this is valid
+  turbopack: {
+    root: __dirname,
+  },
   async headers() {
     return [
       {

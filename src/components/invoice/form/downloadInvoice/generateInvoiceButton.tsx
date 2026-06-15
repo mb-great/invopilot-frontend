@@ -202,9 +202,10 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
                 <Switch 
                   id="quote-mode" 
                   disabled={!access.plan.canUseQuotes && !access.isAdmin}
-                  checked={(access.plan.canUseQuotes || access.isAdmin) ? isQuote : false} 
+                  checked={(access.plan.canUseQuotes || access.isAdmin) ? effectiveIsQuote : false} 
                   onCheckedChange={(val) => {
                     setIsQuote(val);
+                    setValue('isQuote', val);
                     if (val) setIsRecurring(false);
                   }} 
                 />
