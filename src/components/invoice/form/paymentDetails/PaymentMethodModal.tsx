@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, X, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PAYMENT_METHODS = [
@@ -21,7 +21,7 @@ const PAYMENT_METHODS = [
   { id: 'flutterwave', name: 'Flutterwave', badge: 'F', color: '#f5a623', mode: 'url' as const, slug: 'flutter' },
   { id: 'mercadopago', name: 'Mercado Pago', badge: 'M', color: '#00b1ea', mode: 'url' as const, slug: 'mercadopago' },
   { id: 'pagseguro', name: 'PagSeguro', badge: 'P', color: '#fcb22d', mode: 'url' as const, slug: 'pagseguro' },
-  { id: 'conekta', name: 'Conekta', badge: 'C', color: '#0a2540', mode: 'url' as const, slug: '' },
+  { id: 'conekta', name: 'Conekta', badge: 'C', color: '#0a2540', mode: 'details' as const, slug: '' },
   { id: 'esewa', name: 'eSewa', badge: 'e', color: '#60bb46', mode: 'details' as const, slug: 'esewa' },
   { id: 'khalti', name: 'Khalti', badge: 'K', color: '#5c2d91', mode: 'details' as const, slug: '' },
   { id: 'gcash', name: 'GCash', badge: 'G', color: '#0070e0', mode: 'details' as const, slug: 'gcash' },
@@ -53,21 +53,12 @@ export interface SelectedPaymentMethod {
   badge: string;
 }
 
-export interface SavedPaymentMethod {
-  id: string;
-  title: string;
-  value: string;
-  qr?: string;
-  color: string;
-  badge: string;
-}
-
 interface PaymentMethodModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (method: SelectedPaymentMethod) => void;
   existingCount: number;
-  savedMethods?: SavedPaymentMethod[];
+  isPremium?: boolean;
 }
 
 function MethodBadge({ method, size = 26 }: { method: PaymentMethodItem; size?: number }) {
@@ -112,7 +103,7 @@ export default function PaymentMethodModal({
   onClose,
   onAdd,
   existingCount,
-  savedMethods = [],
+  isPremium = false,
 }: PaymentMethodModalProps) {
   const [search, setSearch] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodItem | null>(null);
@@ -130,8 +121,8 @@ export default function PaymentMethodModal({
   if (!open) return null;
 
   const handleSelectMethod = (method: PaymentMethodItem) => {
-    if (existingCount >= 2) {
-      toast.warning('You can only add a maximum of 2 payment methods per invoice.');
+    if (existingCount >= 3) {
+      toast.warning('You can only add a maximum of 3 payment methods per invoice.');
       return;
     }
     setSelectedMethod(method);
@@ -173,14 +164,6 @@ export default function PaymentMethodModal({
     setSearch('');
   };
 
-  const handleQuickfill = (method: SavedPaymentMethod) => {
-    onAdd(method);
-    toast.success(`${method.title} added`);
-    onClose();
-    handleBack();
-    setSearch('');
-  };
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
@@ -195,6 +178,7 @@ export default function PaymentMethodModal({
             onSelect={handleSelectMethod}
             onClose={onClose}
             existingCount={existingCount}
+            isPremium={isPremium}
           />
         ) : (
           <DetailView
@@ -222,6 +206,7 @@ function PickerView({
   onSelect,
   onClose,
   existingCount,
+  isPremium,
 }: {
   search: string;
   onSearchChange: (v: string) => void;
@@ -229,7 +214,30 @@ function PickerView({
   onSelect: (m: PaymentMethodItem) => void;
   onClose: () => void;
   existingCount: number;
+  isPremium: boolean;
 }) {
+  const [view, setView] = useState<'list' | 'bank' | 'upi'>('list');
+
+  if (view === 'bank') {
+    return (
+      <BankDetailsView
+        onBack={() => setView('list')}
+        onClose={onClose}
+        isPremium={isPremium}
+      />
+    );
+  }
+
+  if (view === 'upi') {
+    return (
+      <UpiView
+        onBack={() => setView('list')}
+        onClose={onClose}
+        isPremium={isPremium}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col max-h-[85vh]">
       <div className="p-6 pb-0">
@@ -259,6 +267,39 @@ function PickerView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ willChange: 'transform', WebkitOverflowScrolling: 'touch' }}>
+        {!search && (
+          <div className="space-y-1 mb-3">
+            <p className="text-[11px] font-bold text-[#8b8b91] uppercase tracking-widest mb-2">Quick Setup</p>
+            <button
+              onClick={() => setView('bank')}
+              className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-[#161618] transition-colors group text-left"
+            >
+              <div className="w-[44px] h-[44px] rounded-lg flex items-center justify-center font-bold text-white shrink-0 text-sm" style={{ backgroundColor: '#1a56db' }}>
+                🏦
+              </div>
+              <span className="text-[15px] font-semibold text-[#f4f4f5] flex-1">Bank Details</span>
+              <ChevronRight className="w-[18px] h-[18px] text-[#8b8b91] group-hover:text-[#f97316] transition-colors" />
+            </button>
+            <button
+              onClick={() => setView('upi')}
+              className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-[#161618] transition-colors group text-left"
+            >
+              <div className="w-[44px] h-[44px] rounded-lg flex items-center justify-center font-bold text-white shrink-0 text-sm" style={{ backgroundColor: '#5f259f' }}>
+                UPI
+              </div>
+              <span className="text-[15px] font-semibold text-[#f4f4f5] flex-1">UPI</span>
+              {!isPremium && (
+                <span className="text-[10px] border border-[#262629] rounded-md px-1.5 py-0.5 text-[#8b8b91] font-semibold">PRO</span>
+              )}
+              <ChevronRight className="w-[18px] h-[18px] text-[#8b8b91] group-hover:text-[#f97316] transition-colors" />
+            </button>
+          </div>
+        )}
+
+        {!search && (
+          <p className="text-[11px] font-bold text-[#8b8b91] uppercase tracking-widest mb-2">All Methods</p>
+        )}
+
         {filtered.length === 0 ? (
           <p className="text-sm text-[#8b8b91] text-center py-8">No methods found.</p>
         ) : (
@@ -278,13 +319,220 @@ function PickerView({
         )}
       </div>
 
-      {existingCount >= 2 && (
+      {existingCount >= 3 && (
         <div className="px-6 pb-4">
           <p className="text-xs text-amber-400 bg-amber-400/10 rounded-lg px-3 py-2">
-            Maximum of 2 payment methods reached. Remove one before adding more.
+            Maximum of 3 payment methods reached. Remove one before adding more.
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function BankDetailsView({
+  onBack,
+  onClose,
+  isPremium,
+}: {
+  onBack: () => void;
+  onClose: () => void;
+  isPremium: boolean;
+}) {
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [ifscCode, setIfscCode] = useState('');
+  const [routingCode, setRoutingCode] = useState('');
+  const [swiftCode, setSwiftCode] = useState('');
+
+  return (
+    <div className="flex flex-col max-h-[85vh]">
+      <div className="p-6 pb-0">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-[#161618] border border-white/5">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white text-sm" style={{ backgroundColor: '#1a56db' }}>
+                🏦
+              </div>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#f4f4f5]">Bank Details</h2>
+              <p className="text-sm text-[#8b8b91] mt-1">Add your bank account information.</p>
+            </div>
+          </div>
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-full bg-[#161618] flex items-center justify-center text-[#8b8b91] hover:text-[#f4f4f5] hover:bg-[#262629] transition-colors shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <InputField label="Bank Name" value={bankName} onChange={setBankName} placeholder="HSBC" />
+          <InputField label="Account Number" value={accountNumber} onChange={setAccountNumber} placeholder="8920804195" />
+          <InputField label="Account Name" value={accountName} onChange={setAccountName} placeholder="Your Name" />
+          <InputField label="IFSC Code" value={ifscCode} onChange={setIfscCode} placeholder="HSBC0560002" />
+          <InputField label="Routing Number" value={routingCode} onChange={setRoutingCode} placeholder="0804189592" />
+          <InputField label="Swift Code" value={swiftCode} onChange={setSwiftCode} placeholder="HSBCINAA123" />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between p-6 mt-auto border-t border-[#262629]">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#262629] text-[#f4f4f5] font-semibold text-sm hover:bg-[#161618] transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
+        <button
+          onClick={() => {
+            const parts = [bankName, accountNumber, accountName, ifscCode, routingCode, swiftCode].filter(Boolean);
+            if (parts.length === 0) {
+              toast.error('Enter at least one bank detail');
+              return;
+            }
+            const summary = [accountName, bankName].filter(Boolean).join(' · ') || 'Bank Details';
+            onClose();
+            toast.success('Bank Details saved');
+            window.dispatchEvent(new CustomEvent('paymentMethod:bankDetails', {
+              detail: { bankName, accountNumber, accountName, ifscCode, routingCode, swiftCode, summary },
+            }));
+          }}
+          className="px-6 py-3 rounded-xl bg-[#f97316] text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-[#ea6a0c] transition-colors"
+        >
+          Add Bank Details
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function UpiView({
+  onBack,
+  onClose,
+  isPremium,
+}: {
+  onBack: () => void;
+  onClose: () => void;
+  isPremium: boolean;
+}) {
+  const [upiId, setUpiId] = useState('');
+  const [showQr, setShowQr] = useState(true);
+  const [lockAmount, setLockAmount] = useState(false);
+
+  return (
+    <div className="flex flex-col max-h-[85vh]">
+      <div className="p-6 pb-0">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-[#161618] border border-white/5">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white text-sm" style={{ backgroundColor: '#5f259f' }}>
+                UPI
+              </div>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#f4f4f5]">UPI</h2>
+              <p className="text-sm text-[#8b8b91] mt-1">Add your UPI payment details.</p>
+            </div>
+          </div>
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-full bg-[#161618] flex items-center justify-center text-[#8b8b91] hover:text-[#f4f4f5] hover:bg-[#262629] transition-colors shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <InputField label="UPI ID" value={upiId} onChange={setUpiId} placeholder="yourname@upi" />
+
+          <div className="space-y-3 pt-2">
+            <label className="flex items-start gap-3 cursor-pointer group relative">
+              <div className="flex items-center h-5 mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={showQr}
+                  onChange={(e) => setShowQr(e.target.checked)}
+                  className="w-4 h-4 border-gray-300 rounded text-brand-600 focus:ring-brand-600 cursor-pointer"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-gray-700">Generate UPI QR code</span>
+                <span className="text-xs text-gray-500 mt-0.5">Display scan-to-pay QR on PDF.</span>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer group relative">
+              <div className="flex items-center h-5 mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={lockAmount}
+                  onChange={(e) => setLockAmount(e.target.checked)}
+                  className="w-4 h-4 border-gray-300 rounded text-brand-600 focus:ring-brand-600 cursor-pointer"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-gray-700">Lock amount in QR</span>
+                <span className="text-xs text-gray-500 mt-0.5">Payers cannot modify amount while scanning.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between p-6 mt-auto border-t border-[#262629]">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#262629] text-[#f4f4f5] font-semibold text-sm hover:bg-[#161618] transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
+        <button
+          onClick={() => {
+            if (!upiId.trim()) {
+              toast.error('Enter a UPI ID');
+              return;
+            }
+            onClose();
+            toast.success('UPI added');
+            window.dispatchEvent(new CustomEvent('paymentMethod:upi', {
+              detail: { upiId: upiId.trim(), showQr, lockAmount },
+            }));
+          }}
+          className="px-6 py-3 rounded-xl bg-[#f97316] text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-[#ea6a0c] transition-colors"
+        >
+          Add UPI
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function InputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-bold text-[#8b8b91] uppercase tracking-widest mb-2">
+        {label}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-[#161618] border border-[#262629] rounded-xl px-4 py-3 text-sm text-[#f4f4f5] placeholder-[#8b8b91] outline-none focus:border-[#f97316] transition-colors"
+      />
     </div>
   );
 }
