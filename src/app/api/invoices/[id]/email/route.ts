@@ -23,6 +23,18 @@ export async function POST(
       return NextResponse.json({ error: 'toEmail is required' }, { status: 400 });
     }
 
+    // Verify invoice ownership — must exist and not be soft-deleted
+    const { data: invoice, error: fetchError } = await supabase
+      .from('invoices')
+      .select('id, workspace_id')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
+
+    if (fetchError || !invoice) {
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    }
+
     const backendUrl = getBackendUrl();
 
     // Call internal backend to perform the email sending

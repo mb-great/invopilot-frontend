@@ -61,7 +61,7 @@ export async function saveClient(clientData: {
 
 
 
-  if (maxClients !== Infinity) {
+  if (maxClients !== Infinity && !access.isAdmin) {
     const { count } = await supabase
       .from('clients')
       .select('*', { count: 'exact', head: true })

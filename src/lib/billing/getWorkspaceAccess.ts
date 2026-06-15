@@ -6,14 +6,24 @@ export async function getActiveWorkspaceId(supabase: SupabaseClient) {
   const cookieStore = await cookies();
   const savedWorkspaceId = cookieStore.get('invopilot_active_workspace')?.value;
 
-  if (savedWorkspaceId) {
-    return savedWorkspaceId;
-  }
-
-  // Fallback to first available workspace
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  if (savedWorkspaceId) {
+    // Validate the cookie value — user must be an accepted member
+    const { data: membership } = await supabase
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_id', user.id)
+      .eq('workspace_id', savedWorkspaceId)
+      .eq('status', 'accepted')
+      .limit(1)
+      .single();
+
+    if (membership) return savedWorkspaceId;
+  }
+
+  // Fallback to first available workspace
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('workspace_id')

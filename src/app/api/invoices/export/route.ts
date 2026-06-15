@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getActiveWorkspaceId } from '@/lib/workspace';
+import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Tier gate: CSV export requires Pro, Business, or Admin
+  const access = await getWorkspaceAccess(supabase);
+  if (!access.isAdmin && !access.plan.canExportCsv) {
+    return NextResponse.json({ error: 'CSV export requires Pro or Business plan' }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const range = searchParams.get('range') || 'lifetime';
