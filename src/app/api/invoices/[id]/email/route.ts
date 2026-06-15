@@ -42,7 +42,7 @@ export async function POST(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Optional: pass an internal service key or secret if backend requires it
+        'x-worker-secret': process.env.WORKER_SECRET || '',
       },
       body: JSON.stringify({
         invoiceId: id,
