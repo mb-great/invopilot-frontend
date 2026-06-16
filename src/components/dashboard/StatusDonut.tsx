@@ -4,7 +4,8 @@ import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
-  Legend
+  Legend,
+  ChartOptions
 } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import { useMemo, useState, useEffect } from 'react';
@@ -93,12 +94,37 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
     };
   }, [invoices]);
 
-  const options = {
+  const centerTextPlugin = useMemo(() => ({
+    id: 'centerText',
+    afterDraw(chart: any) {
+      if (!chartData.hasData) return;
+      const { ctx, chartArea } = chart;
+      const centerX = (chartArea.left + chartArea.right) / 2;
+      const centerY = (chartArea.top + chartArea.bottom) / 2;
+      
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      ctx.font = '900 32px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillStyle = '#0A0D14';
+      ctx.fillText(String(chartData.total), centerX, centerY - 8);
+      
+      ctx.font = '700 10px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillStyle = '#8A92A0';
+      ctx.letterSpacing = '2px';
+      ctx.fillText('TOTAL', centerX, centerY + 16);
+      
+      ctx.restore();
+    }
+  }), [chartData.hasData, chartData.total]);
+
+  const options: ChartOptions<'doughnut'> = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'right' as const,
+        position: 'right',
         labels: {
           usePointStyle: true,
           padding: 20,
@@ -110,10 +136,10 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
         enabled: chartData.hasData,
         backgroundColor: '#1e293b',
         padding: 12,
-        bodyFont: { size: 14, weight: 'bold' as const }
+        bodyFont: { size: 14, weight: 'bold' }
       }
     }
-  };
+  }), [chartData.hasData]);
 
   return (
     <div className="glass-card flex flex-col h-full bg-white border border-ink-100 rounded-2xl overflow-hidden shadow-sm">
@@ -125,15 +151,7 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
           <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
         ) : (
           <div className="w-full h-full relative">
-            <Doughnut data={chartData} options={options} />
-            {chartData.hasData && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[32px] leading-none font-black text-ink-900 tracking-tight">
-                  {chartData.total}
-                </span>
-                <span className="text-[10px] uppercase font-bold text-ink-400 tracking-widest mt-1">Total</span>
-              </div>
-            )}
+            <Doughnut data={chartData} options={options} plugins={[centerTextPlugin]} />
           </div>
         )}
       </div>
