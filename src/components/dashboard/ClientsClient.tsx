@@ -568,13 +568,13 @@ export default function ClientsClient({
       {/* Directory Table */}
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="text-ink-400 text-xs uppercase tracking-widest border-b border-ink-100 bg-ink-50/30">
                 <th className="py-4 px-6 font-bold">Client Name</th>
-                <th className="py-4 px-6 font-bold">Company / Tax ID</th>
-                <th className="py-4 px-6 font-bold text-center">Total Billed</th>
-                <th className="py-4 px-6 font-bold text-center">Invoices</th>
+                <th className="py-4 px-6 font-bold hidden md:table-cell">Company / Tax ID</th>
+                <th className="py-4 px-6 font-bold text-center hidden sm:table-cell">Total Billed</th>
+                <th className="py-4 px-6 font-bold text-center hidden lg:table-cell">Invoices</th>
                 <th className="py-4 px-6 font-bold text-right">Outstanding</th>
                 <th className="py-4 px-6 font-bold text-right">Actions</th>
               </tr>
@@ -602,7 +602,7 @@ export default function ClientsClient({
                           </span>
                         </div>
                       </td>
-                      <td className="py-5 px-6">
+                      <td className="py-5 px-6 hidden md:table-cell">
                         <div className="flex flex-col">
                           <span className="text-sm font-medium text-ink-700">{client.company_name || '—'}</span>
                           {client.vat_gstin && (
@@ -612,10 +612,10 @@ export default function ClientsClient({
                           )}
                         </div>
                       </td>
-                      <td className="py-5 px-6 font-bold text-ink-900 text-center">
+                      <td className="py-5 px-6 font-bold text-ink-900 text-center hidden sm:table-cell">
                         {stats.totalBilled > 0 ? formatCurrency(stats.totalBilled, stats.currency) : '—'}
                       </td>
-                      <td className="py-5 px-6 text-center text-ink-500 font-medium">
+                      <td className="py-5 px-6 text-center text-ink-500 font-medium hidden lg:table-cell">
                         {stats.invoiceCount > 0 ? stats.invoiceCount : '—'}
                       </td>
                       <td className="py-5 px-6 text-right font-medium text-ink-700">

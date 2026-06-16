@@ -4,7 +4,7 @@ import { useFormContext, Controller, useWatch } from "react-hook-form";
 import { useEffect, useState, useRef } from "react";
 import PaymentMethodModal, { SelectedPaymentMethod } from "./PaymentMethodModal";
 import { toast } from "sonner";
-import { Pencil, X, Upload } from "lucide-react";
+import { Pencil, X, Upload, Sparkles } from "lucide-react";
 import { resolvePlanAccess } from "@/lib/billing/tiers";
 import { createClient } from "@/lib/supabase/client";
 

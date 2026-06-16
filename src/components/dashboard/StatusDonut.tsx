@@ -103,8 +103,13 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
       if (!chartData.hasData) return;
       const { ctx, chartArea } = chart;
       
-      const centerX = (chartArea.left + chartArea.right) / 2;
-      const centerY = (chartArea.top + chartArea.bottom) / 2;
+      const activeMeta = chart.getDatasetMeta(0);
+      const centerX = (activeMeta && activeMeta.data && activeMeta.data[0]) 
+        ? (activeMeta.data[0] as any).x 
+        : (chartArea.left + chartArea.right) / 2;
+      const centerY = (activeMeta && activeMeta.data && activeMeta.data[0]) 
+        ? (activeMeta.data[0] as any).y 
+        : (chartArea.top + chartArea.bottom) / 2;
       
       ctx.save();
       ctx.textAlign = 'center';

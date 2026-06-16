@@ -456,17 +456,20 @@ export default function InvoiceTable({
       id: 'issueDate',
       header: 'Issue Date',
       accessorFn: row => row.issue_date || row.form_data?.issueDate,
+      meta: { className: 'hidden md:table-cell' },
       cell: ({ getValue }) => <span className="text-[11px] font-medium text-ink-700 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
     },
     {
       id: 'dueDate',
       header: 'Due Date',
       accessorFn: row => row.due_date || row.form_data?.dueDate,
+      meta: { className: 'hidden sm:table-cell' },
       cell: ({ getValue }) => <span className="text-[11px] font-medium text-ink-700 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
     },
     {
       accessorKey: 'created_at',
       header: 'Created',
+      meta: { className: 'hidden lg:table-cell' },
       cell: ({ getValue }) => <span className="text-[10px] font-medium text-ink-400 italic whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, p')}</span>
     },
     {
@@ -495,7 +498,7 @@ export default function InvoiceTable({
       cell: ({ row }) => {
         const inv = row.original;
         return (
-          <div className="flex justify-end items-center gap-1 flex-wrap min-w-[200px]">
+          <div className="flex justify-end items-center gap-1 flex-wrap min-w-[140px]">
             {inv.status === 'done' ? (
               <>
                 <a href={`/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
@@ -798,14 +801,14 @@ export default function InvoiceTable({
       <div className="w-full flex-1 overflow-hidden">
         <div className="overflow-x-auto pb-4 no-scrollbar w-full">
           
-          <table className="w-full text-left border-collapse min-w-[900px] table-auto">
+          <table className="w-full text-left border-collapse table-auto">
             <thead>
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id} className="text-ink-400 text-[10px] uppercase tracking-widest border-b border-ink-100 bg-ink-50/30">
                   {headerGroup.headers.map(header => (
                     <th 
                       key={header.id} 
-                      className={`py-3 px-4 font-bold cursor-pointer hover:bg-ink-100/50 transition-colors ${header.column.getCanSort() ? 'select-none' : ''}`}
+                      className={`py-3 px-4 font-bold cursor-pointer hover:bg-ink-100/50 transition-colors ${header.column.getCanSort() ? 'select-none' : ''} ${(header.column.columnDef.meta as any)?.className || ''}`}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       <div className="flex items-center gap-1.5">
@@ -828,7 +831,7 @@ export default function InvoiceTable({
               {table.getRowModel().rows.map(row => (
                 <tr key={row.id} className={`group hover:bg-ink-50/50 transition-colors ${selectedIds.includes(row.original.id) ? 'bg-brand-50/30' : ''}`}>
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className={`py-2 px-4 ${cell.column.id === 'actions' ? 'text-right' : ''}`}>
+                    <td key={cell.id} className={`py-2 px-4 ${cell.column.id === 'actions' ? 'text-right' : ''} ${(cell.column.columnDef.meta as any)?.className || ''}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

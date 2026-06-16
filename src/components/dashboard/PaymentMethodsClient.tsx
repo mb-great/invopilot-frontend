@@ -655,7 +655,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
               </thead>
               <tbody className="divide-y divide-ink-100">
                 {localMethods.map((method, idx) => (
-                  <tr key={`${""}-${methodIndex}-${idx}`} className="hover:bg-ink-50/50 transition-colors group">
+                  <tr key={`${method.id}-${idx}`} className="hover:bg-ink-50/50 transition-colors group">
                     <td className="px-6 py-4 align-middle">
                       <div className="flex items-center gap-3">
                         <MethodIcon id={method.id} color={method.color} badge={method.badge} size={32} />
@@ -686,7 +686,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete("", methodIndex)}
+                          onClick={() => handleDelete(idx)}
                           className="p-2 text-ink-400 hover:text-red-600 hover:bg-red-50 rounded-[10px] transition-colors"
                           title="Delete"
                         >
