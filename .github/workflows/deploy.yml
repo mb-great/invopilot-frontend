@@ -87,4 +87,4 @@ jobs:
             
             # Start/Reload App via PM2 under Bun (Zero Downtime)
             cd $TARGET_DIR
-            pm2 reload invopilot-fe || pm2 start bun --name "invopilot-fe" -- run start -- -p 3001
+            pm2 reload beta.invopilot.com || pm2 start bun --name "beta.invopilot.com" -- run start -- -p 3001
