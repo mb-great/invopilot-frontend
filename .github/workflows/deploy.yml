@@ -16,6 +16,12 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Create .env.local
+        run: |
+          cat << 'EOF' > .env.local
+          ${{ secrets.ENV_FILE }}
+          EOF
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
