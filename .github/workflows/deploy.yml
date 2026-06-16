@@ -69,22 +69,21 @@ jobs:
           source: "release.tar.gz"
           target: "~/tmp-deploy/"
 
-      - name: Extract Release & Reload PM2 (Bun)
+      - name: Extract Release (Manual PM2 Reload)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER || 'ubuntu' }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            export PATH=$PATH:$HOME/.bun/bin:/usr/local/bin:/usr/bin
             TARGET_DIR=~/invopilot-frontend
+            TMP_DIR=~/tmp-deploy
             mkdir -p $TARGET_DIR
-            mkdir -p ~/tmp-deploy
+            mkdir -p $TMP_DIR
             
             # Extract over existing directory
-            tar -xzf ~/tmp-deploy/release.tar.gz -C $TARGET_DIR
-            rm -f ~/tmp-deploy/release.tar.gz
+            tar -xzf $TMP_DIR/release.tar.gz -C $TARGET_DIR
+            rm -f $TMP_DIR/release.tar.gz
             
-            # Start/Reload App via PM2 under Bun (Zero Downtime)
-            cd $TARGET_DIR
-            pm2 reload beta.invopilot.com || pm2 start bun --name "beta.invopilot.com" -- run start -- -p 3001
+            echo "Release successfully extracted to $TARGET_DIR."
+            echo "Please SSH into the VPS and run 'pm2 reload beta.invopilot.com' manually."
