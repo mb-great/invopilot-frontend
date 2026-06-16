@@ -98,9 +98,13 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
     id: 'centerText',
     afterDraw(chart: any) {
       if (!chartData.hasData) return;
-      const { ctx, chartArea } = chart;
-      const centerX = (chartArea.left + chartArea.right) / 2;
-      const centerY = (chartArea.top + chartArea.bottom) / 2;
+      const { ctx } = chart;
+      const meta = chart.getDatasetMeta(0);
+      const arc = meta.data?.[0];
+      if (!arc) return;
+      
+      const centerX = arc.x;
+      const centerY = arc.y;
       
       ctx.save();
       ctx.textAlign = 'center';
@@ -112,7 +116,6 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
       
       ctx.font = '700 10px -apple-system, BlinkMacSystemFont, sans-serif';
       ctx.fillStyle = '#8A92A0';
-      ctx.letterSpacing = '2px';
       ctx.fillText('TOTAL', centerX, centerY + 16);
       
       ctx.restore();
