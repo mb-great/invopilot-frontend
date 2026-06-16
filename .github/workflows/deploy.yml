@@ -1,85 +1,31 @@
-name: Production CI/CD Pipeline
+name: Frontend CI
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allows manual button click deployment in GitHub Actions UI
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  # --- Stage 1: Build & Package ---
   build:
-    name: Build & Pack Release
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
+          bun-version: latest
 
-      - name: Install Dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
-      - name: Build Next.js Application
-        run: npm run build
+      - name: Type Check
+        run: bunx tsc --noEmit
 
-      # Compress only the files needed for production run
-      - name: Tar Build Artifacts
-        run: |
-          tar -czf release.tar.gz \
-            .next \
-            public \
-            package.json \
-            next.config.ts \
-            node_modules
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: next-release
-          path: release.tar.gz
-          retention-days: 1
-
-  # --- Stage 2: Deploy to VPS (Only on manual trigger or push to main) ---
-  deploy:
-    name: Deploy to VPS
-    needs: build
-    if: github.event_name == 'workflow_dispatch' # Change to run automatically if desired
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Build Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: next-release
-
-      - name: Upload Tarball to Server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "release.tar.gz"
-          target: "~/tmp-deploy/"
-
-      - name: Extract Release & Reload PM2
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            TARGET_DIR=~/invopilot-frontend
-            mkdir -p $TARGET_DIR
-            
-            # Extract over existing directory
-            tar -xzf ~/tmp-deploy/release.tar.gz -C $TARGET_DIR
-            rm ~/tmp-deploy/release.tar.gz
-            
-            # Start/Reload App via PM2 (Zero Downtime)
-            cd $TARGET_DIR
-            pm2 reload invopilot-fe || pm2 start npm --name "invopilot-fe" -- run start -- -p 3001
+      - name: Build
+        run: bunx next build
