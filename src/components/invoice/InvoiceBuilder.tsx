@@ -14,12 +14,13 @@ import { createClient } from "@/lib/supabase/client";
 import { getRecurringTemplates } from "@/app/dashboard/recurring/actions";
 import { resolvePlanAccess } from "@/lib/billing/tiers";
 import InvoPilotBusinessProfilesModal from "@/components/dashboard/InvoPilotBusinessProfilesModal";
+import UpgradeLimitModal from "@/components/billing/UpgradeLimitModal";
 import { toast } from "sonner";
 import { clearInvoiceDraft } from "@/lib/invoiceStorage";
 import ImportSelectionModal, { ImportItem } from "@/components/invoice/ImportSelectionModal";
 
 export default function InvoiceBuilder() {
-  const methods = useForm({
+  const methods = useForm<any>({
     defaultValues: {
       step: "1",
       signatureMode: "none",
@@ -37,6 +38,7 @@ export default function InvoiceBuilder() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isProfilesModalOpen, setIsProfilesModalOpen] = useState(false);
   const [importModalType, setImportModalType] = useState<"business" | "client" | "template" | null>(null);
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; type: "invoice" | "storage"; max?: number; used?: number }>({ open: false, type: "invoice" });
   const importRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -51,7 +53,7 @@ export default function InvoiceBuilder() {
         const currentUserId = user.id;
         const storedUserId = localStorage.getItem('invopilot_draft_user_id');
         const draftTimestamp = localStorage.getItem('invopilot_draft_timestamp');
-        const isExpired = draftTimestamp && (Date.now() - parseInt(draftTimestamp, 10) > 12 * 60 * 60 * 1000);
+        const isExpired = draftTimestamp && (Date.now() - parseInt(draftTimestamp, 10) > 6 * 60 * 60 * 1000);
 
         if (storedUserId !== currentUserId || isExpired) {
           clearInvoiceDraft();
@@ -80,8 +82,11 @@ export default function InvoiceBuilder() {
           if (ws && ws.businesses) businesses = ws.businesses;
         } else {
           // Fallback to personal workspace
-          const { data: wss } = await supabase.from('workspaces').select('businesses').eq('owner_id', user.id).limit(1);
-          if (wss && wss.length > 0 && wss[0].businesses) businesses = wss[0].businesses;
+          const { data: wss } = await supabase.from('workspaces').select('id, businesses').eq('owner_id', user.id).limit(1);
+          if (wss && wss.length > 0) {
+            if (wss[0].businesses) businesses = wss[0].businesses;
+            activeWorkspaceId = wss[0].id;
+          }
         }
         
         const enhancedProfile = {
@@ -93,6 +98,25 @@ export default function InvoiceBuilder() {
         };
         
         setProfile(enhancedProfile);
+
+        // Proactive gate check: if limit reached, show upgrade modal immediately
+        const access = resolvePlanAccess(enhancedProfile);
+        if (!access.isAdmin && !access.plan.maxInvoices) {
+          // unlimited — skip check
+        } else if (!access.isAdmin) {
+          const maxInv = access.plan.maxInvoices as number;
+          const workspaceId = activeWorkspaceId;
+          if (workspaceId) {
+            const { count } = await supabase
+              .from('invoices')
+              .select('id', { count: 'exact', head: true })
+              .eq('workspace_id', workspaceId)
+              .is('deleted_at', null);
+            if ((count ?? 0) >= maxInv) {
+              setUpgradeModal({ open: true, type: "invoice", max: maxInv, used: count ?? 0 });
+            }
+          }
+        }
       } catch (err) {
         console.error('Error loading profile in builder:', err);
       }
@@ -343,6 +367,14 @@ export default function InvoiceBuilder() {
             requirePassword={false}
           />
 
+          <UpgradeLimitModal
+            isOpen={upgradeModal.open}
+            onClose={() => setUpgradeModal({ open: false, type: "invoice" })}
+            limitType={upgradeModal.type}
+            max={upgradeModal.max}
+            used={upgradeModal.used}
+          />
+
           <div className="h-[100dvh] w-full flex flex-col md:flex-row bg-white overflow-hidden">
             {/* Form Side */}
             <div className="w-full md:w-[450px] lg:w-[500px] h-full bg-white border-r border-ink-100 flex flex-col shrink-0">
@@ -454,7 +486,7 @@ export default function InvoiceBuilder() {
               </div>
 
               {/* Scrollable Form Content */}
-              <div className="flex-1 overflow-y-auto px-6 md:px-10 lg:px-12 pb-32">
+              <div className="flex-1 overflow-y-auto px-6 md:px-10 lg:px-12 pb-4">
                 <UserInputFormWithGenerate profile={profile} canUploadLogo={canUploadLogo} />
               </div>
 

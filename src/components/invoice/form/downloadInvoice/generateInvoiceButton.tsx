@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle2, FilePlus2, Loader2, Send, AlertCircle, Download } from "lucide-react";
+import { CheckCircle2, FilePlus2, Loader2, Send, Download } from "lucide-react";
 import { useData } from "@/hooks/useData";
 import { useEffect, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import UnifiedShareModal from "@/components/invoice/UnifiedShareModal";
+import UpgradeLimitModal from "@/components/billing/UpgradeLimitModal";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { resolvePlanAccess } from "@/lib/billing/tiers";
@@ -28,6 +29,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   const [isQuote, setIsQuote] = useState(searchParams?.get("type") === "quote");
   const [isRecurring, setIsRecurring] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; type: "invoice" | "storage"; max?: number; used?: number }>({ open: false, type: "invoice" });
   
   // Read isQuote from form context
   const formIsQuote = useWatch({ control, name: "isQuote" });
@@ -123,6 +125,16 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
 
       if (!res.ok) {
         const err = await res.json();
+        if (res.status === 402 && err.code === "TIER_LIMIT_REACHED") {
+          setUpgradeModal({ open: true, type: "invoice", max: err.limit, used: err.used });
+          setStatus("ready");
+          return;
+        }
+        if (res.status === 402 && err.code === "STORAGE_LIMIT_REACHED") {
+          setUpgradeModal({ open: true, type: "storage" });
+          setStatus("ready");
+          return;
+        }
         throw new Error(err.error || "Failed to queue");
       }
 
@@ -143,6 +155,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
             clearInterval(intervalRef.current!);
             setShareSlug(data.share_slug);
             setStatus("done");
+            clearInvoiceDraft();
           } else if (data.status === "failed") {
             clearInterval(intervalRef.current!);
             setErrorMsg(data.error_msg || "Generation failed");
@@ -172,6 +185,13 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
 
   return (
     <div className="flex flex-col py-4 md:py-8 w-full max-w-md mx-auto">
+      <UpgradeLimitModal
+        isOpen={upgradeModal.open}
+        onClose={() => setUpgradeModal({ open: false, type: "invoice" })}
+        limitType={upgradeModal.type}
+        max={upgradeModal.max}
+        used={upgradeModal.used}
+      />
       <UnifiedShareModal 
         isOpen={isShareOpen || isEmailOpen} 
         onClose={() => { setIsShareOpen(false); setIsEmailOpen(false); }} 
@@ -261,27 +281,9 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         })()}
 
         {status === "error" && (
-          errorMsg.includes("Storage limit") ? (
-            <div className="mb-6 p-5 bg-white border border-red-200 shadow-xl shadow-red-500/10 rounded-2xl text-center">
-              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <AlertCircle className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-ink-900 mb-2">Storage Limit Reached</h3>
-              <p className="text-sm text-ink-500 mb-4">{errorMsg}</p>
-              <div className="flex gap-3 justify-center">
-                <a href="/pricing" className="px-4 py-2 bg-brand-500 text-white font-bold rounded-lg hover:bg-brand-600 transition-colors">
-                  Upgrade Plan
-                </a>
-                <a href="/dashboard" className="px-4 py-2 bg-ink-50 text-ink-700 font-bold rounded-lg hover:bg-ink-100 transition-colors">
-                  Go to Dashboard
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              {errorMsg}
-            </div>
-          )
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {errorMsg}
+          </div>
         )}
 
         <button

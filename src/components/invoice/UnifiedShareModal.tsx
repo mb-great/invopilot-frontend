@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, KeyboardEvent } from 'react';
-import { X, Send, Copy, MessageCircle, Share2 } from 'lucide-react';
+import { X, Send, Copy, MessageCircle, Share2, Paperclip, Eye, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -112,6 +112,8 @@ export default function UnifiedShareModal({
   const [toChips, setToChips] = useState<string[]>(clientEmail ? [clientEmail] : []);
   const [ccChips, setCcChips] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  const [attachPdf, setAttachPdf] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
 
   const shareUrl = hasShare && typeof window !== 'undefined'
     ? `${window.location.origin}/i/${shareSlug}`
@@ -121,7 +123,7 @@ export default function UnifiedShareModal({
     `Invoice #${invoiceNumber} from ${senderName || 'us'}`
   );
   const [message, setMessage] = useState(
-    `Hi ${clientName || 'there'},\n\nPlease find your invoice #${invoiceNumber} attached.\n\nView it online: ${shareUrl}\n\nTotal: ${formData?.currency || ''} ${formData?.total || ''}\n\nLet me know if you have any questions.\n\nBest regards,\n${senderName || ''}`
+    `Hi ${clientName || 'there'},\n\nPlease find your invoice #${invoiceNumber}${attachPdf ? ' attached' : ''}.\n\nView it online: ${shareUrl}\n\nTotal: ${formData?.currency || ''} ${formData?.total || ''}\n\nLet me know if you have any questions.\n\nBest regards,\n${senderName || ''}`
   );
 
   if (!isOpen) return null;
@@ -145,6 +147,7 @@ export default function UnifiedShareModal({
           subject,
           message,
           cc: ccChips.join(','),
+          attachPdf,
         }),
       });
       if (!res.ok) {
@@ -177,6 +180,32 @@ export default function UnifiedShareModal({
       toast.error('Sharing not supported on this browser');
     }
   };
+
+  const previewHtml = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+      <div style="background: white; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="width: 48px; height: 48px; background: #FFF5EB; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+            <span style="font-size: 24px;">📄</span>
+          </div>
+          <h1 style="margin: 0; font-size: 20px; color: #0A0D14;">Invoice #${invoiceNumber}</h1>
+        </div>
+        <div style="color: #5C6471; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${message}</div>
+        ${attachPdf ? `<div style="margin-top: 24px; padding: 16px; background: #F7F8F9; border-radius: 12px; text-align: center;">
+          <div style="display: inline-flex; align-items: center; gap: 8px; color: #5C6471; font-size: 13px;">
+            <span style="font-size: 16px;">📎</span>
+            Invoice_${invoiceNumber}.pdf attached
+          </div>
+        </div>` : ''}
+        ${shareUrl ? `<div style="margin-top: 20px; text-align: center;">
+          <a href="${shareUrl}" style="display: inline-block; background: #F39C5B; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">View Invoice Online</a>
+        </div>` : ''}
+      </div>
+      <div style="text-align: center; margin-top: 16px; color: #8A92A0; font-size: 11px;">
+        Sent via InvoPilot
+      </div>
+    </div>
+  `;
 
   return (
     <div
@@ -218,7 +247,7 @@ export default function UnifiedShareModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {tab === 'email' && (
+          {tab === 'email' && !showPreview && (
             <div className="space-y-3">
               {/* Sender bar */}
               <div className="flex items-center justify-between text-xs text-ink-500 bg-ink-50 rounded-lg px-3 py-2">
@@ -254,6 +283,20 @@ export default function UnifiedShareModal({
                 />
               </div>
 
+              {/* Attach PDF toggle */}
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 text-ink-400" />
+                  <span className="text-sm text-ink-700">Attach PDF</span>
+                </div>
+                <button
+                  onClick={() => setAttachPdf(!attachPdf)}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${attachPdf ? 'bg-brand-500' : 'bg-ink-200'}`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${attachPdf ? 'left-5.5 translate-x-0' : 'left-0.5'}`} />
+                </button>
+              </div>
+
               {/* Message */}
               <textarea
                 value={message}
@@ -261,6 +304,26 @@ export default function UnifiedShareModal({
                 rows={8}
                 className="w-full bg-ink-50 rounded-xl p-4 text-sm text-ink-900 outline-none resize-none focus:ring-2 focus:ring-brand-500/20"
               />
+            </div>
+          )}
+
+          {tab === 'email' && showPreview && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-ink-500 mb-2">
+                <Eye className="w-4 h-4" />
+                <span>Email Preview</span>
+              </div>
+              <div className="border border-ink-200 rounded-xl overflow-hidden">
+                <div className="bg-ink-50 px-4 py-2 border-b border-ink-200 text-xs text-ink-500">
+                  <div><strong>To:</strong> {toChips.join(', ') || '(none)'}</div>
+                  {ccChips.length > 0 && <div><strong>CC:</strong> {ccChips.join(', ')}</div>}
+                  <div><strong>Subject:</strong> {subject}</div>
+                </div>
+                <div
+                  className="p-4 text-sm"
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                />
+              </div>
             </div>
           )}
 
@@ -326,12 +389,21 @@ export default function UnifiedShareModal({
         {/* Footer (email tab only) */}
         {tab === 'email' && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-ink-100 bg-ink-50/50">
-            <button
-              onClick={handleSaveDraft}
-              className="text-xs font-semibold text-ink-500 hover:text-ink-700 transition-colors"
-            >
-              Save draft
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSaveDraft}
+                className="text-xs font-semibold text-ink-500 hover:text-ink-700 transition-colors"
+              >
+                Save draft
+              </button>
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-ink-500 hover:text-ink-700 transition-colors"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                {showPreview ? 'Edit' : 'Preview'}
+              </button>
+            </div>
             <button
               onClick={handleSend}
               disabled={sending || !toChips.length}

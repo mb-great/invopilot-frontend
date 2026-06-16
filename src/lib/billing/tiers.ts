@@ -63,7 +63,7 @@ export const PLANS: PlanDefinition[] = [
     canUseQuotes: false,
     canUploadLogo: false,
     canExportCsv: false,
-    canUseUpiQr: false,
+    canUseUpiQr: true,
     canUseRecurring: false,
     canSavePaymentMethods: true,
     included: [
@@ -74,6 +74,7 @@ export const PLANS: PlanDefinition[] = [
       'Basic invoice history',
       '5 clients max',
       '50 MB PDF storage',
+      'UPI payments',
     ],
     excluded: [
       'Dashboard & charts',
@@ -100,7 +101,7 @@ export const PLANS: PlanDefinition[] = [
     canUseQuotes: false,
     canUploadLogo: false,
     canExportCsv: false,
-    canUseUpiQr: false,
+    canUseUpiQr: true,
     canUseRecurring: false,
     canSavePaymentMethods: true,
     included: [
@@ -113,11 +114,11 @@ export const PLANS: PlanDefinition[] = [
       'Invoice status tracking (draft/sent/paid/overdue)',
       '1 business profile with autofill',
       '500 MB PDF storage',
+      'UPI payments',
     ],
     excluded: [
       'Payment links (Razorpay)',
       'Auto payment reminders',
-      'UPI QR on invoice PDF',
       'CSV/Excel export',
       'Quote → Invoice',
       'Custom logo on PDF',

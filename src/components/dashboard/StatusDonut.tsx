@@ -58,6 +58,7 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
     }
     fetchInvoices();
   }, [activeWorkspaceId, businessFilter]);
+
   const chartData = useMemo(() => {
     let paid = 0;
     let outstanding = 0;
@@ -73,6 +74,7 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
     });
 
     const hasData = paid > 0 || outstanding > 0 || overdue > 0 || draft > 0;
+    const total = paid + outstanding + overdue + draft;
 
     return {
       labels: ['Paid', 'Outstanding', 'Overdue', 'Draft'],
@@ -80,13 +82,14 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
         {
           data: hasData ? [paid, outstanding, overdue, draft] : [1],
           backgroundColor: hasData 
-            ? ['#10b981', '#3b82f6', '#ef4444', '#cbd5e1'] // emerald-500, brand-500, red-500, slate-300
+            ? ['#10b981', '#3b82f6', '#ef4444', '#cbd5e1']
             : ['#f1f5f9'],
           borderWidth: 0,
           cutout: '75%',
         }
       ],
-      hasData
+      hasData,
+      total
     };
   }, [invoices]);
 
@@ -117,21 +120,21 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
       <div className="px-6 py-5 border-b border-ink-100">
         <h2 className="font-bold text-ink-900 tracking-tight text-sm uppercase">Invoice Status</h2>
       </div>
-      <div className="p-6 flex-1 min-h-[240px] flex items-center justify-center relative">
+      <div className="p-6 flex-1 min-h-[240px] flex items-center justify-center">
         {isLoading ? (
           <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
         ) : (
-          <>
+          <div className="w-full h-full relative">
             <Doughnut data={chartData} options={options} />
             {chartData.hasData && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pr-[100px]">
-                 <span className="text-3xl font-black text-ink-900 tracking-tight">
-                   {chartData.datasets[0].data.reduce((a,b) => a+b, 0)}
-                 </span>
-                 <span className="text-[10px] uppercase font-bold text-ink-400 tracking-widest">Total</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[32px] leading-none font-black text-ink-900 tracking-tight">
+                  {chartData.total}
+                </span>
+                <span className="text-[10px] uppercase font-bold text-ink-400 tracking-widest mt-1">Total</span>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

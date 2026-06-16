@@ -122,6 +122,19 @@ export default function AdminTable({
       cell: ({ row }) => <div className="text-right font-bold text-ink-900">{row.original.total_invoices_generated.toLocaleString()}</div>
     },
     {
+      accessorKey: 'subscription_source',
+      header: 'Source',
+      cell: ({ row }) => {
+        const src = row.original.subscription_source;
+        if (!src || src === 'none') return <span className="text-xs text-ink-400">—</span>;
+        return (
+          <span className="text-xs font-bold uppercase tracking-wider text-ink-600 bg-ink-100 px-2 py-1 rounded">
+            {src}
+          </span>
+        );
+      }
+    },
+    {
       id: 'actions',
       header: '',
       cell: ({ row }) => (

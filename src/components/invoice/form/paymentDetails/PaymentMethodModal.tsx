@@ -288,9 +288,6 @@ function PickerView({
                 UPI
               </div>
               <span className="text-[15px] font-semibold text-ink-900 flex-1">UPI</span>
-              {!isPremium && (
-                <span className="text-[10px] border border-ink-200 rounded-md px-1.5 py-0.5 text-ink-500 font-semibold">PRO</span>
-              )}
               <ChevronRight className="w-[18px] h-[18px] text-ink-500 group-hover:text-brand-500 transition-colors" />
             </button>
           </div>
