@@ -1,20 +1,26 @@
-name: Build and Deploy
+name: Build and Deploy Frontend (Bun)
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build & Pack Release
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - uses: oven-sh/setup-bun@v2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Create .env.local
         run: |
@@ -22,21 +28,63 @@ jobs:
           ${{ secrets.ENV_FILE }}
           EOF
 
-      - run: bun install --frozen-lockfile
-      - run: bunx next build
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build Next.js Application
+        run: bun run build
+
+      - name: Tar Build Artifacts
+        run: |
+          tar -czf release.tar.gz \
+            .next \
+            public \
+            package.json \
+            next.config.ts \
+            node_modules
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-release
+          path: release.tar.gz
+          retention-days: 1
 
   deploy:
+    name: Deploy to OCI VPS
     needs: build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: next-release
+
+      - name: Upload Tarball to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER || 'ubuntu' }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "release.tar.gz"
+          target: "~/tmp-deploy/"
+
+      - name: Extract Release & Reload PM2 (Bun)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ubuntu
+          username: ${{ secrets.VPS_USER || 'ubuntu' }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd ~/invopilot-frontend
-            git pull origin main
-            pm2 reload all
+            export PATH=$PATH:$HOME/.bun/bin:/usr/local/bin:/usr/bin
+            TARGET_DIR=~/invopilot-frontend
+            mkdir -p $TARGET_DIR
+            mkdir -p ~/tmp-deploy
+            
+            # Extract over existing directory
+            tar -xzf ~/tmp-deploy/release.tar.gz -C $TARGET_DIR
+            rm -f ~/tmp-deploy/release.tar.gz
+            
+            # Start/Reload App via PM2 under Bun (Zero Downtime)
+            cd $TARGET_DIR
+            pm2 reload invopilot-fe || pm2 start bun --name "invopilot-fe" -- run start -- -p 3001
