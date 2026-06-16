@@ -137,7 +137,7 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
             {chartData.hasData && (
               <div 
                 className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none"
-                style={{ left: 'calc(50% - 55px - 0.5vw)' }}
+                style={{ left: 'calc(50% - 55px - 0.7vw)' }}
               >
                 <span className={`${fontSize} leading-none font-black text-ink-900 tracking-tight tabular-nums`}>
                   {chartData.total.toLocaleString()}
