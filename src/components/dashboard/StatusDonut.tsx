@@ -8,7 +8,7 @@ import {
   ChartOptions
 } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -25,7 +25,6 @@ interface Props {
 export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchInvoices() {
@@ -95,12 +94,37 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
     };
   }, [invoices]);
 
+  const totalDigits = String(chartData.total).length;
+  const fontSize = totalDigits > 6 ? 22 : totalDigits > 4 ? 28 : 32;
+
+  const centerTextPlugin = useMemo(() => ({
+    id: 'centerText',
+    afterDraw(chart: any) {
+      if (!chartData.hasData) return;
+      const { ctx, chartArea } = chart;
+      
+      const centerX = (chartArea.left + chartArea.right) / 2;
+      const centerY = (chartArea.top + chartArea.bottom) / 2;
+      
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      ctx.font = `900 ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+      ctx.fillStyle = '#0A0D14';
+      ctx.fillText(chartData.total.toLocaleString(), centerX, centerY - 8);
+      
+      ctx.font = '700 10px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillStyle = '#8A92A0';
+      ctx.fillText('TOTAL', centerX, centerY + 16);
+      
+      ctx.restore();
+    }
+  }), [chartData.hasData, chartData.total, fontSize]);
+
   const options: ChartOptions<'doughnut'> = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    layout: {
-      padding: { right: 110 }
-    },
     plugins: {
       legend: {
         position: 'right',
@@ -120,9 +144,6 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
     }
   }), [chartData.hasData]);
 
-  const totalDigits = String(chartData.total).length;
-  const fontSize = totalDigits > 6 ? 'text-2xl' : totalDigits > 4 ? 'text-3xl' : 'text-[32px]';
-
   return (
     <div className="glass-card flex flex-col h-full bg-white border border-ink-100 rounded-2xl overflow-hidden shadow-sm">
       <div className="px-6 py-5 border-b border-ink-100">
@@ -132,19 +153,8 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
         {isLoading ? (
           <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
         ) : (
-          <div ref={containerRef} className="w-full h-full relative">
-            <Doughnut data={chartData} options={options} />
-            {chartData.hasData && (
-              <div 
-                className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none"
-                style={{ left: 'calc(50% - 55px - 0.7vw)' }}
-              >
-                <span className={`${fontSize} leading-none font-black text-ink-900 tracking-tight tabular-nums`}>
-                  {chartData.total.toLocaleString()}
-                </span>
-                <span className="text-[10px] uppercase font-bold text-ink-400 tracking-widest mt-1">Total</span>
-              </div>
-            )}
+          <div className="w-full h-full relative">
+            <Doughnut data={chartData} options={options} plugins={[centerTextPlugin]} />
           </div>
         )}
       </div>
