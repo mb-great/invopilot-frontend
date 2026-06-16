@@ -4,12 +4,11 @@ import { format } from 'date-fns';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X, Columns, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { flexRender, getCoreRowModel, useReactTable, ColumnDef, VisibilityState, SortingState } from '@tanstack/react-table';
-import { ShareDialog } from './ShareDialog';
+import UnifiedShareModal from '@/components/invoice/UnifiedShareModal';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { toast } from 'sonner';
 import PremiumBadge from '@/components/ui/PremiumBadge';
 import { clearInvoiceDraft } from '@/lib/invoiceStorage';
-import { SendInvoiceModal } from '@/components/invoice/SendInvoiceModal';
 
 interface Invoice {
   id: string;
@@ -81,8 +80,7 @@ export default function InvoiceTable({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   // Modal State
-  const [shareData, setShareData] = useState<{ isOpen: boolean; url: string }>({ isOpen: false, url: '' });
-  const [sendEmailData, setSendEmailData] = useState<{ isOpen: boolean; id: string; email?: string; invoiceNumber?: string }>({ isOpen: false, id: '' });
+  const [unifiedModal, setUnifiedModal] = useState<{ isOpen: boolean; invoiceId: string; invoiceNumber: string; clientEmail: string; shareSlug?: string }>({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; isBulk?: boolean }>({ isOpen: false, id: null });
 
   // Filters
@@ -235,21 +233,15 @@ export default function InvoiceTable({
 
   const handleShare = (id: string) => {
     const inv = invoices.find(i => i.id === id);
-    if (inv?.share_slug) {
-      const url = `${window.location.origin}/i/${inv.share_slug}`;
-      setShareData({ isOpen: true, url });
+    if (inv) {
+      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined });
     }
   };
 
   const handleSendEmail = (id: string) => {
     const inv = invoices.find(i => i.id === id);
     if (inv) {
-      setSendEmailData({
-        isOpen: true,
-        id: inv.id,
-        email: inv.client_email || '',
-        invoiceNumber: inv.invoice_number || undefined
-      });
+      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined });
     }
   };
 
@@ -602,21 +594,14 @@ export default function InvoiceTable({
 
   return (
     <div className="w-full space-y-4 min-h-[65vh] flex flex-col">
-      <ShareDialog 
-        isOpen={shareData.isOpen} 
-        onClose={() => setShareData({ ...shareData, isOpen: false })} 
-        shareUrl={shareData.url} 
+      <UnifiedShareModal
+        isOpen={unifiedModal.isOpen}
+        onClose={() => setUnifiedModal({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' })}
+        invoiceId={unifiedModal.invoiceId}
+        invoiceNumber={unifiedModal.invoiceNumber}
+        clientEmail={unifiedModal.clientEmail}
+        shareSlug={unifiedModal.shareSlug}
       />
-
-      {sendEmailData.isOpen && (
-        <SendInvoiceModal
-          isOpen={sendEmailData.isOpen}
-          onClose={() => setSendEmailData({ isOpen: false, id: '' })}
-          invoiceId={sendEmailData.id}
-          defaultEmail={sendEmailData.email}
-          invoiceNumber={sendEmailData.invoiceNumber}
-        />
-      )}
 
       <ConfirmationModal
         isOpen={deleteModal.isOpen}

@@ -12,20 +12,38 @@ export async function GET(
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const shareToken = searchParams.get('share');
 
-  // 1. Get the PDF URL and nickname from the invoice
-  // We use the user's supabase client here so RLS ensures they own it
-  const { data: invoice, error } = await supabase
-    .from('invoices')
-    .select('pdf_url, nickname, invoice_number')
-    .eq('id', id)
-    .single();
+  if (!user && !shareToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  if (error || !invoice || !invoice.pdf_url) return NextResponse.json({ error: 'Not found or not generated' }, { status: 404 });
+  let invoice = null;
+  let error = null;
 
-  if (invoice.pdf_url.startsWith('http://') || invoice.pdf_url.startsWith('https://')) {
-    return NextResponse.redirect(invoice.pdf_url);
+  if (user) {
+    // Session user checks via RLS
+    const res = await supabase
+      .from('invoices')
+      .select('pdf_url, nickname, invoice_number')
+      .eq('id', id)
+      .single();
+    invoice = res.data;
+    error = res.error;
+  } else {
+    // Public user downloads via matching share token (bypass RLS using supabaseAdmin)
+    const res = await supabaseAdmin
+      .from('invoices')
+      .select('pdf_url, nickname, invoice_number')
+      .eq('id', id)
+      .eq('share_slug', shareToken)
+      .single();
+    invoice = res.data;
+    error = res.error;
+  }
+
+  if (error || !invoice || !invoice.pdf_url) {
+    return NextResponse.json({ error: 'Not found or not generated' }, { status: 404 });
   }
 
   const filename = `${invoice.nickname || invoice.invoice_number || 'invoice'}.pdf`.replace(/[^a-z0-9.]/gi, '_');

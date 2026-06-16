@@ -10,6 +10,8 @@ type QueryBuilder = {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   is: ReturnType<typeof vi.fn>;
+  in: ReturnType<typeof vi.fn>;
+  or: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   range: ReturnType<typeof vi.fn>;
   gte: ReturnType<typeof vi.fn>;
@@ -27,6 +29,8 @@ const { supabaseClient } = vi.hoisted(() => {
   query.select = vi.fn(() => query);
   query.eq = vi.fn(() => query);
   query.is = vi.fn(() => query);
+  query.in = vi.fn(() => query);
+  query.or = vi.fn(() => query);
   query.order = vi.fn(() => query);
   query.range = vi.fn(() => query);
   query.gte = vi.fn(() => query);
@@ -37,15 +41,24 @@ const { supabaseClient } = vi.hoisted(() => {
   return {
     supabaseClient: {
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user', email: 'test@example.com' } } })
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user', email: 'test@example.com' } } }),
+        signOut: vi.fn().mockResolvedValue({})
       },
       from: vi.fn(() => query),
-      rpc: vi.fn().mockResolvedValue({ 
-        data: { 
-          top_currencies: [{ currency: 'INR', outstanding: 100, paid: 200, overdue: 0, this_month: 300, total_volume: 300, invoice_count: 1 }], 
-          other_currencies: [], 
-          total_invoice_count: 1 
-        } 
+      rpc: vi.fn((fnName) => {
+        if (fnName === 'get_revenue_chart_series') {
+          return Promise.resolve({ data: [{ currency: 'INR', amount: 100, date: '2026-06-15' }] });
+        }
+        if (fnName === 'get_workspace_storage_used' || fnName === 'get_user_storage_used') {
+          return Promise.resolve({ data: 1024 });
+        }
+        return Promise.resolve({ 
+          data: { 
+            top_currencies: [{ currency: 'INR', outstanding: 100, paid: 200, overdue: 0, this_month: 300, total_volume: 300, invoice_count: 1 }], 
+            other_currencies: [], 
+            total_invoice_count: 1 
+          } 
+        });
       })
     }
   };
@@ -65,7 +78,11 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/headers', () => ({
-  cookies: vi.fn().mockResolvedValue({ getAll: vi.fn(() => []), set: vi.fn() }),
+  cookies: vi.fn().mockResolvedValue({
+    getAll: vi.fn(() => []),
+    set: vi.fn(),
+    get: vi.fn(() => ({ value: 'test-workspace' }))
+  }),
   headers: vi.fn().mockResolvedValue(new Map())
 }));
 
@@ -74,7 +91,7 @@ vi.mock('@supabase/ssr', () => ({
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: vi.fn(() => ({ auth: { signOut: vi.fn().mockResolvedValue({}) } }))
+  createClient: vi.fn(() => supabaseClient)
 }));
 
 describe('Dashboard Page', () => {

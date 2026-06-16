@@ -4,7 +4,7 @@ import { CheckCircle2, FilePlus2, Loader2, Send, AlertCircle, Download } from "l
 import { useData } from "@/hooks/useData";
 import { useEffect, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { ShareDialog } from "@/components/dashboard/ShareDialog";
+import UnifiedShareModal from "@/components/invoice/UnifiedShareModal";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { resolvePlanAccess } from "@/lib/billing/tiers";
@@ -23,6 +23,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isEmailOpen, setIsEmailOpen] = useState(false);
   const searchParams = useSearchParams();
   const [isQuote, setIsQuote] = useState(searchParams?.get("type") === "quote");
   const [isRecurring, setIsRecurring] = useState(false);
@@ -171,10 +172,15 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
 
   return (
     <div className="flex flex-col py-4 md:py-8 w-full max-w-md mx-auto">
-      <ShareDialog 
-        isOpen={isShareOpen} 
-        onClose={() => setIsShareOpen(false)} 
-        shareUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/i/${shareSlug}`} 
+      <UnifiedShareModal 
+        isOpen={isShareOpen || isEmailOpen} 
+        onClose={() => { setIsShareOpen(false); setIsEmailOpen(false); }} 
+        invoiceId={activeInvoiceId || ''}
+        invoiceNumber={invoiceTerms.invoiceNumber || ""}
+        clientEmail={companyDetails.email || ""}
+        clientName={companyDetails.companyName || ""}
+        senderName={yourDetails?.yourName || ""}
+        shareSlug={shareSlug || undefined}
       />
       <div className="w-full text-center">
         <h1 className="text-4xl font-bold pb-4 text-ink-900">
@@ -335,6 +341,14 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
               className="w-full h-12 rounded-lg border border-brand-200 bg-brand-50/50 text-brand-600 font-bold hover:bg-brand-50 transition-colors flex items-center justify-center gap-2"
             >
               Share Link
+            </button>
+
+            <button 
+              onClick={() => setIsEmailOpen(true)}
+              className="w-full h-12 rounded-lg bg-ink-900 text-white font-bold hover:bg-ink-800 transition-colors flex items-center justify-center gap-2 mt-3"
+            >
+              <Send className="w-4 h-4" />
+              Send to Client
             </button>
 
             <a

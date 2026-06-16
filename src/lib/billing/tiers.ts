@@ -42,6 +42,7 @@ export type PlanDefinition = {
   canExportCsv: boolean;
   canUseUpiQr: boolean;
   canUseRecurring: boolean;
+  canSavePaymentMethods: boolean;
   included: string[];
   excluded: string[];
 };
@@ -64,6 +65,7 @@ export const PLANS: PlanDefinition[] = [
     canExportCsv: false,
     canUseUpiQr: false,
     canUseRecurring: false,
+    canSavePaymentMethods: true,
     included: [
       'All 6 generators + 35+ templates',
       'PDF download (no watermark)',
@@ -100,6 +102,7 @@ export const PLANS: PlanDefinition[] = [
     canExportCsv: false,
     canUseUpiQr: false,
     canUseRecurring: false,
+    canSavePaymentMethods: true,
     included: [
       'Everything in Free',
       'Save up to 50 invoices / billing cycle',
@@ -138,6 +141,7 @@ export const PLANS: PlanDefinition[] = [
     canExportCsv: true,
     canUseUpiQr: true,
     canUseRecurring: true,
+    canSavePaymentMethods: true,
     included: [
       'Everything in Starter',
       'Unlimited invoices & clients',
@@ -172,6 +176,7 @@ export const PLANS: PlanDefinition[] = [
     canExportCsv: true,
     canUseUpiQr: true,
     canUseRecurring: true,
+    canSavePaymentMethods: true,
     included: [
       'Everything in Pro',
       'Up to 5 team members (coming soon)',

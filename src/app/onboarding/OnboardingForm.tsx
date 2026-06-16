@@ -29,7 +29,7 @@ export default function OnboardingForm({
       // Update profile with company name and set onboarding flag
       const { data: existing } = await supabase
         .from('profiles')
-        .select('defaults')
+        .select('defaults, subscription_source, tier, subscription_period_end')
         .eq('id', userId)
         .single()
 
@@ -45,6 +45,13 @@ export default function OnboardingForm({
           defaults: updatedDefaults,
         })
         .eq('id', userId)
+
+      if (existing && existing.subscription_source === 'manual' && existing.tier) {
+        localStorage.setItem('invopilot_celebration_toast', JSON.stringify({
+          tier: existing.tier,
+          periodEnd: existing.subscription_period_end
+        }));
+      }
 
       router.push('/dashboard')
     } catch {

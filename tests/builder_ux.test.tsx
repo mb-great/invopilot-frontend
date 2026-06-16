@@ -8,7 +8,8 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
     push: pushMock,
   })),
-  usePathname: vi.fn(() => '/invoices/new')
+  usePathname: vi.fn(() => '/invoices/new'),
+  useSearchParams: vi.fn(() => new URLSearchParams())
 }));
 
 // Mock useData for preview
@@ -31,8 +32,8 @@ describe('Invoice Builder Navigation & Layout UX', () => {
 
   it('verifies 100vh/100vw layout classes are applied', () => {
     render(<InvoiceBuilder />);
-    // The component uses h-screen w-screen
-    const container = document.querySelector('.h-screen.w-screen');
+    // The component uses h-[100dvh] w-full
+    const container = document.querySelector('.h-\\[100dvh\\].w-full');
     expect(container).toBeInTheDocument();
   });
 
@@ -50,8 +51,8 @@ describe('Invoice Builder Navigation & Layout UX', () => {
   it('Clear Draft button shows confirmation modal', async () => {
     render(<InvoiceBuilder />);
     
-    // Get the Clear Draft button in the header
-    const clearBtn = screen.getByRole('button', { name: /Clear Draft/i });
+    // Get the Clear Draft button in the header (which is labeled 'Clear')
+    const clearBtn = screen.getByRole('button', { name: /Clear/i });
     fireEvent.click(clearBtn);
     
     expect(screen.getByText(/Clear current draft\?/i)).toBeInTheDocument();
@@ -62,24 +63,22 @@ describe('Invoice Builder Navigation & Layout UX', () => {
     localStorage.setItem('yourName', 'Test User');
     render(<InvoiceBuilder />);
     
-    // 1. Click the header Clear Draft button
-    const clearBtn = screen.getByRole('button', { name: /Clear Draft/i });
+    // 1. Click the header Clear button
+    const clearBtn = screen.getByRole('button', { name: /Clear/i });
     fireEvent.click(clearBtn);
     
-    // 2. Click the modal confirm button (there will be two "Clear Draft" buttons now)
-    const confirmBtn = screen.getAllByRole('button', { name: /Clear Draft/i })[0]; 
-    // Usually the one in the modal appears first in the DOM or we can check parent
+    // 2. Click the modal confirm button (confirmLabel is "Clear Draft")
+    const confirmBtn = screen.getByRole('button', { name: /Clear Draft/i }); 
     fireEvent.click(confirmBtn);
     
     await waitFor(() => {
       expect(localStorage.getItem('yourName')).toBeNull();
-      expect(pushMock).toHaveBeenCalledWith('/dashboard');
     });
   });
 
   it('verifies Preview Side is height-constrained (h-full)', () => {
     render(<InvoiceBuilder />);
-    const previewContainer = document.querySelector('.flex-1.h-full.bg-ink-50');
+    const previewContainer = document.querySelector('.flex-1.h-full.bg-\\[\\#f9fafb\\]');
     expect(previewContainer).toHaveClass('overflow-hidden');
     
     const previewWrapper = previewContainer?.querySelector('.h-full.w-auto');

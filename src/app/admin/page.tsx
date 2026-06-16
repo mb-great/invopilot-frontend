@@ -4,6 +4,7 @@ import DashboardShell from '@/components/layout/DashboardShell'
 import StatCards from '@/components/admin/StatCards'
 import AdminTable from '@/components/admin/AdminTable'
 import RecentActivity from '@/components/admin/RecentActivity'
+import InviteUserForm from '@/components/admin/InviteUserForm'
 import { Activity } from 'lucide-react'
 import Link from 'next/link'
 import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
@@ -178,6 +179,8 @@ export default async function AdminPage({
         </div>
 
         <div className="space-y-8">
+          <InviteUserForm />
+
           <section className="glass-card p-6 bg-white border border-ink-100 shadow-sm">
             <h3 className="font-bold text-xl text-ink-900 mb-6 flex items-center gap-2">
               <Activity className="w-5 h-5 text-brand-500" />

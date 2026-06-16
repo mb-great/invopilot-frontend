@@ -44,9 +44,9 @@ function Calendar({
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
         ),
         selected:
-          "bg-slate-900 text-slate-50 hover:bg-slate-900 hover:text-slate-50 focus:bg-slate-900 focus:text-slate-50",
+          "bg-brand-500 text-white hover:bg-brand-600 hover:text-white focus:bg-brand-600 focus:text-white",
         today:
-          "bg-slate-100 text-slate-900",
+          "bg-brand-50 text-brand-900 font-bold",
         outside:
           "text-slate-500 opacity-50 aria-selected:bg-slate-100/50 aria-selected:text-slate-500 aria-selected:opacity-30",
         disabled: "text-slate-500 opacity-50",

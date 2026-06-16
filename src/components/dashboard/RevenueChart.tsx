@@ -402,8 +402,10 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
         </div>
       )}
 
-      <div className="p-6 flex-1 min-h-[240px]">
-        <Line data={chartData} options={options} />
+      <div className="p-6 flex-1 min-h-[240px] flex items-center justify-center">
+        <div className="w-full">
+          <Line data={chartData} options={options} />
+        </div>
       </div>
     </div>
   );

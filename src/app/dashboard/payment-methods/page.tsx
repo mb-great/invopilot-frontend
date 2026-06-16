@@ -50,6 +50,7 @@ export default async function PaymentMethodsPage() {
 
   const access = await getWorkspaceAccess(supabase);
   const businesses = activeWorkspace?.businesses || [];
+  const paymentMethods = activeWorkspace?.defaults?.paymentMethods || [];
 
   return (
     <DashboardShell
@@ -60,8 +61,10 @@ export default async function PaymentMethodsPage() {
     >
       <PaymentMethodsClient
         businesses={businesses}
+        paymentMethods={paymentMethods}
         workspaceId={activeWorkspace?.id}
         userId={user.id}
+        canSavePaymentMethods={access.isAdmin || access.plan.canSavePaymentMethods}
       />
     </DashboardShell>
   );

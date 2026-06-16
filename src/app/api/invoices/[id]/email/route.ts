@@ -17,7 +17,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { toEmail } = body;
+    const { toEmail, subject, message, cc } = body;
 
     if (!toEmail) {
       return NextResponse.json({ error: 'toEmail is required' }, { status: 400 });
@@ -46,7 +46,10 @@ export async function POST(
       },
       body: JSON.stringify({
         invoiceId: id,
-        toEmail
+        toEmail,
+        subject,
+        message,
+        cc,
       })
     });
 

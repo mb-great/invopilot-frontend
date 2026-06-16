@@ -75,7 +75,7 @@ function MethodBadge({ method, size = 26 }: { method: PaymentMethodItem; size?: 
 
   return (
     <div
-      className="rounded-lg flex items-center justify-center bg-white border border-white/10 overflow-hidden shrink-0"
+      className="rounded-lg flex items-center justify-center bg-white border border-ink-100 overflow-hidden shrink-0"
       style={{ width: size, height: size }}
     >
       <img
@@ -167,7 +167,7 @@ export default function PaymentMethodModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-[#0b0b0d] w-full max-w-[540px] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[#f4f4f5]"
+        className="bg-white w-full max-w-[540px] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-ink-900"
         onClick={(e) => e.stopPropagation()}
       >
         {!selectedMethod ? (
@@ -243,25 +243,25 @@ function PickerView({
       <div className="p-6 pb-0">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-[#f4f4f5]">Add a payment method</h2>
-            <p className="text-sm text-[#8b8b91] mt-1">Pick how your customers will pay you.</p>
+            <h2 className="text-xl font-bold text-ink-900">Add a payment method</h2>
+            <p className="text-sm text-ink-500 mt-1">Pick how your customers will pay you.</p>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-[#161618] flex items-center justify-center text-[#8b8b91] hover:text-[#f4f4f5] hover:bg-[#262629] transition-colors shrink-0"
+            className="w-10 h-10 rounded-full bg-ink-50 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-ink-100 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="relative mb-4">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b8b91]" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-500" />
           <input
             type="text"
             placeholder="Search payment methods..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-[#161618] border border-[#262629] rounded-xl py-3 pl-11 pr-4 text-sm text-[#f4f4f5] placeholder-[#8b8b91] outline-none focus:border-[#f97316] transition-colors"
+            className="w-full bg-ink-50 border border-ink-200 rounded-xl py-3 pl-11 pr-4 text-sm text-ink-900 placeholder-[#8b8b91] outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
           />
         </div>
       </div>
@@ -269,50 +269,50 @@ function PickerView({
       <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ willChange: 'transform', WebkitOverflowScrolling: 'touch' }}>
         {!search && (
           <div className="space-y-1 mb-3">
-            <p className="text-[11px] font-bold text-[#8b8b91] uppercase tracking-widest mb-2">Quick Setup</p>
+            <p className="text-[11px] font-bold text-ink-500 uppercase tracking-widest mb-2">Quick Setup</p>
             <button
               onClick={() => setView('bank')}
-              className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-[#161618] transition-colors group text-left"
+              className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ink-50 transition-colors group text-left"
             >
               <div className="w-[44px] h-[44px] rounded-lg flex items-center justify-center font-bold text-white shrink-0 text-sm" style={{ backgroundColor: '#1a56db' }}>
                 🏦
               </div>
-              <span className="text-[15px] font-semibold text-[#f4f4f5] flex-1">Bank Details</span>
-              <ChevronRight className="w-[18px] h-[18px] text-[#8b8b91] group-hover:text-[#f97316] transition-colors" />
+              <span className="text-[15px] font-semibold text-ink-900 flex-1">Bank Details</span>
+              <ChevronRight className="w-[18px] h-[18px] text-ink-500 group-hover:text-brand-500 transition-colors" />
             </button>
             <button
               onClick={() => setView('upi')}
-              className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-[#161618] transition-colors group text-left"
+              className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ink-50 transition-colors group text-left"
             >
               <div className="w-[44px] h-[44px] rounded-lg flex items-center justify-center font-bold text-white shrink-0 text-sm" style={{ backgroundColor: '#5f259f' }}>
                 UPI
               </div>
-              <span className="text-[15px] font-semibold text-[#f4f4f5] flex-1">UPI</span>
+              <span className="text-[15px] font-semibold text-ink-900 flex-1">UPI</span>
               {!isPremium && (
-                <span className="text-[10px] border border-[#262629] rounded-md px-1.5 py-0.5 text-[#8b8b91] font-semibold">PRO</span>
+                <span className="text-[10px] border border-ink-200 rounded-md px-1.5 py-0.5 text-ink-500 font-semibold">PRO</span>
               )}
-              <ChevronRight className="w-[18px] h-[18px] text-[#8b8b91] group-hover:text-[#f97316] transition-colors" />
+              <ChevronRight className="w-[18px] h-[18px] text-ink-500 group-hover:text-brand-500 transition-colors" />
             </button>
           </div>
         )}
 
         {!search && (
-          <p className="text-[11px] font-bold text-[#8b8b91] uppercase tracking-widest mb-2">All Methods</p>
+          <p className="text-[11px] font-bold text-ink-500 uppercase tracking-widest mb-2">All Methods</p>
         )}
 
         {filtered.length === 0 ? (
-          <p className="text-sm text-[#8b8b91] text-center py-8">No methods found.</p>
+          <p className="text-sm text-ink-500 text-center py-8">No methods found.</p>
         ) : (
           <div className="space-y-1">
             {filtered.map((method) => (
               <button
                 key={method.id}
                 onClick={() => onSelect(method)}
-                className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-[#161618] transition-colors group text-left"
+                className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ink-50 transition-colors group text-left"
               >
                 <MethodBadge method={method} size={44} />
-                <span className="text-[15px] font-semibold text-[#f4f4f5] flex-1">{method.name}</span>
-                <ChevronRight className="w-[18px] h-[18px] text-[#8b8b91] group-hover:text-[#f97316] transition-colors" />
+                <span className="text-[15px] font-semibold text-ink-900 flex-1">{method.name}</span>
+                <ChevronRight className="w-[18px] h-[18px] text-ink-500 group-hover:text-brand-500 transition-colors" />
               </button>
             ))}
           </div>
@@ -351,19 +351,19 @@ function BankDetailsView({
       <div className="p-6 pb-0">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-[#161618] border border-white/5">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-ink-50 border border-ink-100">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white text-sm" style={{ backgroundColor: '#1a56db' }}>
                 🏦
               </div>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#f4f4f5]">Bank Details</h2>
-              <p className="text-sm text-[#8b8b91] mt-1">Add your bank account information.</p>
+              <h2 className="text-xl font-bold text-ink-900">Bank Details</h2>
+              <p className="text-sm text-ink-500 mt-1">Add your bank account information.</p>
             </div>
           </div>
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-[#161618] flex items-center justify-center text-[#8b8b91] hover:text-[#f4f4f5] hover:bg-[#262629] transition-colors shrink-0"
+            className="w-10 h-10 rounded-full bg-ink-50 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-ink-100 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -379,10 +379,10 @@ function BankDetailsView({
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-6 mt-auto border-t border-[#262629]">
+      <div className="flex items-center justify-between p-6 mt-auto border-t border-ink-200">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#262629] text-[#f4f4f5] font-semibold text-sm hover:bg-[#161618] transition-colors"
+          className="flex items-center gap-2 px-5 py-3 rounded-xl border border-ink-200 text-ink-900 font-semibold text-sm hover:bg-ink-50 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /> Back
         </button>
@@ -400,7 +400,7 @@ function BankDetailsView({
               detail: { bankName, accountNumber, accountName, ifscCode, routingCode, swiftCode, summary },
             }));
           }}
-          className="px-6 py-3 rounded-xl bg-[#f97316] text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-[#ea6a0c] transition-colors"
+          className="px-6 py-3 rounded-xl bg-brand-500 text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-brand-600 transition-colors"
         >
           Add Bank Details
         </button>
@@ -427,19 +427,19 @@ function UpiView({
       <div className="p-6 pb-0">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-[#161618] border border-white/5">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-ink-50 border border-ink-100">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white text-sm" style={{ backgroundColor: '#5f259f' }}>
                 UPI
               </div>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#f4f4f5]">UPI</h2>
-              <p className="text-sm text-[#8b8b91] mt-1">Add your UPI payment details.</p>
+              <h2 className="text-xl font-bold text-ink-900">UPI</h2>
+              <p className="text-sm text-ink-500 mt-1">Add your UPI payment details.</p>
             </div>
           </div>
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-[#161618] flex items-center justify-center text-[#8b8b91] hover:text-[#f4f4f5] hover:bg-[#262629] transition-colors shrink-0"
+            className="w-10 h-10 rounded-full bg-ink-50 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-ink-100 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -482,10 +482,10 @@ function UpiView({
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-6 mt-auto border-t border-[#262629]">
+      <div className="flex items-center justify-between p-6 mt-auto border-t border-ink-200">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#262629] text-[#f4f4f5] font-semibold text-sm hover:bg-[#161618] transition-colors"
+          className="flex items-center gap-2 px-5 py-3 rounded-xl border border-ink-200 text-ink-900 font-semibold text-sm hover:bg-ink-50 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /> Back
         </button>
@@ -501,7 +501,7 @@ function UpiView({
               detail: { upiId: upiId.trim(), showQr, lockAmount },
             }));
           }}
-          className="px-6 py-3 rounded-xl bg-[#f97316] text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-[#ea6a0c] transition-colors"
+          className="px-6 py-3 rounded-xl bg-brand-500 text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-brand-600 transition-colors"
         >
           Add UPI
         </button>
@@ -523,7 +523,7 @@ function InputField({
 }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-[#8b8b91] uppercase tracking-widest mb-2">
+      <label className="block text-xs font-bold text-ink-500 uppercase tracking-widest mb-2">
         {label}
       </label>
       <input
@@ -531,7 +531,7 @@ function InputField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-[#161618] border border-[#262629] rounded-xl px-4 py-3 text-sm text-[#f4f4f5] placeholder-[#8b8b91] outline-none focus:border-[#f97316] transition-colors"
+        className="w-full bg-ink-50 border border-ink-200 rounded-xl px-4 py-3 text-sm text-ink-900 placeholder-[#8b8b91] outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
       />
     </div>
   );
@@ -568,14 +568,14 @@ function DetailView({
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-start gap-4">
             <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 overflow-hidden"
+              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border border-ink-100 overflow-hidden"
               style={{ backgroundColor: '#161618' }}
             >
               <MethodBadge method={method} size={30} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#f4f4f5]">{method.name}</h2>
-              <p className="text-sm text-[#8b8b91] mt-1">
+              <h2 className="text-xl font-bold text-ink-900">{method.name}</h2>
+              <p className="text-sm text-ink-500 mt-1">
                 {isUrl
                   ? `Add your ${method.name} payment link.`
                   : `Add your ${method.name} payment details.`}
@@ -584,7 +584,7 @@ function DetailView({
           </div>
           <button
             onClick={onBack}
-            className="w-10 h-10 rounded-full bg-[#161618] flex items-center justify-center text-[#8b8b91] hover:text-[#f4f4f5] hover:bg-[#262629] transition-colors shrink-0"
+            className="w-10 h-10 rounded-full bg-ink-50 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-ink-100 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -592,19 +592,19 @@ function DetailView({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[#8b8b91] uppercase tracking-widest mb-2">
+            <label className="block text-xs font-bold text-ink-500 uppercase tracking-widest mb-2">
               Payment title
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
-              className="w-full bg-[#161618] border border-[#262629] rounded-xl px-4 py-3 text-sm text-[#f4f4f5] placeholder-[#8b8b91] outline-none focus:border-[#f97316] transition-colors"
+              className="w-full bg-ink-50 border border-ink-200 rounded-xl px-4 py-3 text-sm text-ink-900 placeholder-[#8b8b91] outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#8b8b91] uppercase tracking-widest mb-2">
+            <label className="block text-xs font-bold text-ink-500 uppercase tracking-widest mb-2">
               {isUrl ? 'Payment URL' : 'Payment Details'}
             </label>
             {isUrl ? (
@@ -613,7 +613,7 @@ function DetailView({
                 value={value}
                 onChange={(e) => onValueChange(e.target.value)}
                 placeholder="Paste the URL of your payment page here"
-                className="w-full bg-[#161618] border border-[#262629] rounded-xl px-4 py-3 text-sm text-[#f4f4f5] placeholder-[#8b8b91] outline-none focus:border-[#f97316] transition-colors"
+                className="w-full bg-ink-50 border border-ink-200 rounded-xl px-4 py-3 text-sm text-ink-900 placeholder-[#8b8b91] outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
               />
             ) : (
               <textarea
@@ -621,34 +621,34 @@ function DetailView({
                 onChange={(e) => onValueChange(e.target.value)}
                 placeholder={`Enter payment details for ${method.name}`}
                 rows={3}
-                className="w-full bg-[#161618] border border-[#262629] rounded-xl px-4 py-3 text-sm text-[#f4f4f5] placeholder-[#8b8b91] outline-none focus:border-[#f97316] transition-colors resize-none"
+                className="w-full bg-ink-50 border border-ink-200 rounded-xl px-4 py-3 text-sm text-ink-900 placeholder-[#8b8b91] outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-none"
               />
             )}
           </div>
 
-          <div className="bg-[#111113] border border-[#262629] rounded-2xl p-4 flex items-center justify-between gap-4">
+          <div className="bg-ink-50 border border-ink-200 rounded-2xl p-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-[#f4f4f5]">QR Code</span>
-                <span className="text-[10px] border border-[#262629] rounded-md px-1.5 py-0.5 text-[#8b8b91] font-semibold">
+                <span className="text-sm font-bold text-ink-900">QR Code</span>
+                <span className="text-[10px] border border-ink-200 rounded-md px-1.5 py-0.5 text-ink-500 font-semibold">
                   Optional
                 </span>
               </div>
-              <p className="text-xs text-[#8b8b91] mt-1">
+              <p className="text-xs text-ink-500 mt-1">
                 Upload a QR code image so customers can scan it to pay.
               </p>
             </div>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="w-20 h-20 border border-dashed border-[#3a3a3e] rounded-xl flex items-center justify-center text-[#8b8b91] hover:border-[#f97316] hover:text-[#f97316] transition-colors shrink-0 relative"
+              className="w-20 h-20 border border-dashed border-ink-200 rounded-xl flex items-center justify-center text-ink-500 hover:border-brand-500 hover:text-brand-500 transition-colors shrink-0 relative"
             >
               {qrPreview ? (
                 <img src={qrPreview} alt="QR preview" className="w-full h-full object-cover rounded-xl" />
               ) : (
                 <>
                   <Upload className="w-7 h-7" />
-                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#f97316] text-white flex items-center justify-center text-sm font-bold shadow-lg">
+                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center text-sm font-bold shadow-lg">
                     +
                   </div>
                 </>
@@ -665,16 +665,16 @@ function DetailView({
         </div>
       </div>
 
-      <div className="flex items-center justify-between p-6 mt-auto border-t border-[#262629]">
+      <div className="flex items-center justify-between p-6 mt-auto border-t border-ink-200">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#262629] text-[#f4f4f5] font-semibold text-sm hover:bg-[#161618] transition-colors"
+          className="flex items-center gap-2 px-5 py-3 rounded-xl border border-ink-200 text-ink-900 font-semibold text-sm hover:bg-ink-50 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /> Back
         </button>
         <button
           onClick={onSave}
-          className="px-6 py-3 rounded-xl bg-[#f97316] text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-[#ea6a0c] transition-colors"
+          className="px-6 py-3 rounded-xl bg-brand-500 text-white font-bold text-sm shadow-lg shadow-orange-500/30 hover:bg-brand-600 transition-colors"
         >
           Add Payment Method
         </button>

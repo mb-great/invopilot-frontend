@@ -8,16 +8,16 @@ import { InvoiceTermsForm } from "@/components/invoice/form/invoiceTerms/invoice
 import { useGetValue } from "@/hooks/useGetValue";
 import { getInitialValue } from "@/lib/getInitialValue";
 
-export const UserInputForm = ({ profile }: { profile: any }) => {
+export const UserInputForm = ({ profile, canUploadLogo = false }: { profile: any; canUploadLogo?: boolean }) => {
   const step = useGetValue("step", getInitialValue("step", "1"));
 
   return (
     <div>
       <div className={step === "1" ? "block" : "hidden"}>
-        <YourDetailsForm profile={profile} />
+        <YourDetailsForm profile={profile} canUploadLogo={canUploadLogo} />
       </div>
       <div className={step === "2" ? "block" : "hidden"}>
-        <CompanyDetailsForm />
+        <CompanyDetailsForm canUploadLogo={canUploadLogo} />
       </div>
       <div className={step === "3" ? "block" : "hidden"}>
         <InvoiceDetailsForm />

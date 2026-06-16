@@ -11,6 +11,7 @@ type QueryBuilder = {
   eq: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   is: ReturnType<typeof vi.fn>;
+  in: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   limit: ReturnType<typeof vi.fn>;
   or: ReturnType<typeof vi.fn>;
@@ -28,6 +29,7 @@ const { supabaseClient } = vi.hoisted(() => {
   query.eq = vi.fn(() => query);
   query.single = vi.fn().mockResolvedValue({ data: { role: 'admin' } });
   query.is = vi.fn(() => query);
+  query.in = vi.fn(() => query);
   query.order = vi.fn(() => query);
   query.limit = vi.fn(() => query);
   query.or = vi.fn(() => query);
@@ -37,7 +39,8 @@ const { supabaseClient } = vi.hoisted(() => {
   return {
     supabaseClient: {
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'admin-user', email: 'admin@example.com' } } })
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'admin-user', email: 'admin@example.com' } } }),
+        signOut: vi.fn().mockResolvedValue({})
       },
       from: vi.fn(() => query),
       rpc: vi.fn().mockResolvedValue({ data: [{ active_invoices_count: 10, total_users: 5, total_invoices_lifetime: 100 }] })
@@ -59,7 +62,11 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/headers', () => ({
-  cookies: vi.fn().mockResolvedValue({ getAll: vi.fn(() => []), set: vi.fn() }),
+  cookies: vi.fn().mockResolvedValue({
+    getAll: vi.fn(() => []),
+    set: vi.fn(),
+    get: vi.fn(() => ({ value: 'test-workspace' }))
+  }),
   headers: vi.fn().mockResolvedValue(new Map())
 }));
 
@@ -68,7 +75,7 @@ vi.mock('@supabase/ssr', () => ({
 }));
 
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: vi.fn(() => ({ auth: { signOut: vi.fn().mockResolvedValue({}) } }))
+  createClient: vi.fn(() => supabaseClient)
 }));
 
 describe('Admin Page', () => {

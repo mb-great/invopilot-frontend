@@ -2,7 +2,7 @@ import CustomTextInput from "@/components/invoice/ui/customTextInput";
 import CustomNumberInput from "@/components/invoice/ui/customNumberInput";
 import ImageInput from "@/components/invoice/ui/imageInput";
 
-export const CompanyDetailsForm = () => (
+export const CompanyDetailsForm = ({ canUploadLogo = false }: { canUploadLogo?: boolean }) => (
   <div className="pt-4">
     <p className="text-2xl font-semibold pb-3">Company Details (To)</p>
     <CustomTextInput
@@ -19,7 +19,7 @@ export const CompanyDetailsForm = () => (
       placeholder="Invopilot"
       variableName="companyName"
     />
-    <ImageInput label="Logo" variableName="companyLogo" premium="pro" />
+    <ImageInput label="Logo" variableName="companyLogo" premium="pro" locked={!canUploadLogo} />
     <CustomTextInput
       label="Address"
       placeholder="Address"

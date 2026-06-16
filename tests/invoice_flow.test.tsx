@@ -12,7 +12,8 @@ vi.mock('next/navigation', () => ({
     refresh: vi.fn(),
     back: vi.fn()
   })),
-  usePathname: vi.fn(() => '/invoices/new')
+  usePathname: vi.fn(() => '/invoices/new'),
+  useSearchParams: vi.fn(() => new URLSearchParams())
 }));
 
 describe('Invoice Flow', () => {

@@ -1,33 +1,41 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const supabase = await createClient();
 
-  // 1. Get invoice by share_slug
-  const { data: invoice, error } = await supabase
+  // Use admin client to bypass RLS for public share links
+  const { data: invoice, error } = await supabaseAdmin
     .from('invoices')
-    .select('pdf_url')
+    .select('pdf_url, nickname, invoice_number')
     .eq('share_slug', slug)
+    .is('deleted_at', null)
     .single();
 
   if (error || !invoice || !invoice.pdf_url) {
     return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
   }
 
-  // 2. Generate signed URL (300s rotation)
-  const { data: signedUrl, error: signedUrlError } = await supabase
+  // Download the file directly from storage
+  const { data: fileData, error: downloadError } = await supabaseAdmin
     .storage
     .from('invoices')
-    .createSignedUrl(invoice.pdf_url, 300);
+    .download(invoice.pdf_url);
 
-  if (signedUrlError || !signedUrl) {
-    return NextResponse.json({ error: 'Could not generate preview' }, { status: 500 });
+  if (downloadError || !fileData) {
+    return NextResponse.json({ error: 'Could not download file' }, { status: 500 });
   }
 
-  return NextResponse.redirect(signedUrl.signedUrl);
+  // Serve inline (display in browser, not download)
+  const headers = new Headers();
+  headers.set('Content-Type', 'application/pdf');
+  headers.set('Content-Disposition', 'inline');
+
+  return new NextResponse(fileData, {
+    status: 200,
+    headers,
+  });
 }

@@ -19,7 +19,16 @@ import { clearInvoiceDraft } from "@/lib/invoiceStorage";
 import ImportSelectionModal, { ImportItem } from "@/components/invoice/ImportSelectionModal";
 
 export default function InvoiceBuilder() {
-  const methods = useForm();
+  const methods = useForm({
+    defaultValues: {
+      step: "1",
+      signatureMode: "none",
+      signatureUrl: "",
+      customSignatureUrl: "",
+      businessId: "",
+    }
+  });
+  const step = methods.watch("step");
   const [isClient, setIsClient] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -52,7 +61,8 @@ export default function InvoiceBuilder() {
             currency: "INR", taxRate: "0", discount: "0", yourCountry: "India", companyCountry: "India",
             yourName: "", yourEmail: "", yourAddress: "", yourCity: "", yourState: "", yourZip: "", yourTaxId: "", yourLogo: "",
             companyName: "", email: "", companyAddress: "", companyCity: "", companyState: "", companyZip: "", companyTaxId: "", companyLogo: "",
-            invoiceNumber: "", note: "", bankName: "", accountName: "", accountNumber: "", ifscCode: "", routingCode: "", swiftCode: ""
+            invoiceNumber: "", note: "", bankName: "", accountName: "", accountNumber: "", ifscCode: "", routingCode: "", swiftCode: "",
+            signatureMode: "none", signatureUrl: "", customSignatureUrl: "", businessId: ""
           });
         }
         localStorage.setItem('invopilot_draft_user_id', currentUserId);
@@ -240,7 +250,11 @@ export default function InvoiceBuilder() {
           taxRate: "0",
           discount: "0",
           yourCountry: "India",
-          companyCountry: "India"
+          companyCountry: "India",
+          signatureMode: "none",
+          signatureUrl: "",
+          customSignatureUrl: "",
+          businessId: ""
         });
       } else {
         let savedStep = localStorage.getItem("step") || "1";
@@ -284,6 +298,10 @@ export default function InvoiceBuilder() {
           routingCode: localStorage.getItem("routingCode") || "",
           swiftCode: localStorage.getItem("swiftCode") || "",
           items: JSON.parse(savedItems || '[{"itemDescription":""}]'),
+          signatureMode: localStorage.getItem("signatureMode") || "none",
+          signatureUrl: localStorage.getItem("signatureUrl") || "",
+          customSignatureUrl: localStorage.getItem("customSignatureUrl") || "",
+          businessId: localStorage.getItem("businessId") || "",
         });
       }
     }
@@ -298,7 +316,8 @@ export default function InvoiceBuilder() {
         currency: "INR", taxRate: "0", discount: "0", yourCountry: "India", companyCountry: "India",
         yourName: "", yourEmail: "", yourAddress: "", yourCity: "", yourState: "", yourZip: "", yourTaxId: "", yourLogo: "",
         companyName: "", email: "", companyAddress: "", companyCity: "", companyState: "", companyZip: "", companyTaxId: "", companyLogo: "",
-        invoiceNumber: "", note: "", bankName: "", accountName: "", accountNumber: "", ifscCode: "", routingCode: "", swiftCode: ""
+        invoiceNumber: "", note: "", bankName: "", accountName: "", accountNumber: "", ifscCode: "", routingCode: "", swiftCode: "",
+        signatureMode: "none", signatureUrl: "", customSignatureUrl: "", businessId: ""
       });
       setShowDiscardModal(false);
       toast.success("Draft cleared successfully");
@@ -341,77 +360,79 @@ export default function InvoiceBuilder() {
                   
                   <div className="flex items-center gap-4">
                     {/* Unified Import Dropdown */}
-                    <div className="relative" ref={importRef}>
-                      <button
-                        onClick={() => setIsImportOpen(!isImportOpen)}
-                        className="flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-3.5 py-1.5 rounded-lg transition-colors border border-brand-100/50 shadow-sm"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Import</span>
-                      </button>
+                    {step !== "6" && (
+                      <div className="relative" ref={importRef}>
+                        <button
+                          onClick={() => setIsImportOpen(!isImportOpen)}
+                          className="flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-3.5 py-1.5 rounded-lg transition-colors border border-brand-100/50 shadow-sm"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Import</span>
+                        </button>
 
-                      {isImportOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-ink-150 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
-                          <div className="p-1 divide-y divide-ink-50">
-                            
-                            <button
-                              onClick={() => {
-                                setIsImportOpen(false);
-                                setImportModalType("business");
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-ink-50 transition-colors text-ink-700 font-medium flex items-center gap-2"
-                            >
-                              💼 Import Business
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setIsImportOpen(false);
-                                setImportModalType("client");
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-ink-50 transition-colors text-ink-700 font-medium flex items-center gap-2"
-                            >
-                              👤 Import Client
-                            </button>
-
-                            {!canUseRecurring ? (
+                        {isImportOpen && (
+                          <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-ink-150 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
+                            <div className="p-1 divide-y divide-ink-50">
+                              
                               <button
                                 onClick={() => {
                                   setIsImportOpen(false);
-                                  toast.error("Upgrade to Pro to load recurring templates.");
-                                }}
-                                className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50/50 transition-colors text-amber-600 font-medium flex items-center justify-between"
-                              >
-                                <span className="flex items-center gap-2">🔄 Load Template</span>
-                                <Lock className="w-3.5 h-3.5 text-amber-500" />
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setIsImportOpen(false);
-                                  setImportModalType("template");
+                                  setImportModalType("business");
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-ink-50 transition-colors text-ink-700 font-medium flex items-center gap-2"
                               >
-                                🔄 Load Template
+                                💼 Import Business
                               </button>
-                            )}
 
-                            <div className="p-1 pt-2 mt-1">
                               <button
                                 onClick={() => {
                                   setIsImportOpen(false);
-                                  setIsProfilesModalOpen(true);
+                                  setImportModalType("client");
                                 }}
-                                className="w-full text-center py-2 bg-ink-50 hover:bg-brand-50 hover:text-brand-700 text-ink-700 font-bold rounded-lg text-[10px] uppercase tracking-wider transition-all border border-transparent hover:border-brand-200"
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-ink-50 transition-colors text-ink-700 font-medium flex items-center gap-2"
                               >
-                                Manage Profiles
+                                👤 Import Client
                               </button>
+
+                              {!canUseRecurring ? (
+                                <button
+                                  onClick={() => {
+                                    setIsImportOpen(false);
+                                    toast.error("Upgrade to Pro to load recurring templates.");
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50/50 transition-colors text-amber-600 font-medium flex items-center justify-between"
+                                >
+                                  <span className="flex items-center gap-2">🔄 Load Template</span>
+                                  <Lock className="w-3.5 h-3.5 text-amber-500" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setIsImportOpen(false);
+                                    setImportModalType("template");
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-ink-50 transition-colors text-ink-700 font-medium flex items-center gap-2"
+                                >
+                                  🔄 Load Template
+                                </button>
+                              )}
+
+                              <div className="p-1 pt-2 mt-1">
+                                <button
+                                  onClick={() => {
+                                    setIsImportOpen(false);
+                                    setIsProfilesModalOpen(true);
+                                  }}
+                                  className="w-full text-center py-2 bg-ink-50 hover:bg-brand-50 hover:text-brand-700 text-ink-700 font-bold rounded-lg text-[10px] uppercase tracking-wider transition-all border border-transparent hover:border-brand-200"
+                                >
+                                  Manage Profiles
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
 
                     <button 
                       onClick={() => setShowDiscardModal(true)}
@@ -434,7 +455,7 @@ export default function InvoiceBuilder() {
 
               {/* Scrollable Form Content */}
               <div className="flex-1 overflow-y-auto px-6 md:px-10 lg:px-12 pb-32">
-                <UserInputFormWithGenerate profile={profile} />
+                <UserInputFormWithGenerate profile={profile} canUploadLogo={canUploadLogo} />
               </div>
 
               {/* Sticky Footer */}
@@ -501,12 +522,12 @@ export default function InvoiceBuilder() {
   );
 }
 
-function UserInputFormWithGenerate({ profile }: { profile: any }) {
+function UserInputFormWithGenerate({ profile, canUploadLogo }: { profile: any; canUploadLogo: boolean }) {
   const step = useGetValue("step", getInitialValue("step", "1"));
 
   if (step === "6") {
     return <GenerateInvoiceButton profile={profile} />;
   }
 
-  return <UserInputForm profile={profile} />;
+  return <UserInputForm profile={profile} canUploadLogo={canUploadLogo} />;
 }

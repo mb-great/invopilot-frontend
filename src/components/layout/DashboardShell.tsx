@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -8,6 +8,7 @@ import { Menu, X, LogOut, LayoutDashboard, FileText, Users, Settings, ShieldChec
 import { resolvePlanAccess } from '@/lib/billing/tiers'
 import PremiumBadge from '@/components/ui/PremiumBadge'
 import GlobalWorkspaceSwitcher from '@/components/layout/GlobalWorkspaceSwitcher'
+import { toast } from 'sonner'
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -37,6 +38,24 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
   const [imgError, setImgError] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+
+  useEffect(() => {
+    const celebration = localStorage.getItem('invopilot_celebration_toast');
+    if (celebration) {
+      try {
+        const { tier, periodEnd } = JSON.parse(celebration);
+        const dateStr = new Date(periodEnd).toLocaleDateString(undefined, {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        toast.success(`🎉 You've been granted the ${tier.toUpperCase()} plan free until ${dateStr}!`, {
+          duration: 8000
+        });
+      } catch {}
+      localStorage.removeItem('invopilot_celebration_toast');
+    }
+  }, []);
 
   const handleSignOut = async () => {
     setIsLoggingOut(true)

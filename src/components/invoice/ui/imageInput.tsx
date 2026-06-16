@@ -12,12 +12,17 @@ type CustomNumberProps = {
   label: string;
   variableName: string;
   premium?: 'pro' | 'biz';
+  locked?: boolean;
 };
 
-export const ImageInput = ({ label, variableName, premium }: CustomNumberProps) => {
+export const ImageInput = ({ label, variableName, premium, locked }: CustomNumberProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleButtonClick = () => {
+    if (locked) {
+      toast.error("Logo upload requires Pro plan. Upgrade at /pricing");
+      return;
+    }
     if (inputRef.current) {
       inputRef.current.click();
     }
@@ -106,25 +111,36 @@ export const ImageInput = ({ label, variableName, premium }: CustomNumberProps) 
                     className="h-8 rounded-md p-1 hover:bg-neutral-200 object-contain"
                     alt="company logo"
                   />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onChange("");
-                      localStorage.removeItem(variableName);
-                    }}
-                    className="p-1 rounded-full hover:bg-neutral-200 text-gray-500 hover:text-red-500 transition-colors"
-                    title="Remove Logo"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  {!locked && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onChange("");
+                        localStorage.removeItem(variableName);
+                      }}
+                      className="p-1 rounded-full hover:bg-neutral-200 text-gray-500 hover:text-red-500 transition-colors"
+                      title="Remove Logo"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <button
                   type="button"
-                  className="text-neutral-500/70 border rounded-full p-1.5 border-dashed"
+                  className={`border rounded-full p-1.5 border-dashed ${
+                    locked ? 'text-neutral-300 cursor-not-allowed' : 'text-neutral-500/70'
+                  }`}
+                  disabled={locked}
                 >
-                  <Plus className="w-4 h-4" />
+                  {locked ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
                 </button>
               )}
             </div>
@@ -132,6 +148,7 @@ export const ImageInput = ({ label, variableName, premium }: CustomNumberProps) 
               accept=".png, .jpg, .jpeg, .svg, .svg+xml, .webp"
               ref={inputRef}
               type="file"
+              disabled={locked}
               onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
                 const file = e.target.files?.[0];
                 if (file && isAcceptedFileType(file)) {
@@ -161,8 +178,8 @@ export const ImageInput = ({ label, variableName, premium }: CustomNumberProps) 
               aria-hidden="true"
             />
           </div>
-          <span className="text-[10px] text-neutral-400 -mt-1 pb-1">
-            Recommend square or horizontal aspect ratio. Will compress to WebP (max 2MB).
+          <span className={`text-[10px] -mt-1 pb-1 ${locked ? 'text-amber-500 font-medium' : 'text-neutral-400'}`}>
+            {locked ? 'Upgrade to Pro to add logo' : 'Recommend square or horizontal aspect ratio. Will compress to WebP (max 2MB).'}
           </span>
         </div>
       )}
