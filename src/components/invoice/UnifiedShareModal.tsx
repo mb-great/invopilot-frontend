@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, KeyboardEvent } from 'react';
+import { useState, useRef, KeyboardEvent, useEffect } from 'react';
 import { X, Send, Copy, MessageCircle, Share2, Paperclip, Eye, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -114,6 +114,25 @@ export default function UnifiedShareModal({
   const [sending, setSending] = useState(false);
   const [attachPdf, setAttachPdf] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [senderConfig, setSenderConfig] = useState<{ method: string; email?: string } | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/settings/sender-config')
+        .then(r => r.json())
+        .then(json => {
+          if (json.data && json.data.method !== 'system') {
+            setSenderConfig({
+              method: json.data.method,
+              email: json.data.method === 'gmail' ? json.data.gmail_email : json.data.smtp_user,
+            });
+          } else {
+            setSenderConfig(null);
+          }
+        })
+        .catch(() => setSenderConfig(null));
+    }
+  }, [isOpen]);
 
   const shareUrl = hasShare && typeof window !== 'undefined'
     ? `${window.location.origin}/i/${shareSlug}`
@@ -128,12 +147,11 @@ export default function UnifiedShareModal({
 
   if (!isOpen) return null;
 
-  const senderBar =
-    senderMethod === 'gmail'
-      ? `Sending as ${senderEmail || 'your Gmail'}`
-      : senderMethod === 'smtp'
-      ? 'Sending via custom SMTP'
-      : 'Sending via InvoPilot';
+  const senderBar = senderConfig
+    ? senderConfig.method === 'gmail'
+      ? `Sending as ${senderConfig.email || 'your Gmail'}`
+      : `Sending as ${senderConfig.email || 'your SMTP'}`
+    : 'Email not configured';
 
   const handleSend = async () => {
     if (!toChips.length) return;
@@ -250,11 +268,17 @@ export default function UnifiedShareModal({
           {tab === 'email' && !showPreview && (
             <div className="space-y-3">
               {/* Sender bar */}
-              <div className="flex items-center justify-between text-xs text-ink-500 bg-ink-50 rounded-lg px-3 py-2">
+              <div className={`flex items-center justify-between text-xs rounded-lg px-3 py-2 ${senderConfig ? 'text-ink-500 bg-ink-50' : 'text-amber-600 bg-amber-50 border border-amber-200'}`}>
                 <span>{senderBar}</span>
-                <Link href="/dashboard/settings" className="text-brand-500 font-semibold hover:underline">
-                  Change in Settings →
-                </Link>
+                {!senderConfig ? (
+                  <a href="/dashboard/settings" className="text-amber-600 font-semibold hover:underline">
+                    Setup Email →
+                  </a>
+                ) : (
+                  <Link href="/dashboard/settings" className="text-brand-500 font-semibold hover:underline">
+                    Change →
+                  </Link>
+                )}
               </div>
 
               {/* To */}
@@ -406,7 +430,7 @@ export default function UnifiedShareModal({
             </div>
             <button
               onClick={handleSend}
-              disabled={sending || !toChips.length}
+              disabled={sending || !toChips.length || !senderConfig}
               className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               <Send className="w-4 h-4" />
