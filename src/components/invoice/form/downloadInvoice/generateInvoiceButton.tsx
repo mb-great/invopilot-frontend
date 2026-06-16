@@ -184,7 +184,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   };
 
   return (
-    <div className="flex flex-col py-4 md:py-8 w-full max-w-md mx-auto">
+    <div className="flex flex-col py-4 md:py-6 w-full max-w-md mx-auto">
       <UpgradeLimitModal
         isOpen={upgradeModal.open}
         onClose={() => setUpgradeModal({ open: false, type: "invoice" })}
@@ -203,29 +203,28 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         shareSlug={shareSlug || undefined}
       />
       <div className="w-full text-center">
-        <h1 className="text-4xl font-bold pb-4 text-ink-900">
+        <h1 className="text-2xl md:text-3xl font-bold pb-2 text-ink-900">
           {status === "done" 
             ? (effectiveIsQuote ? "Quote Generated!" : "Invoice Generated!") 
             : effectiveIsQuote ? "Your quote is ready" : "Your invoice is ready"}
         </h1>
-        <p className="text-ink-500 text-lg pb-8">
+        <p className="text-ink-500 text-sm pb-4">
           {status === "done"
-            ? "Your PDF has been generated and stored securely."
-            : "Please review the details carefully before generating your document."}
+            ? "PDF generated and stored securely."
+            : "Review details before generating."}
         </p>
 
         {status === "ready" && (() => {
           const access = resolvePlanAccess(profile);
           const canUseRecurring = access.plan.canUseRecurring || access.isAdmin;
           return (
-            <div className="space-y-4 mb-8">
-              <div className="flex items-center justify-between bg-ink-50 p-4 rounded-xl border border-ink-100 relative">
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center justify-between bg-ink-50 p-3 rounded-xl border border-ink-100 relative">
                 <div className="flex flex-col text-left">
-                  <Label htmlFor="quote-mode" className="text-ink-900 cursor-pointer font-bold text-sm flex items-center gap-1">
+                  <Label htmlFor="quote-mode" className="text-ink-900 cursor-pointer font-bold text-xs flex items-center gap-1">
                     Save as Quote
                     <PremiumBadge type="pro" />
                   </Label>
-                  <span className="text-[10px] text-ink-500 mt-0.5">Saves as a draft approval document</span>
                 </div>
                 <Switch 
                   id="quote-mode" 
@@ -248,13 +247,12 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
                   />
                 )}
               </div>
-              <div className="flex items-center justify-between bg-ink-50 p-4 rounded-xl border border-ink-100 relative">
+              <div className="flex items-center justify-between bg-ink-50 p-3 rounded-xl border border-ink-100 relative">
                 <div className="flex flex-col text-left">
-                  <Label htmlFor="recurring-mode" className="text-ink-900 cursor-pointer font-bold text-sm flex items-center gap-1">
+                  <Label htmlFor="recurring-mode" className="text-ink-900 cursor-pointer font-bold text-xs flex items-center gap-1">
                     Save as Recurring Template
                     <PremiumBadge type="pro" />
                   </Label>
-                  <span className="text-[10px] text-ink-500 mt-0.5">Save preset to quickly generate invoices later</span>
                 </div>
                 <Switch 
                   id="recurring-mode" 
@@ -281,7 +279,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         })()}
 
         {status === "error" && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
             {errorMsg}
           </div>
         )}
@@ -289,7 +287,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         <button
           disabled={status === "generating" || status === "polling" || status === "done"}
           onClick={handleGenerate}
-          className="w-full h-14 rounded-xl text-xl bg-brand-500 text-white font-bold hover:bg-brand-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-xl shadow-brand-500/20"
+          className="w-full h-11 rounded-xl text-base bg-brand-500 text-white font-bold hover:bg-brand-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20"
         >
           {status === "ready" && (
             <>
@@ -319,56 +317,58 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         </button>
 
         {status === "done" && activeInvoiceId && (
-          <div className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <a
                 href={`/api/invoices/${activeInvoiceId}/download?view=1`}
                 target="_blank"
                 rel="noreferrer"
-                className="h-12 rounded-lg bg-white border border-ink-200 text-ink-600 font-bold hover:bg-ink-50 transition-colors flex items-center justify-center gap-2"
+                className="h-10 rounded-lg bg-white border border-ink-200 text-ink-600 font-bold hover:bg-ink-50 transition-colors flex items-center justify-center gap-2 text-sm"
               >
                 View PDF
               </a>
               <a
                 href={`/api/invoices/${activeInvoiceId}/download`}
-                className="h-12 rounded-lg bg-brand-500 text-white font-bold hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
+                className="h-10 rounded-lg bg-brand-500 text-white font-bold hover:bg-brand-600 transition-colors flex items-center justify-center gap-2 text-sm"
               >
-                <Download className="w-4 h-4" />
-                Download PDF
+                <Download className="w-3.5 h-3.5" />
+                Download
               </a>
             </div>
             
             <button 
               onClick={handleShare}
-              className="w-full h-12 rounded-lg border border-brand-200 bg-brand-50/50 text-brand-600 font-bold hover:bg-brand-50 transition-colors flex items-center justify-center gap-2"
+              className="w-full h-10 rounded-lg border border-brand-200 bg-brand-50/50 text-brand-600 font-bold hover:bg-brand-50 transition-colors flex items-center justify-center gap-2 text-sm"
             >
               Share Link
             </button>
 
             <button 
               onClick={() => setIsEmailOpen(true)}
-              className="w-full h-12 rounded-lg bg-ink-900 text-white font-bold hover:bg-ink-800 transition-colors flex items-center justify-center gap-2 mt-3"
+              className="w-full h-10 rounded-lg bg-ink-900 text-white font-bold hover:bg-ink-800 transition-colors flex items-center justify-center gap-2 mt-2 text-sm"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5" />
               Send to Client
             </button>
 
-            <a
-              href="/dashboard"
-              className="block mt-6 text-sm font-medium text-ink-400 hover:text-ink-600 transition-colors underline underline-offset-4"
-            >
-              Go to Dashboard
-            </a>
-            <button
-              onClick={() => {
-                clearInvoiceDraft();
-                window.location.href = effectiveIsQuote ? '/invoices/new?type=quote' : '/invoices/new';
-              }}
-              className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 transition-colors mt-4 mx-auto"
-            >
-              <FilePlus2 className="w-4 h-4" />
-              {effectiveIsQuote ? 'New Quote' : 'New Invoice'}
-            </button>
+            <div className="flex items-center justify-center gap-4 mt-3">
+              <a
+                href="/dashboard"
+                className="text-xs font-medium text-ink-400 hover:text-ink-600 transition-colors underline underline-offset-4"
+              >
+                Dashboard
+              </a>
+              <button
+                onClick={() => {
+                  clearInvoiceDraft();
+                  window.location.href = effectiveIsQuote ? '/invoices/new?type=quote' : '/invoices/new';
+                }}
+                className="flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 transition-colors font-bold"
+              >
+                <FilePlus2 className="w-3.5 h-3.5" />
+                {effectiveIsQuote ? 'New Quote' : 'New Invoice'}
+              </button>
+            </div>
           </div>
         )}
       </div>
