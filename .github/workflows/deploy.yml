@@ -30,7 +30,7 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: ...
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd ~/invopilot-frontend
