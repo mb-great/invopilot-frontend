@@ -16,6 +16,7 @@ export async function GET(request: Request) {
   const search = searchParams.get('search') || '';
   const status = searchParams.get('status') || '';
   const currency = searchParams.get('currency') || '';
+  const type = searchParams.get('type') || '';
   const dateType = searchParams.get('dateType') || '';
   const dateValue = searchParams.get('dateValue') || '';
   const tzOffset = parseInt(searchParams.get('tzOffset') || '0');
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
   let workspaceIdToQuery = targetWorkspaceId || await getActiveWorkspaceId(queryUserId);
 
   // Logic: If any filter is active, we do an exact count for accurate pagination.
-  const isFiltered = !!(search || status || currency || dateValue || targetBusiness);
+  const isFiltered = !!(search || status || currency || type || dateValue || targetBusiness);
 
   let query = supabase
     .from('invoices')
@@ -88,6 +89,10 @@ export async function GET(request: Request) {
 
   if (currency) {
     query = query.eq('currency', currency);
+  }
+
+  if (type) {
+    query = query.eq('type', type);
   }
 
   if (dateValue) {

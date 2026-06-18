@@ -15,6 +15,7 @@ interface Invoice {
   nickname: string | null;
   created_at: string;
   status: string;
+  type: string;
   payment_status: string;
   pdf_url: string | null;
   amount: number;
@@ -87,6 +88,7 @@ export default function InvoiceTable({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currencyFilter, setCurrencyFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [sortBy, setSortBy] = useState('created_at.desc');
   const [page, setPage] = useState(1);
   const [mounted, setMounted] = useState(false);
@@ -128,6 +130,7 @@ export default function InvoiceTable({
         search,
         status: baseStatus || statusFilter,
         currency: currencyFilter,
+        type: typeFilter,
         dateType,
         dateValue,
         sort: sortBy,
@@ -174,7 +177,7 @@ export default function InvoiceTable({
       sessionStorage.setItem('invoice_page', page.toString());
     }
     fetchInvoices();
-  }, [statusFilter, currencyFilter, dateType, dateValue, sortBy, page, fetchInvoices, mounted]);
+  }, [statusFilter, currencyFilter, typeFilter, dateType, dateValue, sortBy, page, fetchInvoices, mounted]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -333,7 +336,7 @@ export default function InvoiceTable({
   const getPaymentStatusClass = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-emerald-500 text-white border-emerald-600';
-      case 'unpaid': return 'bg-brand-500/10 text-brand-600 border-brand-500/20';
+      case 'due': return 'bg-brand-500/10 text-brand-600 border-brand-500/20';
       case 'overdue': return 'bg-red-500/10 text-red-600 border-red-500/20';
       case 'draft': return 'bg-ink-100 text-ink-600 border-ink-200';
       case 'converted': return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
@@ -476,13 +479,13 @@ export default function InvoiceTable({
       accessorKey: 'payment_status',
       header: 'Status',
       cell: ({ row }) => {
-        const isPastDue = row.original.payment_status === 'unpaid' && row.original.due_date && new Date(row.original.due_date) < new Date();
+        const isPastDue = row.original.payment_status === 'due' && row.original.due_date && new Date(row.original.due_date) < new Date();
         const displayStatus = row.original.payment_status === 'overdue' || isPastDue ? 'overdue' : row.original.payment_status;
         
         return (
           <div className="flex flex-col items-center gap-1">
             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border inline-block uppercase tracking-wider ${getPaymentStatusClass(displayStatus)}`}>
-              {displayStatus === 'paid' ? 'Paid' : displayStatus === 'converted' ? 'Converted' : displayStatus === 'draft' ? 'Draft' : displayStatus === 'quote' ? 'Quote' : displayStatus === 'overdue' ? 'Overdue' : 'Unpaid'}
+              {displayStatus === 'paid' ? 'Paid' : displayStatus === 'converted' ? 'Converted' : displayStatus === 'draft' ? 'Draft' : displayStatus === 'quote' ? 'Quote' : displayStatus === 'overdue' ? 'Overdue' : 'Due'}
             </span>
             {row.original.status !== 'done' && (
               <span className="text-[9px] text-ink-400 italic">PDF: {row.original.status}</span>
@@ -501,8 +504,8 @@ export default function InvoiceTable({
           <div className="flex justify-end items-center gap-1 flex-wrap min-w-[140px]">
             {inv.status === 'done' ? (
               <>
-                <a href={`/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
-                <a href={`/api/invoices/${inv.id}/download`} className="p-1.5 text-ink-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></a>
+                <a href={inv.share_slug ? `/invoices/${inv.share_slug}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
+                <a href={inv.share_slug ? `/api/share/${inv.share_slug}?download=1` : `/api/invoices/${inv.id}/download`} className="p-1.5 text-ink-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></a>
                 <button onClick={() => handleShare(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Share</button>
                 <button onClick={() => handleSendEmail(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Email</button>
                 {inv.payment_status === 'quote' && (
@@ -673,18 +676,29 @@ export default function InvoiceTable({
               </select>
             )}
             {!baseStatus && (
-              <select 
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                className="px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm outline-none cursor-pointer"
-              >
-                <option value="">All Status</option>
-                <option value="paid">Paid</option>
-                <option value="sent">Unpaid</option>
-                <option value="overdue">Overdue</option>
-                <option value="draft">Draft</option>
-                <option value="quote">Quote</option>
-              </select>
+              <>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+                  className="px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm outline-none cursor-pointer font-bold text-ink-600"
+                >
+                  <option value="">All Types</option>
+                  <option value="invoice">Invoices</option>
+                  <option value="quote">Quotes</option>
+                </select>
+                <select 
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                  className="px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm outline-none cursor-pointer"
+                >
+                  <option value="">All Status</option>
+                  <option value="paid">Paid</option>
+                  <option value="due">Due</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="draft">Draft (Quote)</option>
+                  <option value="converted">Converted (Quote)</option>
+                </select>
+              </>
             )}
             <select
               value={dateType}
@@ -714,9 +728,9 @@ export default function InvoiceTable({
               <option value="amount.desc">Highest Amount</option>
               <option value="amount.asc">Lowest Amount</option>
             </select>
-            {(search || statusFilter || currencyFilter || dateType) && (
+            {(search || statusFilter || currencyFilter || typeFilter || dateType) && (
               <button
-                onClick={() => { setSearch(''); setStatusFilter(''); setCurrencyFilter(''); setDateType(''); setDateValue(''); setPage(1); }}
+                onClick={() => { setSearch(''); setStatusFilter(''); setCurrencyFilter(''); setTypeFilter(''); setDateType(''); setDateValue(''); setPage(1); }}
                 className="flex items-center gap-1 px-2.5 py-2 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors"
                 title="Clear all filters"
               >
