@@ -34,14 +34,13 @@ jobs:
       - name: Build Next.js Application
         run: bun run build
 
-      - name: Tar Build Artifacts
+      - name: Prepare Standalone Release
         run: |
-          tar -czf release.tar.gz \
-            .next \
-            public \
-            package.json \
-            next.config.ts \
-            node_modules
+          # Copy static assets into standalone structure
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          # Tar only the standalone folder
+          tar -czf release.tar.gz -C .next/standalone .
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -81,9 +80,10 @@ jobs:
             mkdir -p $TARGET_DIR
             mkdir -p $TMP_DIR
             
-            # Extract over existing directory
+            # Extract standalone build over existing directory
             tar -xzf $TMP_DIR/release.tar.gz -C $TARGET_DIR
             rm -f $TMP_DIR/release.tar.gz
             
             echo "Release successfully extracted to $TARGET_DIR."
-            echo "Please SSH into the VPS and run 'pm2 reload beta.invopilot.com' manually."
+            echo "Run: pm2 reload beta.invopilot.com or pm2 start node --name beta.invopilot.com -- $TARGET_DIR/server.js"
+
