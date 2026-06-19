@@ -12,7 +12,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing or invalid IDs' }, { status: 400 });
   }
 
-  // Soft Delete (ADR-005)
+  if (ids.length > 100) {
+    return NextResponse.json({ error: 'Maximum 100 invoices per request' }, { status: 400 });
+  }
+
+  // Soft Delete (ADR-005) — RLS enforces workspace ownership
   const { error } = await supabase
     .from('invoices')
     .update({ deleted_at: new Date().toISOString() })

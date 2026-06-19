@@ -2,6 +2,20 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
 
+async function verifyWorkspaceMember(supabase: any, userId: string, workspaceId: string, requireAdmin = false) {
+  const { data: member, error } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', userId)
+    .eq('status', 'accepted')
+    .single();
+
+  if (error || !member) return false;
+  if (requireAdmin && !['owner', 'admin'].includes(member.role)) return false;
+  return true;
+}
+
 export async function GET(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -15,6 +29,10 @@ export async function GET(req: Request) {
 
   if (!workspaceId) {
     return NextResponse.json({ error: 'Missing workspaceId' }, { status: 400 });
+  }
+
+  if (!await verifyWorkspaceMember(supabase, user.id, workspaceId)) {
+    return NextResponse.json({ data: [] });
   }
 
   const { data: apiKeys, error } = await supabase
@@ -43,6 +61,10 @@ export async function POST(req: Request) {
 
   if (!name || !workspaceId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
+  if (!await verifyWorkspaceMember(supabase, user.id, workspaceId, true)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // Generate secure key: inv_prod_ + 32 random hex chars
@@ -83,6 +105,10 @@ export async function DELETE(req: Request) {
 
   if (!id || !workspaceId) {
     return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+  }
+
+  if (!await verifyWorkspaceMember(supabase, user.id, workspaceId, true)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { error } = await supabase
