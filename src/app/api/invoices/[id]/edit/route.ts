@@ -63,7 +63,8 @@ export async function PUT(
 
   // Delete old PDF blob if it exists
   if (existing.pdf_url) {
-    await supabaseAdmin.storage.from('invoices').remove([existing.pdf_url]);
+    const { error: storageErr } = await supabaseAdmin.storage.from('invoices').remove([existing.pdf_url]);
+    if (storageErr) console.error('Failed to remove old PDF:', storageErr.message);
   }
 
   // Update form_data and re-queue for PDF generation

@@ -123,8 +123,11 @@ export async function POST(req: Request) {
     const internalFormData = mapApiToFormData(body);
     internalFormData.invoiceNumber = invoiceNumber;
 
-    // Calculate total amount
-    const amount = body.items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.price)), 0);
+    // Calculate total amount (items + tax - discount)
+    const subtotal = body.items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.price)), 0);
+    const taxRate = Number(body.tax_rate || body.items?.[0]?.tax_rate || 0);
+    const discount = Number(body.discount || 0);
+    const amount = subtotal + (subtotal * taxRate / 100) - discount;
 
     const { data, error } = await supabaseAdmin
       .from('invoices')

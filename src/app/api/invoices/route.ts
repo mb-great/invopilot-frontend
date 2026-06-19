@@ -126,7 +126,9 @@ export async function GET(request: Request) {
   }
 
   const [sortCol, sortDir] = sort.split('.');
-  query = query.order(sortCol, { ascending: sortDir === 'asc' });
+  const allowedSortColumns = ['created_at', 'updated_at', 'amount', 'client_name', 'invoice_number', 'due_date', 'paid_at'];
+  const safeSortCol = allowedSortColumns.includes(sortCol) ? sortCol : 'created_at';
+  query = query.order(safeSortCol, { ascending: sortDir === 'asc' });
 
   const { data, error, count } = await query.range(offset, offset + limit - 1);
 

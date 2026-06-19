@@ -93,7 +93,7 @@ export async function GET(request: Request) {
 
         if (error) {
           console.error('Fetch invoices error:', error);
-          controller.error(error);
+          try { controller.error(error); } catch {}
           return;
         }
 
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
             inv.issue_date || fd.issueDate || '',
             inv.due_date || fd.dueDate || '',
             inv.created_at ? new Date(inv.created_at).toISOString().slice(0, 10) : '',
-            inv.share_slug ? `${domain}/i/${inv.share_slug}` : '',
+            inv.pdf_url ? `${domain}/view/${encodeURIComponent(inv.pdf_url)}` : '',
             fd.yourName || '',
             fd.yourEmail || '',
             senderAddress,
