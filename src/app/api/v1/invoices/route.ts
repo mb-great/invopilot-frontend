@@ -152,13 +152,13 @@ export async function POST(req: Request) {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3002';
     const workerSecret = process.env.WORKER_SECRET;
     
-    fetch(`${backendUrl}/api/invoices/convert`, {
+    fetch(`${backendUrl}/queue`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-worker-secret': workerSecret || ''
       },
-      body: JSON.stringify({ invoiceId })
+      body: JSON.stringify({ invoiceId, formData: internalFormData })
     }).catch(err => console.error('API Invoice PDF trigger failed:', err));
 
     return NextResponse.json({ data }, { status: 201 });

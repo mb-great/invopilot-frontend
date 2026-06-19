@@ -82,6 +82,19 @@ export async function POST(request: Request) {
     .eq('user_id', user.id)
     .is('deleted_at', null);
 
+  // 10. Soft delete clients and recurring templates
+  await supabaseAdmin
+    .from('clients')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .is('deleted_at', null);
+
+  await supabaseAdmin
+    .from('recurring_templates')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .is('deleted_at', null);
+
   return NextResponse.json({ 
     success: true, 
     message: 'Account scheduled for deletion. Your data will be retained for 90 days. Sign up again to restore.' 

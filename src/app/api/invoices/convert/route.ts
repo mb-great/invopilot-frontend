@@ -10,7 +10,8 @@ const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_U
 /**
  * POST /api/invoices/convert
  * Converts a quote into a draft invoice (1-click).
- * Clones form_data into a new row with status='draft', marks original as 'converted'.
+ * Inserts a brand new row with type='invoice' and payment_status='due', 
+ * marks original quote as payment_status='converted'.
  * Gated by canUseQuotes (Pro+ only).
  */
 export async function POST(request: Request) {
@@ -56,44 +57,71 @@ export async function POST(request: Request) {
 
 
 
-  if (quote.payment_status === 'unpaid' || quote.payment_status === 'paid' || quote.payment_status === 'overdue') {
-    return NextResponse.json({ error: 'This quote has already been converted' }, { status: 409 });
+  if (quote.type !== 'quote' || quote.payment_status === 'converted') {
+    return NextResponse.json({ error: 'This quote has already been converted or is not a quote' }, { status: 409 });
   }
 
-  const { count } = await supabase
+  // Get next invoice number — use MAX to avoid duplicates from deleted invoices
+  const { data: maxRow } = await supabase
     .from('invoices')
-    .select('id', { count: 'exact', head: true })
-    .eq('workspace_id', quote.workspace_id);
+    .select('invoice_number')
+    .eq('workspace_id', quote.workspace_id)
+    .not('invoice_number', 'is', null)
+    .order('invoice_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  const nextNum = (count ?? 0) + 1;
+  const lastNum = maxRow?.invoice_number
+    ? parseInt(maxRow.invoice_number.replace(/\D/g, ''), 10) || 0
+    : 0;
+  const nextNum = lastNum + 1;
   const newInvoiceNumber = `INV-${new Date().getFullYear()}-${String(nextNum).padStart(5, '0')}`;
 
-  // Update form_data and invoice number
+  // Update form_data and invoice number for the NEW invoice
   const updatedFormData = {
     ...(quote.form_data || {}),
     invoiceNumber: newInvoiceNumber,
   };
 
-  // Mutate existing row
-  const { error: updateErr } = await supabase
+  // Insert NEW Invoice Row
+  const { data: newInvoice, error: insertErr } = await supabase
     .from('invoices')
-    .update({
+    .insert({
+      user_id: user.id,
+      workspace_id: quote.workspace_id,
       form_data: updatedFormData,
+      nickname: quote.nickname, // keep original clean nickname
       status: 'queued',
-      payment_status: 'unpaid',
+      amount: quote.amount,
+      currency: quote.currency,
+      client_name: quote.client_name,
+      client_email: quote.client_email,
+      business_profile_name: quote.business_profile_name,
+      type: 'invoice',
+      payment_status: 'due',
+      delivery_status: 'unsent',
+      pdf_retry_count: 0,
       invoice_number: newInvoiceNumber,
-      nickname: quote.nickname ? `${quote.nickname} (Converted)` : 'Converted Quote'
+      issue_date: quote.issue_date,
+      due_date: quote.due_date,
+      expires_at: quote.expires_at,
     })
-    .eq('id', quoteId);
+    .select('id').single();
 
-  if (updateErr) {
-    return NextResponse.json({ error: 'Failed to convert quote: ' + updateErr.message }, { status: 500 });
+  if (insertErr || !newInvoice) {
+    return NextResponse.json({ error: 'Failed to create invoice: ' + insertErr?.message }, { status: 500 });
   }
 
-  // Notify backend queue to regenerate PDF for the SAME ID
+  // Mark original Quote as converted
+  await supabase
+    .from('invoices')
+    .update({ payment_status: 'converted' })
+    .eq('id', quoteId);
+
+  // Notify backend queue to generate PDF for the NEW INVOICE
   let dispatchFailed = false;
   try {
-    const backendUrl = BACKEND_URL.replace('localhost', '127.0.0.1'); // Fix Node 18+ IPv6 fetch issue
+    const backendUrl = BACKEND_URL.replace('localhost', '127.0.0.1');
     const res = await fetch(`${backendUrl}/queue`, {
       method: 'POST',
       headers: { 
@@ -101,7 +129,7 @@ export async function POST(request: Request) {
         'x-worker-secret': process.env.WORKER_SECRET || ''
       },
       body: JSON.stringify({
-        invoiceId: quoteId,
+        invoiceId: newInvoice.id,
         formData: updatedFormData
       })
     });
@@ -109,30 +137,24 @@ export async function POST(request: Request) {
     if (!res.ok) {
       dispatchFailed = true;
       const errText = await res.text();
-      console.error(`[API] Failed to dispatch job to backend during quote conversion. Status: ${res.status}. Body: ${errText}`);
+      console.error(`[API] Failed to dispatch job to backend for converted invoice ${newInvoice.id}. Status: ${res.status}. Body: ${errText}`);
     } else {
-      console.log(`[API] Job successfully dispatched to backend for converted invoice ${quoteId}`);
+      console.log(`[API] Job successfully dispatched to backend for converted invoice ${newInvoice.id}`);
     }
   } catch (err) {
     dispatchFailed = true;
     console.error('[API] Fetch exception when dispatching job to backend during quote conversion:', err);
   }
 
-  // Rollback if dispatch fails so the user doesn't lose their quote forever
+  // Rollback if dispatch fails (soft-delete per ADR-005)
   if (dispatchFailed) {
-    await supabase.from('invoices').update({
-      form_data: quote.form_data,
-      status: quote.status,
-      payment_status: quote.payment_status,
-      invoice_number: quote.invoice_number,
-      nickname: quote.nickname
-    }).eq('id', quoteId);
-
+    await supabase.from('invoices').update({ deleted_at: new Date().toISOString() }).eq('id', newInvoice.id);
+    await supabase.from('invoices').update({ payment_status: 'draft' }).eq('id', quoteId);
     return NextResponse.json({ error: 'Worker dispatch failed. Quote conversion rolled back.' }, { status: 500 });
   }
 
   return NextResponse.json({
-    data: { id: quoteId, invoiceNumber: newInvoiceNumber },
+    data: { id: newInvoice.id, invoiceNumber: newInvoiceNumber },
     status: 200,
   });
 }
