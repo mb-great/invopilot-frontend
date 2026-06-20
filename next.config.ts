@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  allowedDevOrigins: ['0.0.0.0', 'localhost'],
+  allowedDevOrigins: ['localhost'],
   // @ts-ignore - Next.js 16 type definitions might be strict but this is valid
   turbopack: {
     root: __dirname,

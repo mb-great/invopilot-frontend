@@ -22,19 +22,10 @@ export function getBackendUrl(): string {
  * Used for CORS origins, redirect URLs, share links.
  */
 export function getFrontendUrl(): string {
-  // Server-side: use env vars
-  if (typeof window === 'undefined') {
-    const url = process.env.NEXT_PUBLIC_SITE_URL || process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_FRONTEND_URL;
-    if (url) return url.replace(/\/$/, '');
-    if (isDev) return 'http://localhost:3001';
-    throw new Error('[URL] FRONTEND_URL or NEXT_PUBLIC_SITE_URL must be set in production');
-  }
-
-  // Client-side: prefer env var if origin is non-standard (0.0.0.0, etc.)
-  const envUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL;
-  const origin = window.location.origin;
-  if (envUrl && (origin.includes('0.0.0.0') || origin.includes('127.0.0.1'))) {
-    return envUrl.replace(/\/$/, '');
-  }
-  return origin;
+  // Always use env var — no window.location.origin fallback
+  const url = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL;
+  if (url) return url.replace(/\/$/, '');
+  if (typeof window !== 'undefined') return window.location.origin;
+  if (isDev) return 'http://localhost:3001';
+  throw new Error('[URL] NEXT_PUBLIC_SITE_URL must be set in production');
 }
