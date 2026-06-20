@@ -98,11 +98,10 @@ export default async function DashboardPage({
   const businesses = (activeWorkspace?.businesses || []).filter((b: any) => !b.deletedAt);
   const isMultiBusinessLocked = !access.plan.canUseQuotes && !access.isAdmin; // using Quotes access as proxy for Pro tier
 
-  // Fetch only recent invoices to prevent node heap limit crashes (250MB)
+  // Fetch recent invoices AND quotes
   let query = supabase
     .from('invoices')
-    .select('id, amount, currency, payment_status, created_at, nickname, invoice_number, share_slug, status, pdf_url, form_data->>dueDate')
-    .in('payment_status', ['draft', 'unpaid', 'paid', 'overdue'])
+    .select('id, amount, currency, payment_status, delivery_status, created_at, nickname, invoice_number, share_slug, status, pdf_url, type, form_data->>dueDate')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(10);
@@ -118,7 +117,7 @@ export default async function DashboardPage({
   }
 
   const { data: recentInvoicesData } = await query
-  const recentInvoices = recentInvoicesData || []
+  const recentInvoices = (recentInvoicesData || []) as any[]
 
   // Calculate global storage used via RPC (Safe for 250MB heap)
   let currentStorageBytes = 0;
@@ -244,9 +243,9 @@ export default async function DashboardPage({
                 {recentInvoices && recentInvoices.length > 0 ? (
                   <InvoiceTable 
                     invoices={recentInvoices} 
-                    baseStatus="draft,unpaid,paid,overdue"
                     initialMeta={initialMeta}
                     showHeader={false} 
+                    showActions={false}
                     availableCurrencies={availableCurrencies}
                     canExportCsv={access.plan.canExportCsv || access.isAdmin}
                     activeWorkspaceId={activeWorkspace?.id}
