@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { currencyList } from "@/lib/currency";
 import { ChevronDown } from "lucide-react";
 import { useData } from "@/hooks/useData";
@@ -24,6 +24,14 @@ export const PaymentDetailsPreview: React.FC<
 }) => {
   const { companyDetails, invoiceDetails } = useData();
   const [qrUrl, setQrUrl] = useState<string>("");
+  const [methodQrs, setMethodQrs] = useState<Record<number, string>>({});
+
+  const filteredMethods = useMemo(() => {
+    return (selectedMethods || []).filter((m: any) => {
+      const type = (m.type || m.id || '').toLowerCase();
+      return type !== 'bank-details' && type !== 'bank';
+    });
+  }, [selectedMethods]);
 
   const currencyDetails = currencyList.find(
     (currencyDetails) =>
@@ -53,6 +61,23 @@ export const PaymentDetailsPreview: React.FC<
       setQrUrl("");
     }
   }, [upiId, upiLockAmount, showUpiQr, totalAmount, companyDetails?.companyName]);
+
+  useEffect(() => {
+    filteredMethods.forEach((method: any, idx: number) => {
+      if (method.qrBase64) {
+        setMethodQrs(prev => ({ ...prev, [idx]: method.qrBase64 }));
+      } else if (method.details && !method.qrBase64) {
+        let payUrl = method.details;
+        if (method.type === 'phonepe' || method.type === 'gpay' || method.type === 'paytm') {
+          payUrl = `upi://pay?pa=${method.details}&pn=${encodeURIComponent(companyDetails?.companyName || 'Merchant')}&cu=INR`;
+          if (totalAmount <= 100000) payUrl += `&am=${totalAmount.toFixed(2)}`;
+        }
+        QRCode.toDataURL(payUrl, { margin: 1, width: 120, color: { dark: "#000000", light: "#ffffff" } })
+          .then(url => setMethodQrs(prev => ({ ...prev, [idx]: url })))
+          .catch(() => {});
+      }
+    });
+  }, [filteredMethods, totalAmount, companyDetails?.companyName]);
 
   return (
     <div
@@ -142,16 +167,24 @@ export const PaymentDetailsPreview: React.FC<
           )}
         </div>
         {/* Selected Payment Methods (Middle) */}
-        {selectedMethods && selectedMethods.length > 0 && (
+        {filteredMethods.length > 0 && (
           <div className="mt-4 pt-4 border-t border-dashed border-neutral-200 flex flex-col gap-3 animate-in fade-in duration-200">
-            {selectedMethods.map((method: any, idx: number) => (
-              <div key={idx} className="flex flex-col items-start">
-                <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-1">
-                  Pay via {method.title || method.type}
-                </p>
-                <p className="text-[11px] font-medium text-gray-600 leading-tight break-all">
-                  {method.details}
-                </p>
+            {filteredMethods.map((method: any, idx: number) => (
+              <div key={idx} className="flex items-start justify-between gap-2">
+                <div className="flex flex-col items-start flex-1 min-w-0">
+                  <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider mb-1">
+                    Pay via {method.title || method.type}
+                  </p>
+                  <p className="text-[11px] font-medium text-gray-600 leading-tight break-all">
+                    {method.details}
+                  </p>
+                </div>
+                {methodQrs[idx] && (
+                  <div className="flex flex-col items-center flex-shrink-0">
+                    <img src={methodQrs[idx]} alt={`${method.title} QR`} className="w-14 h-14 object-contain" />
+                    <p className="text-[7px] font-bold text-gray-400 mt-0.5 uppercase tracking-tight">{method.title}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
