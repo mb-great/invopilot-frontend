@@ -66,10 +66,10 @@ export const PaymentDetailsPreview: React.FC<
     filteredMethods.forEach((method: any, idx: number) => {
       if (method.qrBase64) {
         setMethodQrs(prev => ({ ...prev, [idx]: method.qrBase64 }));
-      } else if (method.details && !method.qrBase64) {
-        let payUrl = method.details;
+      } else if ((method.details || method.value) && !method.qrBase64) {
+        let payUrl = method.details || method.value;
         if (method.type === 'phonepe' || method.type === 'gpay' || method.type === 'paytm') {
-          payUrl = `upi://pay?pa=${method.details}&pn=${encodeURIComponent(companyDetails?.companyName || 'Merchant')}&cu=INR`;
+          payUrl = `upi://pay?pa=${method.details || method.value}&pn=${encodeURIComponent(companyDetails?.companyName || 'Merchant')}&cu=INR`;
           if (totalAmount <= 100000) payUrl += `&am=${totalAmount.toFixed(2)}`;
         }
         QRCode.toDataURL(payUrl, { margin: 1, width: 120, color: { dark: "#000000", light: "#ffffff" } })
@@ -176,7 +176,7 @@ export const PaymentDetailsPreview: React.FC<
                     Pay via {method.title || method.type}
                   </p>
                   <p className="text-[11px] font-medium text-gray-600 leading-tight break-all">
-                    {method.details}
+                    {method.details || method.value || ''}
                   </p>
                 </div>
                 {methodQrs[idx] && (

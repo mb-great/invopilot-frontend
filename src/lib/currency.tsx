@@ -318,7 +318,7 @@ export const currencyList: {
     label: "BDT",
     details: {
       country: "BD",
-      currencySymbol: "BDT",
+      currencySymbol: "৳",
       currencyName: "Bangladeshi Taka",
       currencyShortForm: "BDT",
       icon: BD,
