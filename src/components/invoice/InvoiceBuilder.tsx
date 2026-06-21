@@ -3,6 +3,7 @@ import { UserInputForm } from "@/components/invoice/form/userInputForm";
 import { FormSteps } from "@/components/invoice/form/step/formSteps";
 import { UserDataPreview } from "@/components/invoice/UserDataPreview";
 import { useForm, FormProvider } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { useGetValue } from "@/hooks/useGetValue";
 import { getInitialValue } from "@/lib/getInitialValue";
@@ -330,6 +331,79 @@ export default function InvoiceBuilder() {
       }
     }
   }, [methods]);
+
+  // Load existing quote for editing
+  const searchParams = useSearchParams();
+  const editId = searchParams?.get('edit');
+  
+  useEffect(() => {
+    if (!editId || !isClient) return;
+    
+    async function loadQuoteForEdit() {
+      try {
+        const res = await fetch(`/api/invoices/${editId}/edit`);
+        if (!res.ok) throw new Error('Failed to load quote');
+        const { data } = await res.json();
+        if (!data?.form_data) throw new Error('No form data found');
+        
+        const fd = data.form_data;
+        methods.reset({
+          step: "5", // Start at review step
+          yourName: fd.yourName || "",
+          yourEmail: fd.yourEmail || "",
+          yourAddress: fd.yourAddress || "",
+          yourCity: fd.yourCity || "",
+          yourState: fd.yourState || "",
+          yourZip: fd.yourZip || "",
+          yourCountry: fd.yourCountry || "India",
+          yourTaxId: fd.yourTaxId || "",
+          yourLogo: fd.yourLogo || "",
+          companyName: fd.companyName || "",
+          email: fd.email || "",
+          companyAddress: fd.companyAddress || "",
+          companyCity: fd.companyCity || "",
+          companyState: fd.companyState || "",
+          companyZip: fd.companyZip || "",
+          companyCountry: fd.companyCountry || "India",
+          companyTaxId: fd.companyTaxId || "",
+          companyLogo: fd.companyLogo || "",
+          invoiceNumber: fd.invoiceNumber || "",
+          issueDate: fd.issueDate ? new Date(fd.issueDate) : new Date(),
+          dueDate: fd.dueDate ? new Date(fd.dueDate) : undefined,
+          currency: fd.currency || "INR",
+          taxRate: fd.taxRate || "0",
+          discount: fd.discount || "0",
+          note: fd.note || "",
+          bankName: fd.bankName || "",
+          accountName: fd.accountName || "",
+          accountNumber: fd.accountNumber || "",
+          ifscCode: fd.ifscCode || "",
+          routingCode: fd.routingCode || "",
+          swiftCode: fd.swiftCode || "",
+          items: fd.items || [{ itemDescription: "", qty: 1, amount: 0 }],
+          selectedMethods: fd.selectedMethods || [],
+          upiId: fd.upiId || "",
+          upiLockAmount: fd.upiLockAmount || false,
+          showUpiQr: fd.showUpiQr || false,
+          nickname: fd.nickname || data.nickname || "",
+          signatureMode: fd.signatureMode || "none",
+          signatureUrl: fd.signatureUrl || "",
+          customSignatureUrl: fd.customSignatureUrl || "",
+          isQuote: true,
+          businessId: fd.businessId || "",
+        });
+        
+        // Store the edit ID for the generate button to use
+        localStorage.setItem('edit_invoice_id', editId!);
+        toast.success('Loaded quote for editing');
+      } catch (err) {
+        toast.error('Failed to load quote for editing');
+        console.error(err);
+      }
+    }
+    
+    loadQuoteForEdit();
+  }, [editId, isClient, methods]);
 
   const handleDiscard = () => {
     if (typeof window !== "undefined") {

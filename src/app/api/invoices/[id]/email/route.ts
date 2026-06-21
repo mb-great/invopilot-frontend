@@ -37,11 +37,16 @@ export async function POST(
 
     const backendUrl = getBackendUrl();
 
+    // Get user's access token for backend auth
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token || '';
+
     // Call internal backend to perform the email sending
     const response = await fetch(`${backendUrl}/email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
         'x-worker-secret': process.env.WORKER_SECRET || '',
       },
       body: JSON.stringify({

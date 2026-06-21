@@ -176,13 +176,13 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Header */}
-        <header className="lg:hidden h-16 bg-white border-b border-ink-200 flex items-center justify-between px-4 shrink-0">
+        <header className="lg:hidden relative z-50 h-16 bg-white border-b border-ink-200 flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-2">
             <img src="/logo.webp" alt="InvoPilot Logo" className="w-7 h-7 object-contain drop-shadow-sm" />
             <span className="font-bold text-md text-ink-900">InvoPilot</span>
           </div>
-          <div className="flex items-center gap-2">
-            <GlobalWorkspaceSwitcher />
+          <div className="flex items-center gap-2 shrink-0">
+            <GlobalWorkspaceSwitcher className="max-w-[160px]" />
             <button 
               className="p-2 text-ink-600 hover:bg-ink-50 rounded-lg"
               onClick={() => setIsMobileMenuOpen(true)}

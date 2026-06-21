@@ -370,6 +370,8 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
                 placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+                autoComplete="email"
                 className="w-full rounded-xl border border-ink-200 pl-11 pr-4 py-3.5 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all bg-white"
                 required
               />
@@ -394,6 +396,8 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+                  autoComplete="current-password"
                   className="w-full rounded-xl border border-ink-200 pl-11 pr-4 py-3.5 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all bg-white"
                   required
                 />

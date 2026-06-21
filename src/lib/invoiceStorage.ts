@@ -18,6 +18,8 @@ export const INVOICE_STORAGE_KEYS = [
   'invoiceNo', 'issueDate', 'dueDate',
   // Builder state
   'step',
+  // Edit state
+  'edit_invoice_id',
 ] as const;
 
 /**

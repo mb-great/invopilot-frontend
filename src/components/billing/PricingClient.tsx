@@ -29,11 +29,12 @@ export default function PricingClient({ profile }: Props) {
   const [interval, setInterval] = useState<BillingInterval>('month');
   const [loadingTier, setLoadingTier] = useState<PaidBillingTier | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [upgradeTarget, setUpgradeTarget] = useState<PaidBillingTier | null>(null);
 
   const handleCancelSubscription = async () => {
     try {
       const res = await fetch('/api/billing/cancel', { method: 'POST' });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to cancel');
       setShowCancelModal(false);
       toast.success(data.message || 'Subscription cancelled');
@@ -44,6 +45,28 @@ export default function PricingClient({ profile }: Props) {
   };
 
   const checkout = async (tier: PaidBillingTier) => {
+    const isActive = access.effectiveTier !== 'free' && !access.isAdmin && !access.isExpired;
+
+    if (isActive) {
+      // Show confirmation for any plan change (upgrade, downgrade, interval switch)
+      setUpgradeTarget(tier);
+      return;
+    }
+    setLoadingTier(tier);
+    await executeCheckout(tier);
+  };
+
+  // Determine change type for the confirmation modal
+  const getChangeType = (target: PaidBillingTier): 'upgrade' | 'downgrade' | 'switch-interval' => {
+    const tierOrder = { starter: 1, pro: 2, business: 3 };
+    const currentRank = tierOrder[access.effectiveTier as keyof typeof tierOrder] || 0;
+    const targetRank = tierOrder[target] || 0;
+    if (targetRank > currentRank) return 'upgrade';
+    if (targetRank < currentRank) return 'downgrade';
+    return 'switch-interval'; // same tier, different interval
+  };
+
+  const executeCheckout = async (tier: PaidBillingTier) => {
     setLoadingTier(tier);
 
     try {
@@ -52,14 +75,13 @@ export default function PricingClient({ profile }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier, interval }),
       });
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         throw new Error(result.error || 'Checkout failed');
       }
 
       if (result.subscription_id) {
-        // Load Razorpay script dynamically
         const loadRazorpay = () => new Promise((resolve) => {
           const script = document.createElement('script');
           script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -76,9 +98,8 @@ export default function PricingClient({ profile }: Props) {
           subscription_id: result.subscription_id,
           name: "InvoPilot",
           description: `${tier.toUpperCase()} Plan`,
-          theme: { color: "#E5853D" }, // brand-600
+          theme: { color: "#E5853D" },
           handler: function (response: any) {
-            // On success, wait 3 seconds for webhook to update DB, then refresh page
             setTimeout(() => {
               router.refresh();
               setLoadingTier(null);
@@ -119,6 +140,86 @@ export default function PricingClient({ profile }: Props) {
         isDestructive={true}
         requirePassword={false}
       />
+
+      {/* Plan Change Confirmation Modal */}
+      {upgradeTarget && (() => {
+        const currentPlan = PLAN_BY_TIER[access.effectiveTier];
+        const newPlan = PLAN_BY_TIER[upgradeTarget];
+        const newPrice = interval === 'month' ? newPlan.monthlyPrice : newPlan.yearlyPrice;
+        const changeType = getChangeType(upgradeTarget);
+        const isIntervalSwitch = changeType === 'switch-interval';
+
+        const title = changeType === 'upgrade' ? 'Upgrade Plan'
+          : changeType === 'downgrade' ? 'Downgrade Plan'
+          : 'Switch Billing Cycle';
+
+        const buttonLabel = changeType === 'upgrade' ? 'Confirm Upgrade'
+          : changeType === 'downgrade' ? 'Confirm Downgrade'
+          : `Switch to ${interval === 'year' ? 'Yearly' : 'Monthly'}`;
+
+        const description = changeType === 'upgrade'
+          ? `Razorpay will charge a prorated amount for the remaining billing period. You\u2019ll see the exact amount on the payment page.`
+          : changeType === 'downgrade'
+          ? `Your plan will change to ${newPlan.name} at the end of your current billing period. No immediate charge.`
+          : `Your billing will switch to ${interval === 'year' ? 'yearly' : 'monthly'} billing at ${newPlan.name} pricing. The change takes effect at your next renewal.`;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+              <h3 className="text-xl font-bold text-ink-900">{title}</h3>
+              <div className="rounded-xl border border-ink-200 p-4 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-ink-500">Current plan</span>
+                  <span className="font-bold text-ink-700">{currentPlan.name}</span>
+                </div>
+                <div className="border-t border-ink-100" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-ink-500">{isIntervalSwitch ? 'Same plan' : changeType === 'upgrade' ? 'Upgrading to' : 'Downgrading to'}</span>
+                  <span className="font-bold text-brand-600">{newPlan.name}</span>
+                </div>
+                {!isIntervalSwitch && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-ink-500">{changeType === 'upgrade' ? 'New price' : 'Price after downgrade'}</span>
+                    <span className="font-bold text-ink-900">${newPrice.toFixed(newPrice % 1 !== 0 ? 2 : 0)}/{interval === 'month' ? 'mo' : 'yr'}</span>
+                  </div>
+                )}
+                {isIntervalSwitch && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-ink-500">New price</span>
+                    <span className="font-bold text-ink-900">${newPrice.toFixed(newPrice % 1 !== 0 ? 2 : 0)}/{interval === 'month' ? 'mo' : 'yr'}</span>
+                  </div>
+                )}
+                <div className="border-t border-ink-100" />
+                <p className="text-xs text-ink-400">{description}</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setUpgradeTarget(null)}
+                  className="flex-1 rounded-xl border border-ink-200 px-4 py-3 text-sm font-bold text-ink-600 hover:bg-ink-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const target = upgradeTarget;
+                    setUpgradeTarget(null);
+                    await executeCheckout(target);
+                  }}
+                  className={`flex-1 rounded-xl px-4 py-3 text-sm font-bold text-white transition-colors shadow-lg ${
+                    changeType === 'downgrade'
+                      ? 'bg-ink-900 hover:bg-ink-800 shadow-ink-900/25'
+                      : 'bg-brand-500 hover:bg-brand-600 shadow-brand-500/25'
+                  }`}
+                >
+                  {buttonLabel}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>

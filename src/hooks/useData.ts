@@ -35,12 +35,16 @@ export const useData = () => {
   const upiId = useGetValue("upiId");
   const upiLockAmount = useGetValue("upiLockAmount", "false") === "true";
   const showUpiQr = useGetValue("showUpiQr", "true") !== "false";
+  const selectedMethods = useGetValue("selectedMethods");
 
   const invoiceNumber = useGetValue("invoiceNo");
   const issueDate = useGetValue("issueDate");
   const dueDate = useGetValue("dueDate");
 
   const currency = useGetValue("currency") || "INR";
+  const signatureUrl = useGetValue("signatureUrl");
+  const customSignatureUrl = useGetValue("customSignatureUrl");
+  const signatureMode = useGetValue("signatureMode");
 
   const invoiceTerms = {
     invoiceNumber,
@@ -66,7 +70,13 @@ export const useData = () => {
     currency,
     upiId,
     upiLockAmount,
-    showUpiQr
+    showUpiQr,
+    selectedMethods: (() => {
+      try {
+        if (!selectedMethods) return [];
+        return typeof selectedMethods === 'string' ? JSON.parse(selectedMethods) : selectedMethods;
+      } catch { return []; }
+    })(),
   };
 
   const yourDetails = {
@@ -99,5 +109,6 @@ export const useData = () => {
     paymentDetails,
     invoiceTerms,
     invoiceDetails,
+    signatureUrl: signatureMode === 'custom' ? customSignatureUrl : signatureMode === 'none' ? null : signatureUrl,
   };
 };

@@ -18,7 +18,7 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-3 bg-white text-slate-900", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -36,7 +36,7 @@ function Calendar({
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",
         weekday:
-          "text-slate-500 rounded-md w-9 font-normal text-[0.8rem]",
+          "text-ink-400 rounded-md w-9 font-normal text-[0.8rem]",
         week: "flex w-full mt-2",
         day: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
         day_button: cn(
@@ -44,12 +44,12 @@ function Calendar({
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
         ),
         selected:
-          "bg-brand-500 text-white hover:bg-brand-600 hover:text-white focus:bg-brand-600 focus:text-white",
+          "bg-ink-900 text-white hover:bg-ink-900 hover:text-white focus:bg-ink-900 focus:text-white",
         today:
-          "bg-brand-50 text-brand-900 font-bold",
+          "bg-ink-100 text-ink-900 font-bold",
         outside:
-          "text-slate-500 opacity-50 aria-selected:bg-slate-100/50 aria-selected:text-slate-500 aria-selected:opacity-30",
-        disabled: "text-slate-500 opacity-50",
+          "text-ink-300 opacity-50 aria-selected:bg-ink-100/50 aria-selected:text-ink-400 aria-selected:opacity-30",
+        disabled: "text-ink-300 opacity-50",
         hidden: "invisible",
         ...classNames,
       }}

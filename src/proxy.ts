@@ -46,7 +46,10 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/billing/unsubscribe') ||
-    pathname.startsWith('/i/') // public share links
+    pathname.startsWith('/api/share') || // public invoice share links
+    pathname.startsWith('/view/') || // public invoice view by filename
+    pathname.startsWith('/i/') || // legacy share links
+    (pathname.startsWith('/invoices/') && pathname !== '/invoices/new' && pathname !== '/invoices') // public share: /invoices/:slug (redirects to /view/)
 
   const isAdminRoute = pathname.startsWith('/admin')
 

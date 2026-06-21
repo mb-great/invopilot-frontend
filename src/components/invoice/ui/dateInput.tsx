@@ -42,7 +42,7 @@ const DateInput = ({ label, variableName }: CustomNumberProps) => {
             <PopoverContent className="w-auto p-0 mt-3" align="end">
               <Calendar
                 mode="single"
-                selected={value ? new Date(value) : undefined}
+                selected={new Date(value)}
                 onSelect={(day: Date | undefined) => {
                   if (day?.toString()) {
                     const updatedValue = day.toString();

@@ -77,7 +77,7 @@ export default function BusinessProfileDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 w-56 bg-white border border-ink-100 rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute top-full mt-2 w-56 bg-white border border-ink-100 rounded-xl shadow-xl z-[150] overflow-hidden">
           {isLocked ? (
             <div className="relative p-1">
               <LockedFeatureOverlay 

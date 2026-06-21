@@ -266,7 +266,7 @@ export default function RecurringClient({ initialTemplates, invoices, maxAllowed
                       })()}
                     </td>
                     <td className="p-4">
-                      <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2">
                         <button 
                           onClick={() => openEditModal(template)}
                           title="Edit Schedule"

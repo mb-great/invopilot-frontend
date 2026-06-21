@@ -10,7 +10,7 @@ export interface PaymentMethod {
 }
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: "stripe", name: "Stripe Connect", badge: "S", color: "#635bff", mode: "url", slug: "stripe" },
+  { id: "stripe", name: "Stripe", badge: "S", color: "#635bff", mode: "url", slug: "stripe" },
   { id: "local", name: "Local transfer", badge: "₿", color: "#2b6cb0", mode: "details", slug: "" },
   { id: "intl", name: "International transfer", badge: "🌐", color: "#d69e2e", mode: "details", slug: "" },
   { id: "paypal", name: "PayPal", badge: "P", color: "#0070ba", mode: "url", slug: "paypal" },

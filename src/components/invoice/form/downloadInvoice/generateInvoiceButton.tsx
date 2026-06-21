@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { resolvePlanAccess } from "@/lib/billing/tiers";
 import { saveRecurringTemplate } from "@/app/dashboard/recurring/actions";
 import PremiumBadge from "@/components/ui/PremiumBadge";
+import HelpPopover from "@/components/ui/HelpPopover";
 import { toast } from "sonner";
 import { clearInvoiceDraft } from "@/lib/invoiceStorage";
 import { useSearchParams } from "next/navigation";
@@ -23,6 +24,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   const [errorMsg, setErrorMsg] = useState("");
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isEmailOpen, setIsEmailOpen] = useState(false);
   const searchParams = useSearchParams();
@@ -33,6 +35,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
   
   // Read isQuote from form context
   const formIsQuote = useWatch({ control, name: "isQuote" });
+  const formNickname = useWatch({ control, name: "nickname" });
   
   // Use form value if available, otherwise use search param
   const effectiveIsQuote = formIsQuote !== undefined ? formIsQuote : isQuote;
@@ -62,6 +65,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
     setErrorMsg("");
     setActiveInvoiceId(null);
     setShareSlug(null);
+    localStorage.removeItem('edit_invoice_id');
 
     // Build full formData matching backend RawInvoiceData contract
     // Merge live react-hook-form values to prevent submitting stale/empty DataContext state
@@ -113,14 +117,19 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
     }
 
     try {
-      const res = await fetch("/api/invoices/generate", {
-        method: "POST",
+      const finalNickname = formNickname?.trim() 
+        ? formNickname.trim()
+        : `${companyDetails.companyName || (effectiveIsQuote ? "Quote" : "Invoice")} - ${invoiceTerms.invoiceNumber || ""}`.trim();
+
+      const editId = typeof window !== 'undefined' ? localStorage.getItem('edit_invoice_id') : null;
+      
+      const res = await fetch(editId ? `/api/invoices/${editId}/edit` : "/api/invoices/generate", {
+        method: editId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          formData,
-          nickname: `${companyDetails.companyName || (effectiveIsQuote ? "Quote" : "Invoice")} - ${invoiceTerms.invoiceNumber || ""}`.trim(),
-          payment_status: effectiveIsQuote ? "quote" : "draft",
-        }),
+        body: JSON.stringify(editId 
+          ? { formData, nickname: finalNickname }
+          : { formData, nickname: finalNickname, payment_status: effectiveIsQuote ? "quote" : "draft" }
+        ),
       });
 
       if (!res.ok) {
@@ -139,7 +148,8 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
       }
 
       const { invoiceId } = await res.json();
-      setActiveInvoiceId(invoiceId);
+      const pollId = editId || invoiceId;
+      setActiveInvoiceId(pollId);
       setStatus("polling");
 
       // Poll for completion
@@ -147,15 +157,17 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
       intervalRef.current = setInterval(async () => {
         attempts++;
         try {
-          const statusRes = await fetch(`/api/invoices/${invoiceId}/status`);
+          const statusRes = await fetch(`/api/invoices/${pollId}/status`);
           if (!statusRes.ok) return;
           const data = await statusRes.json();
 
           if (data.status === "done" || data.status === "completed") {
             clearInterval(intervalRef.current!);
             setShareSlug(data.share_slug);
+            setPdfUrl(data.pdf_url);
             setStatus("done");
             clearInvoiceDraft();
+            if (typeof window !== 'undefined') localStorage.removeItem('edit_invoice_id');
           } else if (data.status === "failed") {
             clearInterval(intervalRef.current!);
             setErrorMsg(data.error_msg || "Generation failed");
@@ -172,6 +184,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         }
       }, 2000);
     } catch (e: unknown) {
+      localStorage.removeItem('edit_invoice_id');
       setErrorMsg(e instanceof Error ? e.message : String(e));
       setStatus("error");
     }
@@ -201,24 +214,50 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
         clientName={companyDetails.companyName || ""}
         senderName={yourDetails?.yourName || ""}
         shareSlug={shareSlug || undefined}
+        pdfUrl={pdfUrl || undefined}
       />
       <div className="w-full text-center">
-        <h1 className="text-2xl md:text-3xl font-bold pb-2 text-ink-900">
-          {status === "done" 
-            ? (effectiveIsQuote ? "Quote Generated!" : "Invoice Generated!") 
-            : effectiveIsQuote ? "Your quote is ready" : "Your invoice is ready"}
-        </h1>
-        <p className="text-ink-500 text-sm pb-4">
-          {status === "done"
-            ? "PDF generated and stored securely."
-            : "Review details before generating."}
-        </p>
+        {(() => {
+          const isEditing = typeof window !== 'undefined' && localStorage.getItem('edit_invoice_id');
+          return (
+            <>
+              <h1 className="text-2xl md:text-3xl font-bold pb-2 text-ink-900">
+                {status === "done" 
+                  ? (isRecurring ? "Template Saved!" : effectiveIsQuote ? (isEditing ? "Quote Updated!" : "Quote Generated!") : "Invoice Generated!") 
+                  : isRecurring ? "Your template is ready" : effectiveIsQuote ? "Your quote is ready" : "Your invoice is ready"}
+              </h1>
+              <p className="text-ink-500 text-sm pb-4">
+                {status === "done"
+                  ? isRecurring ? "Recurring template saved. It will auto-generate drafts on schedule." : "PDF generated and stored securely."
+                  : isEditing ? "Edit the quote details and regenerate." : "Review details before generating."}
+              </p>
+            </>
+          );
+        })()}
 
         {status === "ready" && (() => {
           const access = resolvePlanAccess(profile);
           const canUseRecurring = access.plan.canUseRecurring || access.isAdmin;
           return (
-            <div className="space-y-2 mb-4">
+            <div className="space-y-3 mb-5">
+              <div className="flex flex-col text-left mb-2">
+                <Label htmlFor="nickname" className="text-ink-900 font-bold text-sm mb-1.5 flex items-center gap-1.5">
+                  Internal Nickname (Optional)
+                  <HelpPopover 
+                    title="Invoice Nickname"
+                    content="This nickname is just handy for your reference to search later, and will be included in the filename of the generated PDF."
+                  />
+                </Label>
+                <input
+                  id="nickname"
+                  type="text"
+                  placeholder="e.g. Acme Q3 Retainer"
+                  value={formNickname || ""}
+                  onChange={(e) => setValue("nickname", e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-ink-200 text-sm focus:border-brand-500 outline-none transition-colors"
+                />
+              </div>
+
               <div className="flex items-center justify-between bg-ink-50 p-3 rounded-xl border border-ink-100 relative">
                 <div className="flex flex-col text-left">
                   <Label htmlFor="quote-mode" className="text-ink-900 cursor-pointer font-bold text-xs flex items-center gap-1">
@@ -320,7 +359,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
           <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-2 gap-2 mb-2">
               <a
-                href={`/api/invoices/${activeInvoiceId}/download?view=1`}
+                href={pdfUrl ? `/view/${encodeURIComponent(pdfUrl)}` : `/api/invoices/${activeInvoiceId}/download?view=1`}
                 target="_blank"
                 rel="noreferrer"
                 className="h-10 rounded-lg bg-white border border-ink-200 text-ink-600 font-bold hover:bg-ink-50 transition-colors flex items-center justify-center gap-2 text-sm"
@@ -328,7 +367,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
                 View PDF
               </a>
               <a
-                href={`/api/invoices/${activeInvoiceId}/download`}
+                href={pdfUrl ? `/view/${encodeURIComponent(pdfUrl)}/download` : `/api/invoices/${activeInvoiceId}/download`}
                 className="h-10 rounded-lg bg-brand-500 text-white font-bold hover:bg-brand-600 transition-colors flex items-center justify-center gap-2 text-sm"
               >
                 <Download className="w-3.5 h-3.5" />

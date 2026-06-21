@@ -56,12 +56,30 @@ export const YourDetailsForm = ({ profile, canUploadLogo = false }: { profile: a
       { formField: "ifscCode", val: biz.ifsc || "" },
     ];
 
-    setValue("availableMethods", biz.methods || []);
-    const defaultSelected = (biz.methods || []).slice(0, 2);
-    setValue("selectedMethods", defaultSelected);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("availableMethods", JSON.stringify(biz.methods || []));
-      localStorage.setItem("selectedMethods", JSON.stringify(defaultSelected));
+    // Load payment methods from workspace defaults (not business profile)
+    const wsId = getActiveWorkspaceId();
+    if (wsId) {
+      const supabase = createClient();
+      supabase.from('workspaces').select('defaults').eq('id', wsId).single()
+        .then(({ data: ws }) => {
+          const wsMethods = ws?.defaults?.paymentMethods || [];
+          setValue("availableMethods", wsMethods);
+          const defaultSelected = wsMethods.slice(0, 2);
+          setValue("selectedMethods", defaultSelected);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("availableMethods", JSON.stringify(wsMethods));
+            localStorage.setItem("selectedMethods", JSON.stringify(defaultSelected));
+          }
+        });
+    } else {
+      // Fallback to business profile methods
+      setValue("availableMethods", biz.methods || []);
+      const defaultSelected = (biz.methods || []).slice(0, 2);
+      setValue("selectedMethods", defaultSelected);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("availableMethods", JSON.stringify(biz.methods || []));
+        localStorage.setItem("selectedMethods", JSON.stringify(defaultSelected));
+      }
     }
 
     mappings.forEach(({ formField, val }) => {

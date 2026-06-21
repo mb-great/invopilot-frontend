@@ -34,7 +34,7 @@ export default function StatCards({ topCurrencies, otherCurrencies, businessFilt
       const supabase = createClient();
       const { data } = await supabase
         .from('invoices')
-        .select('currency, payment_status, amount, created_at, due_date')
+        .select('currency, payment_status, type, amount, created_at, due_date')
         .eq('workspace_id', activeWorkspaceId)
         .eq('business_profile_name', businessFilter)
         .is('deleted_at', null);
@@ -54,6 +54,8 @@ export default function StatCards({ topCurrencies, otherCurrencies, businessFilt
         
         const isThisMonth = new Date(inv.created_at).getMonth() === new Date().getMonth() && new Date(inv.created_at).getFullYear() === new Date().getFullYear();
         if (isThisMonth) s.this_month += inv.amount || 0;
+
+        if (inv.type !== 'invoice') return; // We ONLY care about real invoices for revenue metrics!
 
         if (inv.payment_status === 'paid') s.paid += inv.amount || 0;
         if (inv.payment_status === 'unpaid') s.outstanding += inv.amount || 0;

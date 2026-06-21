@@ -14,6 +14,8 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface Invoice {
   payment_status?: string;
+  delivery_status?: string;
+  type?: string;
   form_data?: any;
 }
 
@@ -35,7 +37,7 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
         
         let query = supabase
           .from('invoices')
-          .select('payment_status')
+          .select('payment_status, delivery_status, type')
           .is('deleted_at', null);
           
         if (activeWorkspaceId) {
@@ -62,35 +64,42 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
 
   const chartData = useMemo(() => {
     let paid = 0;
-    let outstanding = 0;
+    let due = 0;
     let overdue = 0;
-    let draft = 0;
+    let sent = 0;
+    let unsent = 0;
 
     invoices.forEach((inv: Invoice) => {
-      const status = inv.payment_status || 'draft';
+      if (inv.type !== 'invoice') return;
+
+      const status = inv.payment_status;
       if (status === 'paid') paid++;
       else if (status === 'overdue') overdue++;
-      else if (status === 'unpaid') outstanding++;
-      else if (status === 'draft') draft++;
+      else if (status === 'unpaid') due++;
+
+      if (inv.delivery_status === 'sent') sent++;
+      else unsent++;
     });
 
-    const hasData = paid > 0 || outstanding > 0 || overdue > 0 || draft > 0;
-    const total = paid + outstanding + overdue + draft;
+    const hasData = paid > 0 || due > 0 || overdue > 0;
+    const total = paid + due + overdue;
 
     return {
-      labels: ['Paid', 'Outstanding', 'Overdue', 'Draft'],
+      labels: ['Paid', 'Due', 'Overdue'],
       datasets: [
         {
-          data: hasData ? [paid, outstanding, overdue, draft] : [1],
+          data: hasData ? [paid, due, overdue] : [1],
           backgroundColor: hasData 
-            ? ['#10b981', '#3b82f6', '#ef4444', '#cbd5e1']
+            ? ['#10b981', '#3b82f6', '#ef4444']
             : ['#f1f5f9'],
           borderWidth: 0,
           cutout: '75%',
         }
       ],
       hasData,
-      total
+      total,
+      sent,
+      unsent
     };
   }, [invoices]);
 
@@ -129,15 +138,15 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
 
   const options: ChartOptions<'doughnut'> = useMemo(() => ({
     responsive: true,
-    maintainAspectRatio: false,
+    maintainAspectRatio: true,
     plugins: {
       legend: {
-        position: 'right',
+        position: 'bottom',
         labels: {
           usePointStyle: true,
-          padding: 20,
+          padding: 16,
           color: '#64748b',
-          font: { size: 12, weight: 500 }
+          font: { size: 11, weight: 500 }
         }
       },
       tooltip: {
@@ -150,16 +159,23 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
   }), [chartData.hasData]);
 
   return (
-    <div className="glass-card flex flex-col h-full bg-white border border-ink-100 rounded-2xl overflow-hidden shadow-sm">
-      <div className="px-6 py-5 border-b border-ink-100">
-        <h2 className="font-bold text-ink-900 tracking-tight text-sm uppercase">Invoice Status</h2>
+    <div className="glass-card flex flex-col bg-white border border-ink-100 rounded-2xl overflow-hidden shadow-sm">
+      <div className="px-6 py-4 border-b border-ink-100">
+        <h2 className="font-bold text-ink-900 tracking-tight text-sm uppercase text-center">Invoice Status</h2>
       </div>
-      <div className="p-6 flex-1 min-h-[240px] flex items-center justify-center">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4">
         {isLoading ? (
           <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
         ) : (
-          <div className="w-full h-full relative">
+          <div className="w-[200px] h-[200px]">
             <Doughnut data={chartData} options={options} plugins={[centerTextPlugin]} />
+          </div>
+        )}
+        {chartData.hasData && (
+          <div className="flex items-center justify-center gap-4 text-xs">
+            <span className="text-green-600 font-semibold">{chartData.sent} sent</span>
+            <span className="text-ink-300">|</span>
+            <span className="text-ink-500 font-semibold">{chartData.unsent} unsent</span>
           </div>
         )}
       </div>

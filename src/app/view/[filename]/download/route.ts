@@ -3,23 +3,22 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ filename: string }> }
 ) {
-  const { slug } = await params;
+  const { filename } = await params;
+  const decodedFilename = decodeURIComponent(filename);
 
-  // Use admin client to bypass RLS for public share links
   const { data: invoice, error } = await supabaseAdmin
     .from('invoices')
     .select('pdf_url, nickname, invoice_number')
-    .eq('share_slug', slug)
+    .eq('pdf_url', decodedFilename)
     .is('deleted_at', null)
     .single();
 
-  if (error || !invoice || !invoice.pdf_url) {
-    return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+  if (error || !invoice?.pdf_url) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  // Download the file directly from storage
   const { data: fileData, error: downloadError } = await supabaseAdmin
     .storage
     .from('invoices')
@@ -29,13 +28,11 @@ export async function GET(
     return NextResponse.json({ error: 'Could not download file' }, { status: 500 });
   }
 
-  // Serve inline (display in browser, not download)
+  const displayFilename = `${invoice.nickname || invoice.invoice_number || 'invoice'}.pdf`.replace(/[^a-z0-9.]/gi, '_');
+
   const headers = new Headers();
   headers.set('Content-Type', 'application/pdf');
-  headers.set('Content-Disposition', 'inline');
+  headers.set('Content-Disposition', `attachment; filename="${displayFilename}"`);
 
-  return new NextResponse(fileData, {
-    status: 200,
-    headers,
-  });
+  return new NextResponse(fileData, { status: 200, headers });
 }

@@ -5,7 +5,7 @@ import { Search, ChevronLeft, ChevronRight, X, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PAYMENT_METHODS = [
-  { id: 'stripe', name: 'Stripe Connect', badge: 'S', color: '#635bff', mode: 'url' as const, slug: 'stripe' },
+  { id: 'stripe', name: 'Stripe Payment Link', badge: 'S', color: '#635bff', mode: 'url' as const, slug: 'stripe' },
   { id: 'local', name: 'Local transfer', badge: '₿', color: '#2b6cb0', mode: 'details' as const, slug: '' },
   { id: 'intl', name: 'International transfer', badge: '🌐', color: '#d69e2e', mode: 'details' as const, slug: '' },
   { id: 'paypal', name: 'PayPal', badge: 'P', color: '#0070ba', mode: 'url' as const, slug: 'paypal' },
@@ -44,6 +44,8 @@ const PAYMENT_METHODS = [
 
 type PaymentMethodItem = (typeof PAYMENT_METHODS)[number];
 
+const UPI_METHODS = ['phonepe', 'gpay', 'paytm'];
+
 export interface SelectedPaymentMethod {
   id: string;
   title: string;
@@ -62,38 +64,12 @@ interface PaymentMethodModalProps {
 }
 
 function MethodBadge({ method, size = 26 }: { method: PaymentMethodItem; size?: number }) {
-  if (!method.slug) {
-    return (
-      <div
-        className="rounded-lg flex items-center justify-center font-bold text-white shrink-0"
-        style={{ width: size, height: size, backgroundColor: method.color, fontSize: size * 0.45 }}
-      >
-        {method.badge}
-      </div>
-    );
-  }
-
   return (
     <div
-      className="rounded-lg flex items-center justify-center bg-white border border-ink-100 overflow-hidden shrink-0"
-      style={{ width: size, height: size }}
+      className="rounded-lg flex items-center justify-center font-bold text-white shrink-0"
+      style={{ width: size, height: size, backgroundColor: method.color, fontSize: size * 0.45 }}
     >
-      <img
-        src={`https://cdn.simpleicons.org/${method.slug}`}
-        alt={method.name}
-        style={{ width: size * 0.6, height: size * 0.6, objectFit: 'contain' }}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          const parent = target.parentElement;
-          if (parent) {
-            const fallback = document.createElement('div');
-            fallback.className = 'flex items-center justify-center font-bold text-white rounded-lg';
-            fallback.style.cssText = `width:${size}px;height:${size}px;background:${method.color};font-size:${size * 0.45}px`;
-            fallback.textContent = method.badge;
-            parent.replaceWith(fallback);
-          }
-        }}
-      />
+      {method.badge}
     </div>
   );
 }
@@ -301,7 +277,38 @@ function PickerView({
           <p className="text-sm text-ink-500 text-center py-8">No methods found.</p>
         ) : (
           <div className="space-y-1">
-            {filtered.map((method) => (
+            {!search && (
+              <>
+                {filtered.filter(m => m.id === 'upi' || UPI_METHODS.includes(m.id)).length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest mb-1 px-3">UPI & UPI Apps</p>
+                    {filtered.filter(m => m.id === 'upi' || UPI_METHODS.includes(m.id)).map((method) => (
+                      <button
+                        key={method.id}
+                        onClick={() => onSelect(method)}
+                        className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ink-50 transition-colors group text-left"
+                      >
+                        <MethodBadge method={method} size={44} />
+                        <span className="text-[15px] font-semibold text-ink-900 flex-1">{method.name}</span>
+                        <ChevronRight className="w-[18px] h-[18px] text-ink-500 group-hover:text-brand-500 transition-colors" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {filtered.filter(m => m.id !== 'upi' && !UPI_METHODS.includes(m.id)).map((method) => (
+                  <button
+                    key={method.id}
+                    onClick={() => onSelect(method)}
+                    className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-ink-50 transition-colors group text-left"
+                  >
+                    <MethodBadge method={method} size={44} />
+                    <span className="text-[15px] font-semibold text-ink-900 flex-1">{method.name}</span>
+                    <ChevronRight className="w-[18px] h-[18px] text-ink-500 group-hover:text-brand-500 transition-colors" />
+                  </button>
+                ))}
+              </>
+            )}
+            {search && filtered.map((method) => (
               <button
                 key={method.id}
                 onClick={() => onSelect(method)}

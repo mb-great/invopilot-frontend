@@ -5,6 +5,7 @@ import StatCards from '@/components/admin/StatCards'
 import AdminTable from '@/components/admin/AdminTable'
 import RecentActivity from '@/components/admin/RecentActivity'
 import InviteUserForm from '@/components/admin/InviteUserForm'
+import ErrorLogs from '@/components/admin/ErrorLogs'
 import { Activity } from 'lucide-react'
 import Link from 'next/link'
 import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
@@ -206,6 +207,8 @@ export default async function AdminPage({
               </div>
             </div>
           </div>
+
+          <ErrorLogs />
         </div>
       </div>
     </DashboardShell>

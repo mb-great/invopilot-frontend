@@ -118,7 +118,7 @@ export default function GlobalWorkspaceSwitcher({ className = '' }: { className?
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full relative flex items-center justify-between gap-2 px-3 py-2 bg-white border border-ink-200 rounded-lg shadow-sm hover:bg-ink-50 transition-colors"
+        className="relative flex items-center justify-between gap-2 px-3 py-2 bg-white border border-ink-200 rounded-lg shadow-sm hover:bg-ink-50 transition-colors min-w-0"
       >
         <div className="flex items-center gap-2 overflow-hidden">
           {activeWorkspace.owner_id ? <User className="w-4 h-4 text-ink-500 shrink-0" /> : <Building className="w-4 h-4 text-ink-500 shrink-0" />}

@@ -44,14 +44,14 @@ export default async function QuotesPage() {
     .from('invoices')
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', activeWorkspaceId)
-    .in('payment_status', ['quote', 'converted'])
+    .in('payment_status', ['draft', 'converted'])
     .is('deleted_at', null)
 
   const { data: quotes } = await supabase
     .from('invoices')
     .select('*, profiles(full_name, avatar_url, email)')
     .eq('workspace_id', activeWorkspaceId)
-    .in('payment_status', ['quote', 'converted'])
+    .in('payment_status', ['draft', 'converted'])
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(0, 9)
@@ -128,11 +128,16 @@ export default async function QuotesPage() {
                   showHeader={false}
                   canUseQuotes={access.plan.canUseQuotes || access.isAdmin}
                   canExportCsv={access.plan.canExportCsv || access.isAdmin}
-                  baseStatus="quote,converted"
+                  baseStatus="draft,converted"
                   activeWorkspaceId={activeWorkspaceId}
                 />
               ) : (
-                <EmptyState />
+                <EmptyState 
+                  title="No quotes yet"
+                  message="Create your first quote to send to clients. Quotes can be converted to invoices with one click."
+                  href="/invoices/new?type=quote"
+                  buttonText="Create Quote"
+                />
               )}
             </div>
           </div>

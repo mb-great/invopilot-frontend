@@ -49,27 +49,7 @@ const MethodIcon = memo(function MethodIcon({ id, color, badge, size = 32, class
       </div>
     );
   }
-  
-  const pm = PM_MAP[id];
-  const slug = pm?.slug;
-  if (slug) {
-    return (
-      <div className={`rounded-[12px] flex items-center justify-center bg-white border border-ink-100 overflow-hidden shrink-0 ${className}`} style={{ width: size, height: size }}>
-        <img
-          src={`https://cdn.simpleicons.org/${slug}`}
-          alt={badge}
-          loading="lazy"
-          decoding="async"
-          style={{ width: size * 0.6, height: size * 0.6, objectFit: 'contain' }}
-          onError={e => {
-            const img = e.target as HTMLImageElement;
-            img.style.display = 'none';
-            if (img.parentElement) img.parentElement.style.backgroundColor = color;
-          }}
-        />
-      </div>
-    );
-  }
+  // All methods use colored badge — no external CDN fetches
   return (
     <div className={`rounded-[12px] flex items-center justify-center font-bold text-white shrink-0 text-xs ${className}`} style={{ width: size, height: size, backgroundColor: color }}>
       {badge}
@@ -613,21 +593,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
         )}
       </div>
 
-      {activeBusinesses.length === 0 ? (
-        <div className="glass-card p-12 bg-white border border-ink-100 shadow-sm text-center rounded-2xl">
-          <div className="w-16 h-16 rounded-2xl bg-ink-100 flex items-center justify-center mx-auto mb-6">
-            <Building2 className="w-8 h-8 text-ink-400" />
-          </div>
-          <h3 className="text-xl font-bold text-ink-900 mb-2">No business profiles yet</h3>
-          <p className="text-ink-500 mb-6">Create a business profile first to add payment methods.</p>
-          <button
-            onClick={() => router.push('/dashboard/settings')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-brand-500 text-white font-bold rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
-          >
-            Go to Settings <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      ) : localMethods.length === 0 ? (
+      {localMethods.length === 0 ? (
         <div className="glass-card p-12 bg-white border border-ink-100 shadow-sm text-center rounded-2xl">
           <div className="w-16 h-16 rounded-2xl bg-ink-100 flex items-center justify-center mx-auto mb-6">
             <CreditCard className="w-8 h-8 text-ink-400" />

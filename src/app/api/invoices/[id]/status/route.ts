@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-type PaymentStatus = 'draft' | 'unpaid' | 'paid' | 'overdue' | 'cancelled';
+type PaymentStatus = 'draft' | 'unpaid' | 'paid' | 'overdue' | 'converted';
 
 type UpdateInvoiceBody = {
   payment_status?: unknown;
-  share_expires_at?: string | null;
+  delivery_status?: unknown;
 };
 
 export async function GET(
@@ -38,12 +38,12 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = (await request.json()) as UpdateInvoiceBody;
-  const { payment_status } = body;
+  const { payment_status, delivery_status } = body;
 
   const updateData: any = {};
 
   if (payment_status !== undefined) {
-    const allowedStatuses: PaymentStatus[] = ['draft', 'unpaid', 'paid', 'overdue', 'cancelled'];
+    const allowedStatuses: PaymentStatus[] = ['unpaid', 'draft', 'paid', 'overdue', 'converted'];
     if (typeof payment_status === 'string' && allowedStatuses.includes(payment_status as PaymentStatus)) {
       updateData.payment_status = payment_status;
       if (payment_status === 'paid') {
@@ -51,6 +51,13 @@ export async function PATCH(
       } else {
         updateData.paid_at = null;
       }
+    }
+  }
+
+  if (delivery_status !== undefined) {
+    const allowedDelivery = ['unsent', 'sent'];
+    if (typeof delivery_status === 'string' && allowedDelivery.includes(delivery_status)) {
+      updateData.delivery_status = delivery_status;
     }
   }
 

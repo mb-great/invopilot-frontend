@@ -10,6 +10,11 @@ export const InvoiceTermsForm = () => (
       placeholder="INVOICE-01"
       variableName="invoiceNo"
     />
+    <CustomTextInput
+      label="Nickname (Optional)"
+      placeholder="e.g. Acme Q3 Retainer"
+      variableName="nickname"
+    />
     <DateInput label="Issue date" variableName="issueDate" />
     <DateInput label="Due date" variableName="dueDate" />
   </div>

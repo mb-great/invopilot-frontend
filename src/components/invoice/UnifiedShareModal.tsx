@@ -102,12 +102,13 @@ export default function UnifiedShareModal({
   clientEmail,
   clientName,
   senderName,
+  pdfUrl,
   shareSlug,
   formData,
   senderMethod = 'system',
   senderEmail,
 }: UnifiedShareModalProps) {
-  const hasShare = Boolean(shareSlug);
+  const hasShare = Boolean(pdfUrl);
   const [tab, setTab] = useState<'email' | 'share'>('email');
   const [toChips, setToChips] = useState<string[]>(clientEmail ? [clientEmail] : []);
   const [ccChips, setCcChips] = useState<string[]>([]);
@@ -134,8 +135,8 @@ export default function UnifiedShareModal({
     }
   }, [isOpen]);
 
-  const shareUrl = hasShare && typeof window !== 'undefined'
-    ? `${window.location.origin}/i/${shareSlug}`
+  const shareUrl = pdfUrl && typeof window !== 'undefined'
+    ? `${window.location.origin}/view/${encodeURIComponent(pdfUrl)}`
     : '';
 
   const [subject, setSubject] = useState(

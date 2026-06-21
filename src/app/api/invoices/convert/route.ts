@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       client_email: quote.client_email,
       business_profile_name: quote.business_profile_name,
       type: 'invoice',
-      payment_status: 'due',
+      payment_status: 'unpaid',
       delivery_status: 'unsent',
       pdf_retry_count: 0,
       invoice_number: newInvoiceNumber,

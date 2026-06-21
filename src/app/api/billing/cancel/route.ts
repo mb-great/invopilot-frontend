@@ -26,6 +26,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Subscription ID not found' }, { status: 400 });
   }
 
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    return NextResponse.json({ error: 'Payment gateway not configured.' }, { status: 500 });
+  }
+
   const rzp = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID!,
     key_secret: process.env.RAZORPAY_KEY_SECRET!,

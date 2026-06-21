@@ -2,7 +2,8 @@
 
 import { format } from 'date-fns';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X, Columns, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X, Columns, ArrowUpDown, ArrowUp, ArrowDown, Link2, Pencil } from 'lucide-react';
 import { flexRender, getCoreRowModel, useReactTable, ColumnDef, VisibilityState, SortingState } from '@tanstack/react-table';
 import UnifiedShareModal from '@/components/invoice/UnifiedShareModal';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
@@ -17,6 +18,7 @@ interface Invoice {
   status: string;
   type: string;
   payment_status: string;
+  delivery_status: string;
   pdf_url: string | null;
   amount: number;
   currency: string;
@@ -50,6 +52,7 @@ export default function InvoiceTable({
   initialMeta,
   showHeader = true,
   showPaymentToggle = false,
+  showActions = true,
   availableCurrencies = [],
   targetUserId,
   canUseQuotes = false,
@@ -62,6 +65,7 @@ export default function InvoiceTable({
   initialMeta?: Meta,
   showHeader?: boolean,
   showPaymentToggle?: boolean,
+  showActions?: boolean,
   availableCurrencies?: string[],
   targetUserId?: string,
   canUseQuotes?: boolean,
@@ -70,6 +74,7 @@ export default function InvoiceTable({
   activeWorkspaceId?: string,
   businessFilter?: string | null
 }) {
+  const router = useRouter();
   const [invoices, setInvoices] = useState(initialInvoices);
   const [meta, setMeta] = useState<Meta>(initialMeta || { page: 1, limit: 10, totalPages: 1 });
   const [loading, setLoading] = useState(false);
@@ -81,7 +86,7 @@ export default function InvoiceTable({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   // Modal State
-  const [unifiedModal, setUnifiedModal] = useState<{ isOpen: boolean; invoiceId: string; invoiceNumber: string; clientEmail: string; shareSlug?: string }>({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' });
+  const [unifiedModal, setUnifiedModal] = useState<{ isOpen: boolean; invoiceId: string; invoiceNumber: string; clientEmail: string; shareSlug?: string; pdfUrl?: string }>({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; isBulk?: boolean }>({ isOpen: false, id: null });
 
   // Filters
@@ -170,7 +175,7 @@ export default function InvoiceTable({
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, currencyFilter, dateType, dateValue, sortBy, targetUserId, mounted, baseStatus, activeWorkspaceId, businessFilter]);
+  }, [page, search, statusFilter, currencyFilter, typeFilter, dateType, dateValue, sortBy, targetUserId, mounted, baseStatus, activeWorkspaceId, businessFilter]);
 
   useEffect(() => {
     if (mounted && typeof window !== 'undefined') {
@@ -206,6 +211,7 @@ export default function InvoiceTable({
       });
       
       if (!res.ok) throw new Error('Update failed');
+      router.refresh();
     } catch (err) {
       // 2. Revert on error
       setInvoices(prevInvoices);
@@ -237,14 +243,14 @@ export default function InvoiceTable({
   const handleShare = (id: string) => {
     const inv = invoices.find(i => i.id === id);
     if (inv) {
-      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined });
+      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined, pdfUrl: inv.pdf_url || undefined });
     }
   };
 
   const handleSendEmail = (id: string) => {
     const inv = invoices.find(i => i.id === id);
     if (inv) {
-      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined });
+      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined, pdfUrl: inv.pdf_url || undefined });
     }
   };
 
@@ -336,7 +342,7 @@ export default function InvoiceTable({
   const getPaymentStatusClass = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-emerald-500 text-white border-emerald-600';
-      case 'due': return 'bg-brand-500/10 text-brand-600 border-brand-500/20';
+      case 'unpaid': return 'bg-brand-500/10 text-brand-600 border-brand-500/20';
       case 'overdue': return 'bg-red-500/10 text-red-600 border-red-500/20';
       case 'draft': return 'bg-ink-100 text-ink-600 border-ink-200';
       case 'converted': return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
@@ -384,7 +390,7 @@ export default function InvoiceTable({
     }
   }, [columnVisibility]);
 
-  const columns = useMemo<ColumnDef<Invoice>[]>(() => [
+  const allColumns = useMemo<ColumnDef<Invoice>[]>(() => [
     {
       id: 'select',
       header: ({ table }) => (
@@ -415,9 +421,14 @@ export default function InvoiceTable({
 
         return (
           <div className="flex flex-col min-w-0 max-w-[250px]">
-            <span className="truncate font-bold text-sm text-ink-900" title={title}>
-              {title}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="truncate font-bold text-sm text-ink-900" title={title}>
+                {title}
+              </span>
+              {row.original.type === 'quote' && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 uppercase shrink-0">Quote</span>
+              )}
+            </div>
             
             {client && (
               <span className="text-[12px] text-ink-600 truncate mt-0.5" title={client}>
@@ -479,7 +490,7 @@ export default function InvoiceTable({
       accessorKey: 'payment_status',
       header: 'Status',
       cell: ({ row }) => {
-        const isPastDue = row.original.payment_status === 'due' && row.original.due_date && new Date(row.original.due_date) < new Date();
+        const isPastDue = row.original.payment_status === 'unpaid' && row.original.due_date && new Date(row.original.due_date) < new Date();
         const displayStatus = row.original.payment_status === 'overdue' || isPastDue ? 'overdue' : row.original.payment_status;
         
         return (
@@ -487,6 +498,11 @@ export default function InvoiceTable({
             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border inline-block uppercase tracking-wider ${getPaymentStatusClass(displayStatus)}`}>
               {displayStatus === 'paid' ? 'Paid' : displayStatus === 'converted' ? 'Converted' : displayStatus === 'draft' ? 'Draft' : displayStatus === 'quote' ? 'Quote' : displayStatus === 'overdue' ? 'Overdue' : 'Due'}
             </span>
+            {row.original.delivery_status === 'sent' ? (
+              <span className="text-[9px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded inline-block">Sent</span>
+            ) : (
+              <span className="text-[9px] text-ink-400 font-medium bg-ink-50 px-1.5 py-0.5 rounded inline-block">Unsent</span>
+            )}
             {row.original.status !== 'done' && (
               <span className="text-[9px] text-ink-400 italic">PDF: {row.original.status}</span>
             )}
@@ -504,20 +520,40 @@ export default function InvoiceTable({
           <div className="flex justify-end items-center gap-1 flex-wrap min-w-[140px]">
             {inv.status === 'done' ? (
               <>
-                <a href={inv.share_slug ? `/invoices/${inv.share_slug}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
-                <a href={inv.share_slug ? `/api/share/${inv.share_slug}?download=1` : `/api/invoices/${inv.id}/download`} className="p-1.5 text-ink-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></a>
+                <a href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
+                <a href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`} className="p-1.5 text-ink-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></a>
                 <button onClick={() => handleShare(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Share</button>
                 <button onClick={() => handleSendEmail(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Email</button>
-                {inv.payment_status === 'quote' && (
-                  <button
-                    onClick={() => canUseQuotes ? handleConvert(inv.id) : toast.error('Upgrade to Pro to convert quotes')}
-                    disabled={convertingId === inv.id}
-                    className={`text-[11px] font-bold px-2 py-1 transition-colors flex items-center gap-1 ${canUseQuotes ? 'text-purple-600 hover:text-purple-700' : 'text-ink-300 cursor-not-allowed'}`}
-                    title={canUseQuotes ? 'Convert to Invoice' : 'Pro+ required'}
-                  >
-                    {convertingId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRightLeft className="w-3 h-3" />}
-                    Convert
-                  </button>
+                {inv.pdf_url && (
+                  <button 
+                    onClick={async () => { 
+                      const newStatus = inv.delivery_status === 'sent' ? 'unsent' : 'sent';
+                      await fetch(`/api/invoices/${inv.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_status: newStatus }) });
+                      setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: newStatus } : i));
+                      toast.success(newStatus === 'sent' ? 'Marked as sent' : 'Marked as unsent');
+                    }}
+                    className={`text-[11px] font-bold px-2 py-1 ${inv.delivery_status === 'sent' ? 'text-green-600 hover:text-green-700' : 'text-ink-400 hover:text-green-600'}`}
+                  >{inv.delivery_status === 'sent' ? ' Mark Unsent' : 'Mark Sent'}</button>
+                )}
+                {inv.type === 'quote' && inv.payment_status === 'draft' && (
+                  <>
+                    <button
+                      onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`}
+                      className="text-[11px] font-bold px-2 py-1 text-ink-500 hover:text-brand-600 flex items-center gap-1"
+                      title="Edit Quote"
+                    >
+                      <Pencil className="w-3 h-3" /> Edit
+                    </button>
+                    <button
+                      onClick={() => canUseQuotes ? handleConvert(inv.id) : toast.error('Upgrade to Pro to convert quotes')}
+                      disabled={convertingId === inv.id}
+                      className={`text-[11px] font-bold px-2 py-1 transition-colors flex items-center gap-1 ${canUseQuotes ? 'text-purple-600 hover:text-purple-700' : 'text-ink-300 cursor-not-allowed'}`}
+                      title={canUseQuotes ? 'Convert to Invoice' : 'Pro+ required'}
+                    >
+                      {convertingId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRightLeft className="w-3 h-3" />}
+                      Convert
+                    </button>
+                  </>
                 )}
                 {showPaymentToggle && (
                   <button 
@@ -550,6 +586,10 @@ export default function InvoiceTable({
       }
     }
   ], [invoices, selectedIds, convertingId, loadingId, canUseQuotes, showPaymentToggle]);
+
+  const columns = useMemo(() => {
+    return showActions ? allColumns : allColumns.filter((col: any) => col.id !== 'actions');
+  }, [allColumns, showActions]);
 
   const table = useReactTable({
     data: invoices,
@@ -607,6 +647,7 @@ export default function InvoiceTable({
         invoiceNumber={unifiedModal.invoiceNumber}
         clientEmail={unifiedModal.clientEmail}
         shareSlug={unifiedModal.shareSlug}
+        pdfUrl={unifiedModal.pdfUrl}
       />
 
       <ConfirmationModal
@@ -693,7 +734,7 @@ export default function InvoiceTable({
                 >
                   <option value="">All Status</option>
                   <option value="paid">Paid</option>
-                  <option value="due">Due</option>
+                  <option value="unpaid">Due</option>
                   <option value="overdue">Overdue</option>
                   <option value="draft">Draft (Quote)</option>
                   <option value="converted">Converted (Quote)</option>
