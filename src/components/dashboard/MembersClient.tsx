@@ -345,11 +345,11 @@ export default function MembersClient({ workspaceId, workspaceName, userRole, me
                         </div>
                       )}
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-ink-900 leading-tight">
                         <span className="font-bold">{creatorName}</span>
-                        {inv.profiles?.email && (
-                          <span className="text-xs font-normal text-ink-400 ml-1">
+                        {inv.profiles?.email && !inv.profiles.email.includes('+deleted') && (
+                          <span className="text-xs font-normal text-ink-400 ml-1 truncate inline-block max-w-[180px]">
                             ({inv.profiles.email})
                           </span>
                         )}
