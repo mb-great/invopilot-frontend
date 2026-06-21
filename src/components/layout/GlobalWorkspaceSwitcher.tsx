@@ -118,9 +118,9 @@ export default function GlobalWorkspaceSwitcher({ className = '' }: { className?
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative flex items-center justify-between gap-2 px-3 py-2 bg-white border border-ink-200 rounded-lg shadow-sm hover:bg-ink-50 transition-colors min-w-0"
+        className="relative flex items-center justify-between gap-2 px-3 py-2 bg-white border border-ink-200 rounded-lg shadow-sm hover:bg-ink-50 transition-colors w-full min-w-0"
       >
-        <div className="flex items-center gap-2 overflow-hidden">
+        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
           {activeWorkspace.owner_id ? <User className="w-4 h-4 text-ink-500 shrink-0" /> : <Building className="w-4 h-4 text-ink-500 shrink-0" />}
           <span className="text-sm font-bold text-ink-900 truncate">
             {activeWorkspace.displayName || activeWorkspace.name || 'Workspace'}
@@ -136,7 +136,7 @@ export default function GlobalWorkspaceSwitcher({ className = '' }: { className?
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 lg:right-0 lg:left-auto mt-2 w-full min-w-[240px] bg-white border border-ink-150 rounded-xl shadow-xl z-[150] overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-0 mt-2 w-[min(280px,calc(100vw-2rem))] bg-white border border-ink-150 rounded-xl shadow-xl z-[150] overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           
           {/* Workspaces Section */}
           <div className="px-3 py-2 border-b border-ink-100 bg-ink-50/50 flex items-center justify-between">
@@ -147,13 +147,13 @@ export default function GlobalWorkspaceSwitcher({ className = '' }: { className?
               <button
                 key={ws.id}
                 onClick={() => handleSelect(ws.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-colors ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-colors min-w-0 gap-2 ${
                   activeWorkspaceId === ws.id ? 'bg-brand-50 text-brand-900' : 'hover:bg-ink-50 text-ink-700'
                 }`}
               >
-                <div className="flex items-center gap-2 truncate">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                   {ws.owner_id ? <User className="w-4 h-4 text-ink-400 shrink-0" /> : <Building className="w-4 h-4 text-ink-400 shrink-0" />}
-                  <span className="text-sm font-medium truncate">{ws.displayName || ws.name}</span>
+                  <span className="text-sm font-medium truncate block">{ws.displayName || ws.name}</span>
                 </div>
                 {activeWorkspaceId === ws.id && <Check className="w-4 h-4 text-brand-600 shrink-0" />}
               </button>
