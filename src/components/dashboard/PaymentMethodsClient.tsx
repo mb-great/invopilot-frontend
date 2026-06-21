@@ -15,6 +15,7 @@ export type SavedPaymentMethod = {
   qr?: string;
   color: string;
   badge: string;
+  slug?: string;
 };
 
 type BusinessProfile = {
@@ -34,7 +35,8 @@ interface PaymentMethodsClientProps {
 }
 
 
-const MethodIcon = memo(function MethodIcon({ id, color, badge, size = 32, className = '' }: { id: string; color: string; badge: string; size?: number; className?: string }) {
+const MethodIcon = memo(function MethodIcon({ id, color, badge, slug, size = 32, className = '' }: { id: string; color: string; badge: string; slug?: string; size?: number; className?: string }) {
+  const [imgFailed, setImgFailed] = useState(false);
   if (id === 'bank-details') {
     return (
       <div className={`rounded-[12px] flex items-center justify-center font-bold text-white shrink-0 ${className}`} style={{ width: size, height: size, backgroundColor: '#1a56db' }}>
@@ -49,7 +51,17 @@ const MethodIcon = memo(function MethodIcon({ id, color, badge, size = 32, class
       </div>
     );
   }
-  // All methods use colored badge — no external CDN fetches
+  if (slug && !imgFailed) {
+    return (
+      <img
+        src={`https://cdn.simpleicons.org/${slug}`}
+        alt={badge}
+        className={`rounded-[12px] shrink-0 object-contain ${className}`}
+        style={{ width: size, height: size }}
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
   return (
     <div className={`rounded-[12px] flex items-center justify-center font-bold text-white shrink-0 text-xs ${className}`} style={{ width: size, height: size, backgroundColor: color }}>
       {badge}
@@ -134,7 +146,7 @@ function MethodPickerModal({ onSelect, onClose, canUseUpi }: { onSelect: (id: st
                   onClick={() => onSelect(method.id)}
                   className="w-full flex items-center gap-[15px] p-3 rounded-[14px] hover:bg-brand-50 transition-colors group text-left"
                 >
-                  <MethodIcon id={method.id} color={method.color} badge={method.badge} size={44} />
+                  <MethodIcon id={method.id} color={method.color} badge={method.badge} slug={method.slug} size={44} />
                   <span className="text-[17px] font-semibold text-ink-900 flex-1">{method.name}</span>
                   <ChevronRight className="w-[18px] h-[18px] text-gray-400 group-hover:text-brand-500 transition-colors" />
                 </button>
@@ -333,6 +345,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
     
     let color = '#666';
     let badge = modalState.typeId.toUpperCase().slice(0, 2);
+    let slug = '';
 
     if (modalState.typeId === 'bank-details') {
       color = '#1a56db';
@@ -345,6 +358,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
       if (pmInfo) {
         color = pmInfo.color;
         badge = pmInfo.badge;
+        slug = pmInfo.slug;
       }
     }
 
@@ -355,6 +369,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
       qr: modalState.qrPreview || undefined,
       color,
       badge,
+      slug,
     };
 
     const updated = [...localMethods];
@@ -417,6 +432,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
                       id={modalState.typeId} 
                       color={modalState.typeId === 'bank-details' ? '#1a56db' : modalState.typeId === 'upi' ? '#5f259f' : (pmInfo?.color || '#666')} 
                       badge={modalState.typeId === 'bank-details' ? '🏦' : modalState.typeId === 'upi' ? 'UPI' : (pmInfo?.badge || '?')} 
+                      slug={pmInfo?.slug}
                       size={40} 
                     />
                   </div>
@@ -444,6 +460,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
                     id={modalState.typeId} 
                     color={modalState.typeId === 'bank-details' ? '#1a56db' : modalState.typeId === 'upi' ? '#5f259f' : (pmInfo?.color || '#666')} 
                     badge={modalState.typeId === 'bank-details' ? '🏦' : modalState.typeId === 'upi' ? 'UPI' : (pmInfo?.badge || '?')} 
+                    slug={pmInfo?.slug}
                     size={28} 
                   />
                   <span className="text-[16px] font-medium text-ink-900 flex-1">{methodDisplayName}</span>
@@ -624,7 +641,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
                   <tr key={`${method.id}-${idx}`} className="hover:bg-ink-50/50 transition-colors group">
                     <td className="px-6 py-4 align-middle">
                       <div className="flex items-center gap-3">
-                        <MethodIcon id={method.id} color={method.color} badge={method.badge} size={32} />
+                        <MethodIcon id={method.id} color={method.color} badge={method.badge} slug={method.slug} size={32} />
                         <span className="font-bold text-ink-900 text-sm">{method.title}</span>
                       </div>
                     </td>
