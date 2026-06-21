@@ -60,7 +60,7 @@ export default function EmailSettings() {
   }
 
   async function handleConnectGmail() {
-    const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001';
+    const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!clientId) {
       toast.error('Google Client ID not configured.');

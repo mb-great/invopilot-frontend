@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001'}/api/settings/sender-config/gmail-callback`,
+        redirect_uri: `${process.env.NEXT_PUBLIC_FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/settings/sender-config/gmail-callback`,
         grant_type: 'authorization_code',
       }),
     });
