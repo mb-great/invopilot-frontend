@@ -241,24 +241,6 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
           const canUseRecurring = access.plan.canUseRecurring || access.isAdmin;
           return (
             <div className="space-y-3 mb-5">
-              <div className="flex flex-col text-left mb-2">
-                <Label htmlFor="nickname" className="text-ink-900 font-bold text-sm mb-1.5 flex items-center gap-1.5">
-                  Internal Nickname (Optional)
-                  <HelpPopover 
-                    title="Invoice Nickname"
-                    content="This nickname is just handy for your reference to search later, and will be included in the filename of the generated PDF."
-                  />
-                </Label>
-                <input
-                  id="nickname"
-                  type="text"
-                  placeholder="e.g. Acme Q3 Retainer"
-                  value={formNickname || ""}
-                  onChange={(e) => setValue("nickname", e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-ink-200 text-sm focus:border-brand-500 outline-none transition-colors"
-                />
-              </div>
-
               <div className="flex items-center justify-between bg-ink-50 p-3 rounded-xl border border-ink-100 relative">
                 <div className="flex flex-col text-left">
                   <Label htmlFor="quote-mode" className="text-ink-900 cursor-pointer font-bold text-xs flex items-center gap-1">
