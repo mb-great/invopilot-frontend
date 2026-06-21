@@ -41,7 +41,7 @@ export async function POST(
     });
 
     if (!res.ok) {
-      const errData = await res.json();
+      const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || 'Backend queue failed');
     }
 

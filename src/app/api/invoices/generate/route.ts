@@ -89,7 +89,7 @@ export async function POST(request: Request) {
   }
 
   // 3.4. Quote Feature Gate Check
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   if (body.payment_status === 'quote' && !access.plan.canUseQuotes && !access.isAdmin) {
     return NextResponse.json(
       { error: 'Quotes require Pro or Business subscription.', code: 'PREMIUM_FEATURE_LOCKED' },

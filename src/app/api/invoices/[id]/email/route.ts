@@ -77,7 +77,7 @@ export async function POST(
       throw new Error(errData.error || `Backend responded with ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     return NextResponse.json(data);
   } catch (err: unknown) {
     console.error('Failed to send email:', err);
