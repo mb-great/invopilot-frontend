@@ -11,6 +11,30 @@ import { toast } from 'sonner';
 import PremiumBadge from '@/components/ui/PremiumBadge';
 import { clearInvoiceDraft } from '@/lib/invoiceStorage';
 
+const pendingStatusChanges = new Map<string, string>();
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flushPendingStatus() {
+  if (pendingStatusChanges.size === 0) return;
+  const changes = Array.from(pendingStatusChanges.entries());
+  pendingStatusChanges.clear();
+  const payload = JSON.stringify(changes.map(([id, status]) => ({ id, delivery_status: status })));
+  if (navigator.sendBeacon) {
+    const blob = new Blob([payload], { type: 'application/json' });
+    for (const [id, status] of changes) {
+      navigator.sendBeacon(`/api/invoices/${id}/status`, new Blob([JSON.stringify({ delivery_status: status })], { type: 'application/json' }));
+    }
+  } else {
+    for (const [id, status] of changes) {
+      fetch(`/api/invoices/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_status: status }) });
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', flushPendingStatus);
+}
+
 interface Invoice {
   id: string;
   nickname: string | null;
@@ -449,8 +473,8 @@ export default function InvoiceTable({
             )}
 
             {row.original.profiles?.full_name && (
-              <span className="text-[10px] text-brand-600 font-bold bg-brand-50 px-1.5 py-0.5 rounded-md mt-1 self-start">
-                Made by {row.original.profiles.full_name}
+              <span className="text-[10px] text-ink-400 mt-0.5">
+                by {row.original.profiles.full_name}
               </span>
             )}
           </div>
@@ -526,10 +550,18 @@ export default function InvoiceTable({
                 <button onClick={() => handleSendEmail(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Email</button>
                 {inv.pdf_url && (
                   <button 
-                    onClick={async () => { 
+                    onClick={() => { 
                       const newStatus = inv.delivery_status === 'sent' ? 'unsent' : 'sent';
-                      await fetch(`/api/invoices/${inv.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_status: newStatus }) });
                       setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: newStatus } : i));
+                      pendingStatusChanges.set(inv.id, newStatus);
+                      if (debounceTimer) clearTimeout(debounceTimer);
+                      debounceTimer = setTimeout(() => {
+                        const changes = Array.from(pendingStatusChanges.entries());
+                        pendingStatusChanges.clear();
+                        for (const [id, status] of changes) {
+                          fetch(`/api/invoices/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_status: status }) });
+                        }
+                      }, 500);
                       toast.success(newStatus === 'sent' ? 'Marked as sent' : 'Marked as unsent');
                     }}
                     className={`text-[11px] font-bold px-2 py-1 ${inv.delivery_status === 'sent' ? 'text-green-600 hover:text-green-700' : 'text-ink-400 hover:text-green-600'}`}

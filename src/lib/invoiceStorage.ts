@@ -15,7 +15,7 @@ export const INVOICE_STORAGE_KEYS = [
   'bankName', 'accountNumber', 'accountName', 'routingCode',
   'swiftCode', 'ifscCode', 'upiId', 'upiLockAmount', 'showUpiQr',
   // Invoice terms
-  'invoiceNo', 'issueDate', 'dueDate',
+  'invoiceNo', 'issueDate', 'dueDate', 'nickname',
   // Builder state
   'step',
   // Edit state

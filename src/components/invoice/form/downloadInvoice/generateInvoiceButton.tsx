@@ -167,6 +167,7 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
             setPdfUrl(data.pdf_url);
             setStatus("done");
             clearInvoiceDraft();
+            setValue("nickname", "");
             if (typeof window !== 'undefined') localStorage.removeItem('edit_invoice_id');
           } else if (data.status === "failed") {
             clearInterval(intervalRef.current!);
