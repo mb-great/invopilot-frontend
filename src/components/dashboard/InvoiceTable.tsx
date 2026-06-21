@@ -559,10 +559,10 @@ export default function InvoiceTable({
                         const changes = Array.from(pendingStatusChanges.entries());
                         pendingStatusChanges.clear();
                         for (const [id, status] of changes) {
-                          fetch(`/api/invoices/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_status: status }) });
+                          fetch(`/api/invoices/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_status: status }) })
+                            .catch(() => toast.error('Failed to update status'));
                         }
                       }, 500);
-                      toast.success(newStatus === 'sent' ? 'Marked as sent' : 'Marked as unsent');
                     }}
                     className={`text-[11px] font-bold px-2 py-1 ${inv.delivery_status === 'sent' ? 'text-green-600 hover:text-green-700' : 'text-ink-400 hover:text-green-600'}`}
                   >{inv.delivery_status === 'sent' ? ' Mark Unsent' : 'Mark Sent'}</button>
