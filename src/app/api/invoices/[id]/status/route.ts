@@ -21,6 +21,7 @@ export async function GET(
     .from('invoices')
     .select('status, error_msg, pdf_url, share_slug, share_expires_at')
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
 
   if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -71,6 +72,7 @@ export async function PATCH(
     .from('invoices')
     .update(updateData)
     .eq('id', id)
+    .is('deleted_at', null)
     .select('id, payment_status, share_expires_at, paid_at')
     .single();
 

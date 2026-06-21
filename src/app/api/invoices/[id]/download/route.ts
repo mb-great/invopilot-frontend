@@ -27,6 +27,7 @@ export async function GET(
       .from('invoices')
       .select('pdf_url, nickname, invoice_number')
       .eq('id', id)
+      .is('deleted_at', null)
       .single();
     invoice = res.data;
     error = res.error;
@@ -37,6 +38,7 @@ export async function GET(
       .select('pdf_url, nickname, invoice_number')
       .eq('id', id)
       .eq('share_slug', shareToken)
+      .is('deleted_at', null)
       .single();
     invoice = res.data;
     error = res.error;

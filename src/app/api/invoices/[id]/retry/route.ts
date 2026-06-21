@@ -17,6 +17,7 @@ export async function POST(
     .from('invoices')
     .select('id, status, form_data')
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
 
   if (error || !invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
