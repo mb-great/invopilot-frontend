@@ -85,7 +85,7 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
     const total = paid + due + overdue;
 
     return {
-      labels: ['Paid', 'Due', 'Overdue'],
+      labels: ['Paid', 'Unpaid', 'Overdue'],
       datasets: [
         {
           data: hasData ? [paid, due, overdue] : [1],

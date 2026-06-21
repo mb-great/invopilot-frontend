@@ -496,7 +496,7 @@ export default function InvoiceTable({
         return (
           <div className="flex flex-col items-center gap-1">
             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border inline-block uppercase tracking-wider ${getPaymentStatusClass(displayStatus)}`}>
-              {displayStatus === 'paid' ? 'Paid' : displayStatus === 'converted' ? 'Converted' : displayStatus === 'draft' ? 'Draft' : displayStatus === 'quote' ? 'Quote' : displayStatus === 'overdue' ? 'Overdue' : 'Due'}
+              {displayStatus === 'paid' ? 'Paid' : displayStatus === 'converted' ? 'Converted' : displayStatus === 'draft' ? 'Draft' : displayStatus === 'quote' ? 'Quote' : displayStatus === 'overdue' ? 'Overdue' : displayStatus === 'unpaid' ? 'Unpaid' : 'Unpaid'}
             </span>
             {row.original.delivery_status === 'sent' ? (
               <span className="text-[9px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded inline-block">Sent</span>
@@ -734,7 +734,7 @@ export default function InvoiceTable({
                 >
                   <option value="">All Status</option>
                   <option value="paid">Paid</option>
-                  <option value="unpaid">Due</option>
+                  <option value="unpaid">Unpaid</option>
                   <option value="overdue">Overdue</option>
                   <option value="draft">Draft (Quote)</option>
                   <option value="converted">Converted (Quote)</option>
