@@ -23,9 +23,9 @@ export function getBackendUrl(): string {
  */
 export function getFrontendUrl(): string {
   // Always use env var — no window.location.origin fallback
-  const url = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL;
+  const url = process.env.NEXT_PUBLIC_FRONTEND_URL;
   if (url) return url.replace(/\/$/, '');
   if (typeof window !== 'undefined') return window.location.origin;
   if (isDev) return 'http://localhost:3001';
-  throw new Error('[URL] NEXT_PUBLIC_SITE_URL must be set in production');
+  throw new Error('[URL] NEXT_PUBLIC_FRONTEND_URL must be set in production');
 }

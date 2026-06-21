@@ -81,7 +81,7 @@ export async function GET(req: Request) {
       ...inv,
       form_data: mapFormDataToApi(inv.form_data),
       pdf_download_url: inv.pdf_url ? `${backendUrl}/storage/v1/object/public/invoices/${inv.pdf_url}` : null,
-      view_url: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.FRONTEND_URL || 'http://localhost:3001'}/view/${inv.id}`
+      view_url: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001'}/view/${inv.id}`
     };
   });
 
