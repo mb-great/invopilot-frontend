@@ -69,7 +69,7 @@ export default function EmailSettings() {
       return;
     }
     const redirectUri = `${frontendUrl}/api/settings/sender-config/gmail-callback`;
-    const scope = 'https://www.googleapis.com/auth/gmail.send';
+    const scope = 'https://mail.google.com/';
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
     window.location.href = authUrl;
   }
@@ -127,12 +127,24 @@ export default function EmailSettings() {
         <p className="text-ink-500 text-sm">Connect your email to send invoices from your own address.</p>
       </div>
 
-      {!isConfigured && (
+      {!isConfigured ? (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6">
           <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-bold text-amber-800">Email not configured</p>
             <p className="text-xs text-amber-600 mt-1">Connect Gmail or set up SMTP to send invoice emails to clients.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-xl mb-6">
+          <Mail className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-green-800">Email is configured</p>
+            <p className="text-xs text-green-600 mt-1 font-semibold">
+              {config?.method === 'gmail' 
+                ? `Using OAuth connected account: ${senderEmail}` 
+                : `Using SMTP username: ${senderEmail}`}
+            </p>
           </div>
         </div>
       )}
