@@ -35,6 +35,20 @@ export async function POST(
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
+    // Verify user has configured a custom email sender
+    const { data: senderConfig } = await supabase
+      .from('user_sender_config')
+      .select('method')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!senderConfig || senderConfig.method === 'system') {
+      return NextResponse.json(
+        { error: 'Email sender not configured. Please connect Gmail or SMTP in Settings.' }, 
+        { status: 400 }
+      );
+    }
+
     const backendUrl = getBackendUrl();
 
     // Get user's access token for backend auth

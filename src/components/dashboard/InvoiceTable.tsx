@@ -110,7 +110,7 @@ export default function InvoiceTable({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   // Modal State
-  const [unifiedModal, setUnifiedModal] = useState<{ isOpen: boolean; invoiceId: string; invoiceNumber: string; clientEmail: string; shareSlug?: string; pdfUrl?: string }>({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' });
+  const [unifiedModal, setUnifiedModal] = useState<{ isOpen: boolean; invoiceId: string; invoiceNumber: string; clientEmail: string; shareSlug?: string; pdfUrl?: string; initialTab?: 'email' | 'share' }>({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; isBulk?: boolean }>({ isOpen: false, id: null });
 
   // Filters
@@ -267,14 +267,14 @@ export default function InvoiceTable({
   const handleShare = (id: string) => {
     const inv = invoices.find(i => i.id === id);
     if (inv) {
-      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined, pdfUrl: inv.pdf_url || undefined });
+      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined, pdfUrl: inv.pdf_url || undefined, initialTab: 'share' });
     }
   };
 
   const handleSendEmail = (id: string) => {
     const inv = invoices.find(i => i.id === id);
     if (inv) {
-      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined, pdfUrl: inv.pdf_url || undefined });
+      setUnifiedModal({ isOpen: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number || '', clientEmail: inv.client_email || '', shareSlug: inv.share_slug || undefined, pdfUrl: inv.pdf_url || undefined, initialTab: 'email' });
     }
   };
 
@@ -680,6 +680,7 @@ export default function InvoiceTable({
         clientEmail={unifiedModal.clientEmail}
         shareSlug={unifiedModal.shareSlug}
         pdfUrl={unifiedModal.pdfUrl}
+        initialTab={unifiedModal.initialTab}
       />
 
       <ConfirmationModal

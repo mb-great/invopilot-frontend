@@ -18,6 +18,7 @@ export interface UnifiedShareModalProps {
   formData?: Record<string, unknown>;
   senderMethod?: 'system' | 'gmail' | 'smtp';
   senderEmail?: string;
+  initialTab?: 'email' | 'share';
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,10 +27,12 @@ function ChipInput({
   chips,
   setChips,
   placeholder,
+  disabled,
 }: {
   chips: string[];
   setChips: (c: string[]) => void;
   placeholder: string;
+  disabled?: boolean;
 }) {
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -75,8 +78,9 @@ function ChipInput({
           {chip}
           <button
             type="button"
+            disabled={disabled}
             onClick={(e) => { e.stopPropagation(); setChips(chips.filter((c) => c !== chip)); }}
-            className="text-brand-400 hover:text-brand-700"
+            className="text-brand-400 hover:text-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-3 h-3" />
           </button>
@@ -87,8 +91,9 @@ function ChipInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
+        disabled={disabled}
         placeholder={chips.length ? '' : placeholder}
-        className="flex-1 min-w-[120px] text-sm text-ink-900 placeholder:text-ink-300 outline-none bg-transparent"
+        className="flex-1 min-w-[120px] text-sm text-ink-900 placeholder:text-ink-300 outline-none bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
       />
     </div>
   );
@@ -107,9 +112,10 @@ export default function UnifiedShareModal({
   formData,
   senderMethod = 'system',
   senderEmail,
+  initialTab = 'email',
 }: UnifiedShareModalProps) {
   const hasShare = Boolean(pdfUrl);
-  const [tab, setTab] = useState<'email' | 'share'>('email');
+  const [tab, setTab] = useState<'email' | 'share'>(initialTab);
   const [toChips, setToChips] = useState<string[]>(clientEmail ? [clientEmail] : []);
   const [ccChips, setCcChips] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
@@ -119,6 +125,8 @@ export default function UnifiedShareModal({
 
   useEffect(() => {
     if (isOpen) {
+      setTab(initialTab);
+      setToChips(clientEmail ? [clientEmail] : []);
       fetch('/api/settings/sender-config')
         .then(r => r.json())
         .then(json => {
@@ -285,38 +293,40 @@ export default function UnifiedShareModal({
               {/* To */}
               <div className="flex gap-3 items-start">
                 <span className="text-sm font-semibold text-ink-500 w-8 pt-1.5 shrink-0">To</span>
-                <div className="flex-1">
-                  <ChipInput chips={toChips} setChips={setToChips} placeholder="Add email" />
+                <div className={`flex-1 ${!senderConfig ? 'opacity-50' : ''}`}>
+                  <ChipInput chips={toChips} setChips={setToChips} placeholder="Add email" disabled={!senderConfig} />
                 </div>
               </div>
 
               {/* CC */}
               <div className="flex gap-3 items-start">
                 <span className="text-sm font-semibold text-ink-500 w-8 pt-1.5 shrink-0">CC</span>
-                <div className="flex-1">
-                  <ChipInput chips={ccChips} setChips={setCcChips} placeholder="Add email" />
+                <div className={`flex-1 ${!senderConfig ? 'opacity-50' : ''}`}>
+                  <ChipInput chips={ccChips} setChips={setCcChips} placeholder="Add email" disabled={!senderConfig} />
                 </div>
               </div>
 
               {/* Subject */}
-              <div className="flex items-center gap-3 border-b border-ink-100 pb-3">
+              <div className={`flex items-center gap-3 border-b border-ink-100 pb-3 ${!senderConfig ? 'opacity-50' : ''}`}>
                 <span className="text-sm font-semibold text-ink-500 w-8 shrink-0">Sub</span>
                 <input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="flex-1 text-sm text-ink-900 outline-none bg-transparent"
+                  disabled={!senderConfig}
+                  className="flex-1 text-sm text-ink-900 outline-none bg-transparent disabled:cursor-not-allowed"
                 />
               </div>
 
               {/* Attach PDF toggle */}
-              <div className="flex items-center justify-between py-2">
+              <div className={`flex items-center justify-between py-2 ${!senderConfig ? 'opacity-50' : ''}`}>
                 <div className="flex items-center gap-2">
                   <Paperclip className="w-4 h-4 text-ink-400" />
                   <span className="text-sm text-ink-700">Attach PDF</span>
                 </div>
                 <button
                   onClick={() => setAttachPdf(!attachPdf)}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${attachPdf ? 'bg-brand-500' : 'bg-ink-200'}`}
+                  disabled={!senderConfig}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${attachPdf ? 'bg-brand-500' : 'bg-ink-200'} disabled:cursor-not-allowed`}
                 >
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${attachPdf ? 'left-5.5 translate-x-0' : 'left-0.5'}`} />
                 </button>
@@ -326,8 +336,9 @@ export default function UnifiedShareModal({
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                disabled={!senderConfig}
                 rows={8}
-                className="w-full bg-ink-50 rounded-xl p-4 text-sm text-ink-900 outline-none resize-none focus:ring-2 focus:ring-brand-500/20"
+                className={`w-full bg-ink-50 rounded-xl p-4 text-sm text-ink-900 outline-none resize-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed ${!senderConfig ? 'opacity-50' : ''}`}
               />
             </div>
           )}
