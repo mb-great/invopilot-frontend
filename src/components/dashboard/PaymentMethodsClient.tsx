@@ -146,7 +146,7 @@ function MethodPickerModal({ onSelect, onClose, canUseUpi }: { onSelect: (id: st
                   onClick={() => onSelect(method.id)}
                   className="w-full flex items-center gap-[15px] p-3 rounded-[14px] hover:bg-brand-50 transition-colors group text-left"
                 >
-                  <MethodIcon id={method.id} color={method.color} badge={method.badge} slug={method.slug} size={44} />
+                  <MethodIcon id={method.id} color={method.color} badge={method.badge} slug={method.slug || PM_MAP[method.id]?.slug} size={44} />
                   <span className="text-[17px] font-semibold text-ink-900 flex-1">{method.name}</span>
                   <ChevronRight className="w-[18px] h-[18px] text-gray-400 group-hover:text-brand-500 transition-colors" />
                 </button>
@@ -641,7 +641,7 @@ export default function PaymentMethodsClient({ businesses, paymentMethods, works
                   <tr key={`${method.id}-${idx}`} className="hover:bg-ink-50/50 transition-colors group">
                     <td className="px-6 py-4 align-middle">
                       <div className="flex items-center gap-3">
-                        <MethodIcon id={method.id} color={method.color} badge={method.badge} slug={method.slug} size={32} />
+                        <MethodIcon id={method.id} color={method.color} badge={method.badge} slug={method.slug || PM_MAP[method.id]?.slug} size={32} />
                         <span className="font-bold text-ink-900 text-sm">{method.title}</span>
                       </div>
                     </td>
