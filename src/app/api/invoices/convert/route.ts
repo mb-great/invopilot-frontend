@@ -10,7 +10,7 @@ const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_U
 /**
  * POST /api/invoices/convert
  * Converts a quote into a draft invoice (1-click).
- * Inserts a brand new row with type='invoice' and payment_status='due', 
+ * Inserts a brand new row with type='invoice' and payment_status='unpaid', 
  * marks original quote as payment_status='converted'.
  * Gated by canUseQuotes (Pro+ only).
  */
