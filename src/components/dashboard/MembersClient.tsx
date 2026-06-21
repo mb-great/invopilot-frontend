@@ -11,6 +11,7 @@ interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   email: string | null;
+  deleted_at?: string | null;
 }
 
 interface Member {
@@ -330,7 +331,7 @@ export default function MembersClient({ workspaceId, workspaceName, userRole, me
             </div>
           ) : (
             <div className="space-y-6">
-              {recentInvoices.filter(inv => !inv.profiles?.deleted_at).map((inv) => {
+              {recentInvoices.map((inv) => {
                 const creatorName = inv.profiles?.full_name || 'Unknown';
                 const creatorAvatar = inv.profiles?.avatar_url;
                 
