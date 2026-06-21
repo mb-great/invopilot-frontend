@@ -26,6 +26,7 @@ export default function EmailSettings() {
   const [smtpPort, setSmtpPort] = useState('587');
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
+  const [smtpExpanded, setSmtpExpanded] = useState(false);
 
   useEffect(() => {
     const gmailStatus = searchParams.get('gmail');
@@ -51,6 +52,7 @@ export default function EmailSettings() {
         setSmtpHost(json.data.smtp_host || '');
         setSmtpPort(String(json.data.smtp_port || 587));
         setSmtpUser(json.data.smtp_user || '');
+        if (json.data.method === 'smtp') setSmtpExpanded(true);
       } else {
         setConfig(null);
       }
@@ -177,7 +179,7 @@ export default function EmailSettings() {
             className="flex items-center gap-4 p-4 cursor-pointer"
             onClick={() => {
               if (!isConfigured || config?.method !== 'smtp') {
-                // Just expand the form
+                setSmtpExpanded(!smtpExpanded);
               }
             }}
           >
@@ -196,7 +198,7 @@ export default function EmailSettings() {
             )}
           </div>
 
-          {config?.method === 'smtp' && (
+          {smtpExpanded && (
             <div className="px-4 pb-4 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
