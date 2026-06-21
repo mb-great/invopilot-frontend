@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+const getFrontendUrl = () => process.env.NEXT_PUBLIC_FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001';
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
+  const frontendUrl = getFrontendUrl();
 
   if (!code) {
-    return NextResponse.redirect(new URL('/dashboard/settings?gmail=error', request.url));
+    return NextResponse.redirect(`${frontendUrl}/dashboard/settings?gmail=error`);
   }
 
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      return NextResponse.redirect(`${frontendUrl}/login`);
     }
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -24,14 +27,14 @@ export async function GET(request: Request) {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: `${process.env.NEXT_PUBLIC_FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/settings/sender-config/gmail-callback`,
+        redirect_uri: `${frontendUrl}/api/settings/sender-config/gmail-callback`,
         grant_type: 'authorization_code',
       }),
     });
 
     if (!tokenResponse.ok) {
       console.error('Gmail token exchange failed:', await tokenResponse.text());
-      return NextResponse.redirect(new URL('/dashboard/settings?gmail=error', request.url));
+      return NextResponse.redirect(`${frontendUrl}/dashboard/settings?gmail=error`);
     }
 
     const tokens = await tokenResponse.json();
@@ -57,12 +60,12 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Failed to save Gmail config:', error.message);
-      return NextResponse.redirect(new URL('/dashboard/settings?gmail=error', request.url));
+      return NextResponse.redirect(`${frontendUrl}/dashboard/settings?gmail=error`);
     }
 
-    return NextResponse.redirect(new URL('/dashboard/settings?gmail=connected', request.url));
+    return NextResponse.redirect(`${frontendUrl}/dashboard/settings?gmail=connected`);
   } catch (err) {
     console.error('Gmail callback error:', err);
-    return NextResponse.redirect(new URL('/dashboard/settings?gmail=error', request.url));
+    return NextResponse.redirect(`${frontendUrl}/dashboard/settings?gmail=error`);
   }
 }

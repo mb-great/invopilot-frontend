@@ -330,7 +330,7 @@ export default function MembersClient({ workspaceId, workspaceName, userRole, me
             </div>
           ) : (
             <div className="space-y-6">
-              {recentInvoices.map((inv) => {
+              {recentInvoices.filter(inv => !inv.profiles?.deleted_at).map((inv) => {
                 const creatorName = inv.profiles?.full_name || 'Unknown';
                 const creatorAvatar = inv.profiles?.avatar_url;
                 

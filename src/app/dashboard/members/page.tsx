@@ -85,7 +85,7 @@ export default async function MembersPage() {
   // Fetch recent activity (invoices created by members)
   const { data: recentInvoices } = await supabase
     .from('invoices')
-    .select('id, invoice_number, nickname, created_at, amount, currency, profiles(full_name, email, avatar_url)')
+    .select('id, invoice_number, nickname, created_at, amount, currency, profiles(full_name, email, avatar_url, deleted_at)')
     .eq('workspace_id', activeWorkspace.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
