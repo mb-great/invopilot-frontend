@@ -71,7 +71,7 @@ export async function GET(request: Request) {
       while (hasMore) {
         let query = supabase
           .from('invoices')
-          .select('id, invoice_number, client_name, client_email, amount, currency, status, payment_status, issue_date, due_date, created_at, share_slug, form_data')
+          .select('id, invoice_number, client_name, client_email, amount, currency, status, payment_status, issue_date, due_date, created_at, share_slug, pdf_url, form_data')
           .eq('workspace_id', activeWorkspaceId)
           .is('deleted_at', null)
           .order('created_at', { ascending: false });
