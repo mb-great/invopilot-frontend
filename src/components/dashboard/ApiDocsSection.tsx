@@ -121,7 +121,7 @@ function CodeBlock({ code }: { code: string }) {
 }
 
 export default function ApiDocsSection() {
-  const baseUrl = 'https://api.invopilot.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
 
   return (
     <section className="glass-card bg-white border border-ink-100 shadow-sm mt-8">
