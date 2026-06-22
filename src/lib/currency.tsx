@@ -126,6 +126,7 @@ import {
   SR,
   SS,
   ST,
+  SV,
   SY,
   SZ,
   TH,
@@ -551,6 +552,18 @@ export const currencyList: {
       currencyShortForm: "CRC",
       icon: CR,
       iconName: "CR",
+    },
+  },
+  {
+    value: "CUC",
+    label: "CUC",
+    details: {
+      country: "CU",
+      currencySymbol: "$",
+      currencyName: "Cuban Convertible Peso",
+      currencyShortForm: "CUC",
+      icon: CU,
+      iconName: "CU",
     },
   },
   {
@@ -1634,13 +1647,13 @@ export const currencyList: {
     },
   },
   {
-    value: "SLL",
-    label: "SLL",
+    value: "SLE",
+    label: "SLE",
     details: {
       country: "SL",
       currencySymbol: "Le",
-      currencyName: "Sierra Leonean Leone (1964—2022)",
-      currencyShortForm: "SLL",
+      currencyName: "Sierra Leonean Leone",
+      currencyShortForm: "SLE",
       icon: SL,
       iconName: "SL",
     },
@@ -1715,6 +1728,18 @@ export const currencyList: {
       currencyShortForm: "SZL",
       icon: SZ,
       iconName: "SZ",
+    },
+  },
+  {
+    value: "SVC",
+    label: "SVC",
+    details: {
+      country: "SV",
+      currencySymbol: "₡",
+      currencyName: "Salvadoran Colón",
+      currencyShortForm: "SVC",
+      icon: SV,
+      iconName: "SV",
     },
   },
   {
