@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 import { Plus, Trash2, Key, Copy, Check } from 'lucide-react';
 import PremiumBadge from '@/components/ui/PremiumBadge';
 
@@ -84,16 +85,7 @@ export default function ApiKeysSection({ workspaceId, hasAccess }: ApiKeysSectio
 
   const handleCopy = async () => {
     if (rawKey) {
-      try {
-        await navigator.clipboard.writeText(rawKey);
-      } catch {
-        const input = document.createElement('input');
-        input.value = rawKey;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-      }
+      await copyToClipboard(rawKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast.success('Copied to clipboard');

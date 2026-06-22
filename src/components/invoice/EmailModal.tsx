@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Send, Copy, Download, Eye, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 import { getBackendUrl } from '@/lib/url';
 
 interface EmailModalProps {
@@ -66,16 +67,7 @@ export default function EmailModal({
 
   const handleCopyLink = async () => {
     if (shareUrl) {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-      } catch {
-        const input = document.createElement('input');
-        input.value = shareUrl;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-      }
+      await copyToClipboard(shareUrl);
       toast.success('Link copied to clipboard');
     }
   };

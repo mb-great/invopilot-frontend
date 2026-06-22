@@ -3,6 +3,7 @@
 import { useState, useRef, KeyboardEvent, useEffect } from 'react';
 import { X, Send, Copy, MessageCircle, Share2, Paperclip, Eye, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 import Link from 'next/link';
 
 export interface UnifiedShareModalProps {
@@ -196,16 +197,7 @@ export default function UnifiedShareModal({
   };
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      const input = document.createElement('input');
-      input.value = shareUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-    }
+    await copyToClipboard(shareUrl);
     toast.success('Link copied');
   };
 

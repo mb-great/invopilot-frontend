@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Copy, MessageCircle, Share2, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface ShareDialogProps {
   isOpen: boolean;
@@ -16,16 +17,7 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
   const shareText = "Here is your invoice.";
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      const input = document.createElement('input');
-      input.value = shareUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-    }
+    await copyToClipboard(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

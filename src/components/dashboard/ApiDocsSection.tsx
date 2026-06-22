@@ -3,6 +3,7 @@
 import React from 'react';
 import { Copy, Check, Terminal } from 'lucide-react';
 import { useState } from 'react';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const ENDPOINTS = [
   {
@@ -98,16 +99,7 @@ INV-1001,Acme Corp,billing@acme.com,1500...`
 function CodeBlock({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-    } catch {
-      const input = document.createElement('input');
-      input.value = code;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-    }
+    await copyToClipboard(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
