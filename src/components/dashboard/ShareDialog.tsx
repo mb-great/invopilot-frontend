@@ -16,7 +16,16 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
   const shareText = "Here is your invoice.";
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareUrl);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      const input = document.createElement('input');
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

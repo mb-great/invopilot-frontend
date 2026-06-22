@@ -82,9 +82,18 @@ export default function ApiKeysSection({ workspaceId, hasAccess }: ApiKeysSectio
     }
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (rawKey) {
-      navigator.clipboard.writeText(rawKey);
+      try {
+        await navigator.clipboard.writeText(rawKey);
+      } catch {
+        const input = document.createElement('input');
+        input.value = rawKey;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast.success('Copied to clipboard');

@@ -64,9 +64,18 @@ export default function EmailModal({
     }
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (shareUrl) {
-      navigator.clipboard.writeText(shareUrl);
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+      } catch {
+        const input = document.createElement('input');
+        input.value = shareUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
       toast.success('Link copied to clipboard');
     }
   };
