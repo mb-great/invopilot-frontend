@@ -174,7 +174,7 @@ export const currencyList: {
     label: "AED",
     details: {
       country: "AE",
-      currencySymbol: "AED",
+      currencySymbol: "د.إ",
       currencyName: "United Arab Emirates Dirham",
       currencyShortForm: "AED",
       icon: AE,
@@ -186,7 +186,7 @@ export const currencyList: {
     label: "AFN",
     details: {
       country: "AF",
-      currencySymbol: "AFN",
+      currencySymbol: "؋",
       currencyName: "Afghan Afghani",
       currencyShortForm: "AFN",
       icon: AF,
@@ -198,7 +198,7 @@ export const currencyList: {
     label: "ALL",
     details: {
       country: "AL",
-      currencySymbol: "ALL",
+      currencySymbol: "L",
       currencyName: "Albanian Lek",
       currencyShortForm: "ALL",
       icon: AL,
@@ -210,7 +210,7 @@ export const currencyList: {
     label: "AMD",
     details: {
       country: "AM",
-      currencySymbol: "AMD",
+      currencySymbol: "֏",
       currencyName: "Armenian Dram",
       currencyShortForm: "AMD",
       icon: AM,
@@ -222,7 +222,7 @@ export const currencyList: {
     label: "ANG",
     details: {
       country: "CW",
-      currencySymbol: "ANG",
+      currencySymbol: "ƒ",
       currencyName: "Netherlands Antillean Guilder",
       currencyShortForm: "ANG",
       icon: CW,
@@ -234,7 +234,7 @@ export const currencyList: {
     label: "AOA",
     details: {
       country: "AO",
-      currencySymbol: "AOA",
+      currencySymbol: "Kz",
       currencyName: "Angolan Kwanza",
       currencyShortForm: "AOA",
       icon: AO,
@@ -246,7 +246,7 @@ export const currencyList: {
     label: "ARS",
     details: {
       country: "AR",
-      currencySymbol: "ARS",
+      currencySymbol: "$",
       currencyName: "Argentine Peso",
       currencyShortForm: "ARS",
       icon: AR,
@@ -270,7 +270,7 @@ export const currencyList: {
     label: "AWG",
     details: {
       country: "AW",
-      currencySymbol: "AWG",
+      currencySymbol: "ƒ",
       currencyName: "Aruban Florin",
       currencyShortForm: "AWG",
       icon: AW,
@@ -282,7 +282,7 @@ export const currencyList: {
     label: "AZN",
     details: {
       country: "AZ",
-      currencySymbol: "AZN",
+      currencySymbol: "₼",
       currencyName: "Azerbaijani Manat",
       currencyShortForm: "AZN",
       icon: AZ,
@@ -294,7 +294,7 @@ export const currencyList: {
     label: "BAM",
     details: {
       country: "BA",
-      currencySymbol: "BAM",
+      currencySymbol: "KM",
       currencyName: "Bosnia-Herzegovina Convertible Mark",
       currencyShortForm: "BAM",
       icon: BA,
@@ -306,7 +306,7 @@ export const currencyList: {
     label: "BBD",
     details: {
       country: "BB",
-      currencySymbol: "BBD",
+      currencySymbol: "Bds$",
       currencyName: "Barbadian Dollar",
       currencyShortForm: "BBD",
       icon: BB,
@@ -330,7 +330,7 @@ export const currencyList: {
     label: "BGN",
     details: {
       country: "BG",
-      currencySymbol: "BGN",
+      currencySymbol: "лв",
       currencyName: "Bulgarian Lev",
       currencyShortForm: "BGN",
       icon: BG,
@@ -342,7 +342,7 @@ export const currencyList: {
     label: "BHD",
     details: {
       country: "BH",
-      currencySymbol: "BHD",
+      currencySymbol: ".د.ب",
       currencyName: "Bahraini Dinar",
       currencyShortForm: "BHD",
       icon: BH,
@@ -354,7 +354,7 @@ export const currencyList: {
     label: "BIF",
     details: {
       country: "BI",
-      currencySymbol: "BIF",
+      currencySymbol: "FBu",
       currencyName: "Burundian Franc",
       currencyShortForm: "BIF",
       icon: BI,
@@ -366,7 +366,7 @@ export const currencyList: {
     label: "BMD",
     details: {
       country: "BM",
-      currencySymbol: "BMD",
+      currencySymbol: "$",
       currencyName: "Bermudan Dollar",
       currencyShortForm: "BMD",
       icon: BM,
@@ -378,7 +378,7 @@ export const currencyList: {
     label: "BND",
     details: {
       country: "BN",
-      currencySymbol: "BND",
+      currencySymbol: "B$",
       currencyName: "Brunei Dollar",
       currencyShortForm: "BND",
       icon: BN,
@@ -390,7 +390,7 @@ export const currencyList: {
     label: "BOB",
     details: {
       country: "BO",
-      currencySymbol: "BOB",
+      currencySymbol: "Bs.",
       currencyName: "Bolivian Boliviano",
       currencyShortForm: "BOB",
       icon: BO,
@@ -426,7 +426,7 @@ export const currencyList: {
     label: "BTN",
     details: {
       country: "BT",
-      currencySymbol: "BTN",
+      currencySymbol: "Nu.",
       currencyName: "Bhutanese Ngultrum",
       currencyShortForm: "BTN",
       icon: BT,
@@ -438,7 +438,7 @@ export const currencyList: {
     label: "BWP",
     details: {
       country: "BW",
-      currencySymbol: "BWP",
+      currencySymbol: "P",
       currencyName: "Botswanan Pula",
       currencyShortForm: "BWP",
       icon: BW,
@@ -450,7 +450,7 @@ export const currencyList: {
     label: "BYN",
     details: {
       country: "BY",
-      currencySymbol: "BYN",
+      currencySymbol: "Br",
       currencyName: "Belarusian Ruble",
       currencyShortForm: "BYN",
       icon: BY,
@@ -462,7 +462,7 @@ export const currencyList: {
     label: "BZD",
     details: {
       country: "BZ",
-      currencySymbol: "BZD",
+      currencySymbol: "BZ$",
       currencyName: "Belize Dollar",
       currencyShortForm: "BZD",
       icon: BZ,
@@ -486,7 +486,7 @@ export const currencyList: {
     label: "CDF",
     details: {
       country: "CD",
-      currencySymbol: "CDF",
+      currencySymbol: "FC",
       currencyName: "Congolese Franc",
       currencyShortForm: "CDF",
       icon: CD,
@@ -510,7 +510,7 @@ export const currencyList: {
     label: "CLP",
     details: {
       country: "CL",
-      currencySymbol: "CLP",
+      currencySymbol: "$",
       currencyName: "Chilean Peso",
       currencyShortForm: "CLP",
       icon: CL,
@@ -534,7 +534,7 @@ export const currencyList: {
     label: "COP",
     details: {
       country: "CO",
-      currencySymbol: "COP",
+      currencySymbol: "$",
       currencyName: "Colombian Peso",
       currencyShortForm: "COP",
       icon: CO,
@@ -546,7 +546,7 @@ export const currencyList: {
     label: "CRC",
     details: {
       country: "CR",
-      currencySymbol: "CRC",
+      currencySymbol: "₡",
       currencyName: "Costa Rican Colón",
       currencyShortForm: "CRC",
       icon: CR,
@@ -558,7 +558,7 @@ export const currencyList: {
     label: "CUP",
     details: {
       country: "CU",
-      currencySymbol: "CUP",
+      currencySymbol: "₱",
       currencyName: "Cuban Peso",
       currencyShortForm: "CUP",
       icon: CU,
@@ -570,7 +570,7 @@ export const currencyList: {
     label: "CVE",
     details: {
       country: "CV",
-      currencySymbol: "CVE",
+      currencySymbol: "$",
       currencyName: "Cape Verdean Escudo",
       currencyShortForm: "CVE",
       icon: CV,
@@ -582,7 +582,7 @@ export const currencyList: {
     label: "CZK",
     details: {
       country: "CZ",
-      currencySymbol: "CZK",
+      currencySymbol: "Kč",
       currencyName: "Czech Koruna",
       currencyShortForm: "CZK",
       icon: CZ,
@@ -594,7 +594,7 @@ export const currencyList: {
     label: "DJF",
     details: {
       country: "DJ",
-      currencySymbol: "DJF",
+      currencySymbol: "Fdj",
       currencyName: "Djiboutian Franc",
       currencyShortForm: "DJF",
       icon: DJ,
@@ -606,7 +606,7 @@ export const currencyList: {
     label: "DKK",
     details: {
       country: "DK",
-      currencySymbol: "DKK",
+      currencySymbol: "kr",
       currencyName: "Danish Krone",
       currencyShortForm: "DKK",
       icon: DK,
@@ -618,7 +618,7 @@ export const currencyList: {
     label: "DOP",
     details: {
       country: "DO",
-      currencySymbol: "DOP",
+      currencySymbol: "RD$",
       currencyName: "Dominican Peso",
       currencyShortForm: "DOP",
       icon: DO,
@@ -630,7 +630,7 @@ export const currencyList: {
     label: "DZD",
     details: {
       country: "DZ",
-      currencySymbol: "DZD",
+      currencySymbol: "د.ج",
       currencyName: "Algerian Dinar",
       currencyShortForm: "DZD",
       icon: DZ,
@@ -642,7 +642,7 @@ export const currencyList: {
     label: "EGP",
     details: {
       country: "EG",
-      currencySymbol: "EGP",
+      currencySymbol: "E£",
       currencyName: "Egyptian Pound",
       currencyShortForm: "EGP",
       icon: EG,
@@ -654,7 +654,7 @@ export const currencyList: {
     label: "ERN",
     details: {
       country: "ER",
-      currencySymbol: "ERN",
+      currencySymbol: "Nfk",
       currencyName: "Eritrean Nakfa",
       currencyShortForm: "ERN",
       icon: ER,
@@ -666,7 +666,7 @@ export const currencyList: {
     label: "ETB",
     details: {
       country: "ET",
-      currencySymbol: "ETB",
+      currencySymbol: "Br",
       currencyName: "Ethiopian Birr",
       currencyShortForm: "ETB",
       icon: ET,
@@ -690,7 +690,7 @@ export const currencyList: {
     label: "FJD",
     details: {
       country: "FJ",
-      currencySymbol: "FJD",
+      currencySymbol: "FJ$",
       currencyName: "Fijian Dollar",
       currencyShortForm: "FJD",
       icon: FJ,
@@ -702,7 +702,7 @@ export const currencyList: {
     label: "FKP",
     details: {
       country: "FK",
-      currencySymbol: "FKP",
+      currencySymbol: "£",
       currencyName: "Falkland Islands Pound",
       currencyShortForm: "FKP",
       icon: FK,
@@ -726,7 +726,7 @@ export const currencyList: {
     label: "GEL",
     details: {
       country: "GE",
-      currencySymbol: "GEL",
+      currencySymbol: "₾",
       currencyName: "Georgian Lari",
       currencyShortForm: "GEL",
       icon: GE,
@@ -738,7 +738,7 @@ export const currencyList: {
     label: "GHS",
     details: {
       country: "GH",
-      currencySymbol: "GHS",
+      currencySymbol: "GH₵",
       currencyName: "Ghanaian Cedi",
       currencyShortForm: "GHS",
       icon: GH,
@@ -750,7 +750,7 @@ export const currencyList: {
     label: "GIP",
     details: {
       country: "GI",
-      currencySymbol: "GIP",
+      currencySymbol: "£",
       currencyName: "Gibraltar Pound",
       currencyShortForm: "GIP",
       icon: GI,
@@ -762,7 +762,7 @@ export const currencyList: {
     label: "GMD",
     details: {
       country: "GM",
-      currencySymbol: "GMD",
+      currencySymbol: "D",
       currencyName: "Gambian Dalasi",
       currencyShortForm: "GMD",
       icon: GM,
@@ -774,7 +774,7 @@ export const currencyList: {
     label: "GNF",
     details: {
       country: "GN",
-      currencySymbol: "GNF",
+      currencySymbol: "FG",
       currencyName: "Guinean Franc",
       currencyShortForm: "GNF",
       icon: GN,
@@ -786,7 +786,7 @@ export const currencyList: {
     label: "GTQ",
     details: {
       country: "GT",
-      currencySymbol: "GTQ",
+      currencySymbol: "Q",
       currencyName: "Guatemalan Quetzal",
       currencyShortForm: "GTQ",
       icon: GT,
@@ -798,7 +798,7 @@ export const currencyList: {
     label: "GYD",
     details: {
       country: "GY",
-      currencySymbol: "GYD",
+      currencySymbol: "G$",
       currencyName: "Guyanaese Dollar",
       currencyShortForm: "GYD",
       icon: GY,
@@ -822,7 +822,7 @@ export const currencyList: {
     label: "HNL",
     details: {
       country: "HN",
-      currencySymbol: "HNL",
+      currencySymbol: "L",
       currencyName: "Honduran Lempira",
       currencyShortForm: "HNL",
       icon: HN,
@@ -834,7 +834,7 @@ export const currencyList: {
     label: "HRK",
     details: {
       country: "HR",
-      currencySymbol: "HRK",
+      currencySymbol: "kn",
       currencyName: "Croatian Kuna",
       currencyShortForm: "HRK",
       icon: HR,
@@ -846,7 +846,7 @@ export const currencyList: {
     label: "HTG",
     details: {
       country: "HT",
-      currencySymbol: "HTG",
+      currencySymbol: "G",
       currencyName: "Haitian Gourde",
       currencyShortForm: "HTG",
       icon: HT,
@@ -858,7 +858,7 @@ export const currencyList: {
     label: "HUF",
     details: {
       country: "HU",
-      currencySymbol: "HUF",
+      currencySymbol: "Ft",
       currencyName: "Hungarian Forint",
       currencyShortForm: "HUF",
       icon: HU,
@@ -870,7 +870,7 @@ export const currencyList: {
     label: "IDR",
     details: {
       country: "ID",
-      currencySymbol: "IDR",
+      currencySymbol: "Rp",
       currencyName: "Indonesian Rupiah",
       currencyShortForm: "IDR",
       icon: ID,
@@ -906,7 +906,7 @@ export const currencyList: {
     label: "IQD",
     details: {
       country: "IQ",
-      currencySymbol: "IQD",
+      currencySymbol: "ع.د",
       currencyName: "Iraqi Dinar",
       currencyShortForm: "IQD",
       icon: IQ,
@@ -918,7 +918,7 @@ export const currencyList: {
     label: "IRR",
     details: {
       country: "IR",
-      currencySymbol: "IRR",
+      currencySymbol: "﷼",
       currencyName: "Iranian Rial",
       currencyShortForm: "IRR",
       icon: IR,
@@ -930,7 +930,7 @@ export const currencyList: {
     label: "ISK",
     details: {
       country: "IS",
-      currencySymbol: "ISK",
+      currencySymbol: "kr",
       currencyName: "Icelandic Króna",
       currencyShortForm: "ISK",
       icon: IS,
@@ -942,7 +942,7 @@ export const currencyList: {
     label: "JMD",
     details: {
       country: "JM",
-      currencySymbol: "JMD",
+      currencySymbol: "J$",
       currencyName: "Jamaican Dollar",
       currencyShortForm: "JMD",
       icon: JM,
@@ -954,7 +954,7 @@ export const currencyList: {
     label: "JOD",
     details: {
       country: "JO",
-      currencySymbol: "JOD",
+      currencySymbol: "JD",
       currencyName: "Jordanian Dinar",
       currencyShortForm: "JOD",
       icon: JO,
@@ -978,7 +978,7 @@ export const currencyList: {
     label: "KES",
     details: {
       country: "KE",
-      currencySymbol: "KES",
+      currencySymbol: "KSh",
       currencyName: "Kenyan Shilling",
       currencyShortForm: "KES",
       icon: KE,
@@ -990,7 +990,7 @@ export const currencyList: {
     label: "KGS",
     details: {
       country: "KG",
-      currencySymbol: "KGS",
+      currencySymbol: "сом",
       currencyName: "Kyrgystani Som",
       currencyShortForm: "KGS",
       icon: KG,
@@ -1002,7 +1002,7 @@ export const currencyList: {
     label: "KHR",
     details: {
       country: "KH",
-      currencySymbol: "KHR",
+      currencySymbol: "៛",
       currencyName: "Cambodian Riel",
       currencyShortForm: "KHR",
       icon: KH,
@@ -1014,7 +1014,7 @@ export const currencyList: {
     label: "KMF",
     details: {
       country: "KM",
-      currencySymbol: "KMF",
+      currencySymbol: "CF",
       currencyName: "Comorian Franc",
       currencyShortForm: "KMF",
       icon: KM,
@@ -1026,7 +1026,7 @@ export const currencyList: {
     label: "KPW",
     details: {
       country: "KP",
-      currencySymbol: "KPW",
+      currencySymbol: "₩",
       currencyName: "North Korean Won",
       currencyShortForm: "KPW",
       icon: KP,
@@ -1050,7 +1050,7 @@ export const currencyList: {
     label: "KWD",
     details: {
       country: "KW",
-      currencySymbol: "KWD",
+      currencySymbol: "د.ك",
       currencyName: "Kuwaiti Dinar",
       currencyShortForm: "KWD",
       icon: KW,
@@ -1062,7 +1062,7 @@ export const currencyList: {
     label: "KYD",
     details: {
       country: "KY",
-      currencySymbol: "KYD",
+      currencySymbol: "CI$",
       currencyName: "Cayman Islands Dollar",
       currencyShortForm: "KYD",
       icon: KY,
@@ -1074,7 +1074,7 @@ export const currencyList: {
     label: "KZT",
     details: {
       country: "KZ",
-      currencySymbol: "KZT",
+      currencySymbol: "₸",
       currencyName: "Kazakhstani Tenge",
       currencyShortForm: "KZT",
       icon: KZ,
@@ -1086,7 +1086,7 @@ export const currencyList: {
     label: "LAK",
     details: {
       country: "LA",
-      currencySymbol: "LAK",
+      currencySymbol: "₭",
       currencyName: "Laotian Kip",
       currencyShortForm: "LAK",
       icon: LA,
@@ -1098,7 +1098,7 @@ export const currencyList: {
     label: "LBP",
     details: {
       country: "LB",
-      currencySymbol: "LBP",
+      currencySymbol: "L£",
       currencyName: "Lebanese Pound",
       currencyShortForm: "LBP",
       icon: LB,
@@ -1110,7 +1110,7 @@ export const currencyList: {
     label: "LKR",
     details: {
       country: "LK",
-      currencySymbol: "LKR",
+      currencySymbol: "Rs",
       currencyName: "Sri Lankan Rupee",
       currencyShortForm: "LKR",
       icon: LK,
@@ -1122,7 +1122,7 @@ export const currencyList: {
     label: "LRD",
     details: {
       country: "LR",
-      currencySymbol: "LRD",
+      currencySymbol: "L$",
       currencyName: "Liberian Dollar",
       currencyShortForm: "LRD",
       icon: LR,
@@ -1134,7 +1134,7 @@ export const currencyList: {
     label: "LSL",
     details: {
       country: "LS",
-      currencySymbol: "LSL",
+      currencySymbol: "L",
       currencyName: "Lesotho Loti",
       currencyShortForm: "LSL",
       icon: LS,
@@ -1146,7 +1146,7 @@ export const currencyList: {
     label: "LYD",
     details: {
       country: "LY",
-      currencySymbol: "LYD",
+      currencySymbol: "ل.د",
       currencyName: "Libyan Dinar",
       currencyShortForm: "LYD",
       icon: LY,
@@ -1170,7 +1170,7 @@ export const currencyList: {
     label: "MDL",
     details: {
       country: "MD",
-      currencySymbol: "MDL",
+      currencySymbol: "L",
       currencyName: "Moldovan Leu",
       currencyShortForm: "MDL",
       icon: MD,
@@ -1182,7 +1182,7 @@ export const currencyList: {
     label: "MGA",
     details: {
       country: "MG",
-      currencySymbol: "MGA",
+      currencySymbol: "Ar",
       currencyName: "Malagasy Ariary",
       currencyShortForm: "MGA",
       icon: MG,
@@ -1194,7 +1194,7 @@ export const currencyList: {
     label: "MKD",
     details: {
       country: "MK",
-      currencySymbol: "MKD",
+      currencySymbol: "ден",
       currencyName: "Macedonian Denar",
       currencyShortForm: "MKD",
       icon: MK,
@@ -1206,7 +1206,7 @@ export const currencyList: {
     label: "MMK",
     details: {
       country: "MM",
-      currencySymbol: "MMK",
+      currencySymbol: "K",
       currencyName: "Myanmar Kyat",
       currencyShortForm: "MMK",
       icon: MM,
@@ -1218,7 +1218,7 @@ export const currencyList: {
     label: "MNT",
     details: {
       country: "MN",
-      currencySymbol: "MNT",
+      currencySymbol: "₮",
       currencyName: "Mongolian Tugrik",
       currencyShortForm: "MNT",
       icon: MN,
@@ -1230,7 +1230,7 @@ export const currencyList: {
     label: "MOP",
     details: {
       country: "MO",
-      currencySymbol: "MOP",
+      currencySymbol: "MOP$",
       currencyName: "Macanese Pataca",
       currencyShortForm: "MOP",
       icon: MO,
@@ -1242,7 +1242,7 @@ export const currencyList: {
     label: "MRU",
     details: {
       country: "MR",
-      currencySymbol: "MRU",
+      currencySymbol: "UM",
       currencyName: "Mauritanian Ouguiya",
       currencyShortForm: "MRU",
       icon: MR,
@@ -1254,7 +1254,7 @@ export const currencyList: {
     label: "MUR",
     details: {
       country: "MU",
-      currencySymbol: "MUR",
+      currencySymbol: "₨",
       currencyName: "Mauritian Rupee",
       currencyShortForm: "MUR",
       icon: MU,
@@ -1266,7 +1266,7 @@ export const currencyList: {
     label: "MVR",
     details: {
       country: "MV",
-      currencySymbol: "MVR",
+      currencySymbol: "Rf",
       currencyName: "Maldivian Rufiyaa",
       currencyShortForm: "MVR",
       icon: MV,
@@ -1278,7 +1278,7 @@ export const currencyList: {
     label: "MWK",
     details: {
       country: "MW",
-      currencySymbol: "MWK",
+      currencySymbol: "MK",
       currencyName: "Malawian Kwacha",
       currencyShortForm: "MWK",
       icon: MW,
@@ -1302,7 +1302,7 @@ export const currencyList: {
     label: "MYR",
     details: {
       country: "MY",
-      currencySymbol: "MYR",
+      currencySymbol: "RM",
       currencyName: "Malaysian Ringgit",
       currencyShortForm: "MYR",
       icon: MY,
@@ -1314,7 +1314,7 @@ export const currencyList: {
     label: "MZN",
     details: {
       country: "MZ",
-      currencySymbol: "MZN",
+      currencySymbol: "MT",
       currencyName: "Mozambican Metical",
       currencyShortForm: "MZN",
       icon: MZ,
@@ -1326,7 +1326,7 @@ export const currencyList: {
     label: "NAD",
     details: {
       country: "NA",
-      currencySymbol: "NAD",
+      currencySymbol: "N$",
       currencyName: "Namibian Dollar",
       currencyShortForm: "NAD",
       icon: NA,
@@ -1338,7 +1338,7 @@ export const currencyList: {
     label: "NGN",
     details: {
       country: "NG",
-      currencySymbol: "NGN",
+      currencySymbol: "₦",
       currencyName: "Nigerian Naira",
       currencyShortForm: "NGN",
       icon: NG,
@@ -1350,7 +1350,7 @@ export const currencyList: {
     label: "NIO",
     details: {
       country: "NI",
-      currencySymbol: "NIO",
+      currencySymbol: "C$",
       currencyName: "Nicaraguan Córdoba",
       currencyShortForm: "NIO",
       icon: NI,
@@ -1362,7 +1362,7 @@ export const currencyList: {
     label: "NOK",
     details: {
       country: "NO",
-      currencySymbol: "NOK",
+      currencySymbol: "kr",
       currencyName: "Norwegian Krone",
       currencyShortForm: "NOK",
       icon: NO,
@@ -1374,7 +1374,7 @@ export const currencyList: {
     label: "NPR",
     details: {
       country: "NP",
-      currencySymbol: "NPR",
+      currencySymbol: "रू",
       currencyName: "Nepalese Rupee",
       currencyShortForm: "NPR",
       icon: NP,
@@ -1398,7 +1398,7 @@ export const currencyList: {
     label: "OMR",
     details: {
       country: "OM",
-      currencySymbol: "OMR",
+      currencySymbol: "ر.ع.",
       currencyName: "Omani Rial",
       currencyShortForm: "OMR",
       icon: OM,
@@ -1410,7 +1410,7 @@ export const currencyList: {
     label: "PAB",
     details: {
       country: "PA",
-      currencySymbol: "PAB",
+      currencySymbol: "B/.",
       currencyName: "Panamanian Balboa",
       currencyShortForm: "PAB",
       icon: PA,
@@ -1422,7 +1422,7 @@ export const currencyList: {
     label: "PEN",
     details: {
       country: "PE",
-      currencySymbol: "PEN",
+      currencySymbol: "S/.",
       currencyName: "Peruvian Sol",
       currencyShortForm: "PEN",
       icon: PE,
@@ -1434,7 +1434,7 @@ export const currencyList: {
     label: "PGK",
     details: {
       country: "PG",
-      currencySymbol: "PGK",
+      currencySymbol: "K",
       currencyName: "Papua New Guinean Kina",
       currencyShortForm: "PGK",
       icon: PG,
@@ -1458,7 +1458,7 @@ export const currencyList: {
     label: "PKR",
     details: {
       country: "PK",
-      currencySymbol: "PKR",
+      currencySymbol: "₨",
       currencyName: "Pakistani Rupee",
       currencyShortForm: "PKR",
       icon: PK,
@@ -1470,7 +1470,7 @@ export const currencyList: {
     label: "PLN",
     details: {
       country: "PL",
-      currencySymbol: "PLN",
+      currencySymbol: "zł",
       currencyName: "Polish Zloty",
       currencyShortForm: "PLN",
       icon: PL,
@@ -1482,7 +1482,7 @@ export const currencyList: {
     label: "PYG",
     details: {
       country: "PY",
-      currencySymbol: "PYG",
+      currencySymbol: "₲",
       currencyName: "Paraguayan Guarani",
       currencyShortForm: "PYG",
       icon: PY,
@@ -1494,7 +1494,7 @@ export const currencyList: {
     label: "QAR",
     details: {
       country: "QA",
-      currencySymbol: "QAR",
+      currencySymbol: "ر.ق",
       currencyName: "Qatari Riyal",
       currencyShortForm: "QAR",
       icon: QA,
@@ -1506,7 +1506,7 @@ export const currencyList: {
     label: "RON",
     details: {
       country: "RO",
-      currencySymbol: "RON",
+      currencySymbol: "lei",
       currencyName: "Romanian Leu",
       currencyShortForm: "RON",
       icon: RO,
@@ -1518,7 +1518,7 @@ export const currencyList: {
     label: "RSD",
     details: {
       country: "RS",
-      currencySymbol: "RSD",
+      currencySymbol: "дин.",
       currencyName: "Serbian Dinar",
       currencyShortForm: "RSD",
       icon: RS,
@@ -1530,7 +1530,7 @@ export const currencyList: {
     label: "RUB",
     details: {
       country: "RU",
-      currencySymbol: "RUB",
+      currencySymbol: "₽",
       currencyName: "Russian Ruble",
       currencyShortForm: "RUB",
       icon: RU,
@@ -1542,7 +1542,7 @@ export const currencyList: {
     label: "RWF",
     details: {
       country: "RW",
-      currencySymbol: "RWF",
+      currencySymbol: "RF",
       currencyName: "Rwandan Franc",
       currencyShortForm: "RWF",
       icon: RW,
@@ -1554,7 +1554,7 @@ export const currencyList: {
     label: "SAR",
     details: {
       country: "SA",
-      currencySymbol: "SAR",
+      currencySymbol: "﷼",
       currencyName: "Saudi Riyal",
       currencyShortForm: "SAR",
       icon: SA,
@@ -1566,7 +1566,7 @@ export const currencyList: {
     label: "SBD",
     details: {
       country: "SB",
-      currencySymbol: "SBD",
+      currencySymbol: "SI$",
       currencyName: "Solomon Islands Dollar",
       currencyShortForm: "SBD",
       icon: SB,
@@ -1578,7 +1578,7 @@ export const currencyList: {
     label: "SCR",
     details: {
       country: "SC",
-      currencySymbol: "SCR",
+      currencySymbol: "₨",
       currencyName: "Seychellois Rupee",
       currencyShortForm: "SCR",
       icon: SC,
@@ -1590,7 +1590,7 @@ export const currencyList: {
     label: "SDG",
     details: {
       country: "SD",
-      currencySymbol: "SDG",
+      currencySymbol: "ج.س.",
       currencyName: "Sudanese Pound",
       currencyShortForm: "SDG",
       icon: SD,
@@ -1602,7 +1602,7 @@ export const currencyList: {
     label: "SEK",
     details: {
       country: "SE",
-      currencySymbol: "SEK",
+      currencySymbol: "kr",
       currencyName: "Swedish Krona",
       currencyShortForm: "SEK",
       icon: SE,
@@ -1614,7 +1614,7 @@ export const currencyList: {
     label: "SGD",
     details: {
       country: "SG",
-      currencySymbol: "SGD",
+      currencySymbol: "S$",
       currencyName: "Singapore Dollar",
       currencyShortForm: "SGD",
       icon: SG,
@@ -1626,7 +1626,7 @@ export const currencyList: {
     label: "SHP",
     details: {
       country: "SH",
-      currencySymbol: "SHP",
+      currencySymbol: "£",
       currencyName: "St. Helena Pound",
       currencyShortForm: "SHP",
       icon: SH,
@@ -1638,7 +1638,7 @@ export const currencyList: {
     label: "SLL",
     details: {
       country: "SL",
-      currencySymbol: "SLL",
+      currencySymbol: "Le",
       currencyName: "Sierra Leonean Leone (1964—2022)",
       currencyShortForm: "SLL",
       icon: SL,
@@ -1650,7 +1650,7 @@ export const currencyList: {
     label: "SOS",
     details: {
       country: "SO",
-      currencySymbol: "SOS",
+      currencySymbol: "Sh",
       currencyName: "Somali Shilling",
       currencyShortForm: "SOS",
       icon: SO,
@@ -1662,7 +1662,7 @@ export const currencyList: {
     label: "SRD",
     details: {
       country: "SR",
-      currencySymbol: "SRD",
+      currencySymbol: "$",
       currencyName: "Surinamese Dollar",
       currencyShortForm: "SRD",
       icon: SR,
@@ -1674,7 +1674,7 @@ export const currencyList: {
     label: "SSP",
     details: {
       country: "SS",
-      currencySymbol: "SSP",
+      currencySymbol: "£",
       currencyName: "South Sudanese Pound",
       currencyShortForm: "SSP",
       icon: SS,
@@ -1686,7 +1686,7 @@ export const currencyList: {
     label: "STN",
     details: {
       country: "ST",
-      currencySymbol: "STN",
+      currencySymbol: "Db",
       currencyName: "São Tomé & Príncipe Dobra",
       currencyShortForm: "STN",
       icon: ST,
@@ -1698,7 +1698,7 @@ export const currencyList: {
     label: "SYP",
     details: {
       country: "SY",
-      currencySymbol: "SYP",
+      currencySymbol: "£S",
       currencyName: "Syrian Pound",
       currencyShortForm: "SYP",
       icon: SY,
@@ -1710,7 +1710,7 @@ export const currencyList: {
     label: "SZL",
     details: {
       country: "SZ",
-      currencySymbol: "SZL",
+      currencySymbol: "E",
       currencyName: "Swazi Lilangeni",
       currencyShortForm: "SZL",
       icon: SZ,
@@ -1722,7 +1722,7 @@ export const currencyList: {
     label: "THB",
     details: {
       country: "TH",
-      currencySymbol: "THB",
+      currencySymbol: "฿",
       currencyName: "Thai Baht",
       currencyShortForm: "THB",
       icon: TH,
@@ -1734,7 +1734,7 @@ export const currencyList: {
     label: "TJS",
     details: {
       country: "TJ",
-      currencySymbol: "TJS",
+      currencySymbol: "SM",
       currencyName: "Tajikistani Somoni",
       currencyShortForm: "TJS",
       icon: TJ,
@@ -1746,7 +1746,7 @@ export const currencyList: {
     label: "TMT",
     details: {
       country: "TM",
-      currencySymbol: "TMT",
+      currencySymbol: "T",
       currencyName: "Turkmenistani Manat",
       currencyShortForm: "TMT",
       icon: TM,
@@ -1758,7 +1758,7 @@ export const currencyList: {
     label: "TND",
     details: {
       country: "TN",
-      currencySymbol: "TND",
+      currencySymbol: "د.ت",
       currencyName: "Tunisian Dinar",
       currencyShortForm: "TND",
       icon: TN,
@@ -1770,7 +1770,7 @@ export const currencyList: {
     label: "TOP",
     details: {
       country: "TO",
-      currencySymbol: "TOP",
+      currencySymbol: "T$",
       currencyName: "Tongan Paʻanga",
       currencyShortForm: "TOP",
       icon: TO,
@@ -1782,7 +1782,7 @@ export const currencyList: {
     label: "TRY",
     details: {
       country: "TR",
-      currencySymbol: "TRY",
+      currencySymbol: "₺",
       currencyName: "Turkish Lira",
       currencyShortForm: "TRY",
       icon: TR,
@@ -1794,7 +1794,7 @@ export const currencyList: {
     label: "TTD",
     details: {
       country: "TT",
-      currencySymbol: "TTD",
+      currencySymbol: "TT$",
       currencyName: "Trinidad & Tobago Dollar",
       currencyShortForm: "TTD",
       icon: TT,
@@ -1818,7 +1818,7 @@ export const currencyList: {
     label: "TZS",
     details: {
       country: "TZ",
-      currencySymbol: "TZS",
+      currencySymbol: "TSh",
       currencyName: "Tanzanian Shilling",
       currencyShortForm: "TZS",
       icon: TZ,
@@ -1830,7 +1830,7 @@ export const currencyList: {
     label: "UAH",
     details: {
       country: "UA",
-      currencySymbol: "UAH",
+      currencySymbol: "₴",
       currencyName: "Ukrainian Hryvnia",
       currencyShortForm: "UAH",
       icon: UA,
@@ -1842,7 +1842,7 @@ export const currencyList: {
     label: "UGX",
     details: {
       country: "UG",
-      currencySymbol: "UGX",
+      currencySymbol: "USh",
       currencyName: "Ugandan Shilling",
       currencyShortForm: "UGX",
       icon: UG,
@@ -1866,7 +1866,7 @@ export const currencyList: {
     label: "UYU",
     details: {
       country: "UY",
-      currencySymbol: "UYU",
+      currencySymbol: "$U",
       currencyName: "Uruguayan Peso",
       currencyShortForm: "UYU",
       icon: UY,
@@ -1878,7 +1878,7 @@ export const currencyList: {
     label: "UZS",
     details: {
       country: "UZ",
-      currencySymbol: "UZS",
+      currencySymbol: "сўм",
       currencyName: "Uzbekistani Som",
       currencyShortForm: "UZS",
       icon: UZ,
@@ -1890,7 +1890,7 @@ export const currencyList: {
     label: "VES",
     details: {
       country: "VE",
-      currencySymbol: "VES",
+      currencySymbol: "Bs.S",
       currencyName: "Venezuelan Bolívar",
       currencyShortForm: "VES",
       icon: VE,
@@ -1914,7 +1914,7 @@ export const currencyList: {
     label: "VUV",
     details: {
       country: "VU",
-      currencySymbol: "VUV",
+      currencySymbol: "VT",
       currencyName: "Vanuatu Vatu",
       currencyShortForm: "VUV",
       icon: VU,
@@ -1926,7 +1926,7 @@ export const currencyList: {
     label: "WST",
     details: {
       country: "WS",
-      currencySymbol: "WST",
+      currencySymbol: "WS$",
       currencyName: "Samoan Tala",
       currencyShortForm: "WST",
       icon: WS,
@@ -1962,7 +1962,7 @@ export const currencyList: {
     label: "XOF",
     details: {
       country: "SN",
-      currencySymbol: "F CFA",
+      currencySymbol: "CFA",
       currencyName: "West African CFA Franc",
       currencyShortForm: "XOF",
       icon: SN,
@@ -1974,7 +1974,7 @@ export const currencyList: {
     label: "XPF",
     details: {
       country: "PF",
-      currencySymbol: "CFPF",
+      currencySymbol: "₣",
       currencyName: "CFP Franc",
       currencyShortForm: "XPF",
       icon: PF,
@@ -1986,7 +1986,7 @@ export const currencyList: {
     label: "YER",
     details: {
       country: "YE",
-      currencySymbol: "YER",
+      currencySymbol: "﷼",
       currencyName: "Yemeni Rial",
       currencyShortForm: "YER",
       icon: YE,
@@ -1998,7 +1998,7 @@ export const currencyList: {
     label: "ZAR",
     details: {
       country: "ZA",
-      currencySymbol: "ZAR",
+      currencySymbol: "R",
       currencyName: "South African Rand",
       currencyShortForm: "ZAR",
       icon: ZA,
@@ -2010,7 +2010,7 @@ export const currencyList: {
     label: "ZMW",
     details: {
       country: "ZM",
-      currencySymbol: "ZMW",
+      currencySymbol: "ZK",
       currencyName: "Zambian Kwacha",
       currencyShortForm: "ZMW",
       icon: ZM,
@@ -2022,7 +2022,7 @@ export const currencyList: {
     label: "ZWL",
     details: {
       country: "ZW",
-      currencySymbol: "ZWL",
+      currencySymbol: "Z$",
       currencyName: "Zimbabwean Dollar (2009)",
       currencyShortForm: "ZWL",
       icon: ZW,
