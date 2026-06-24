@@ -76,8 +76,8 @@ jobs:
             TMP_DIR=~/tmp-deploy
             mkdir -p $TMP_DIR
             
-            # Clean previous build to prevent stale chunk references
-            rm -rf $TARGET_DIR/.next
+            # Clean previous build artifacts
+            rm -rf $TARGET_DIR/.next $TARGET_DIR/public
             
             # Extract standalone build
             tar -xzf $TMP_DIR/release.tar.gz -C $TARGET_DIR
