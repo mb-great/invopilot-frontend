@@ -74,10 +74,13 @@ jobs:
           script: |
             TARGET_DIR=~/invopilot-frontend
             TMP_DIR=~/tmp-deploy
-            mkdir -p $TARGET_DIR
             mkdir -p $TMP_DIR
             
-            # Extract standalone build over existing directory
+            # Clean previous build to prevent stale chunk references
+            rm -rf $TARGET_DIR
+            mkdir -p $TARGET_DIR
+            
+            # Extract standalone build
             tar -xzf $TMP_DIR/release.tar.gz -C $TARGET_DIR
             rm -f $TMP_DIR/release.tar.gz
             
