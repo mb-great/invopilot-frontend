@@ -36,6 +36,7 @@ jobs:
           # Copy static assets into standalone structure
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public
+          cp .env.local .next/standalone/.env.local
           # Tar only the standalone folder
           tar -czf release.tar.gz -C .next/standalone .
 
