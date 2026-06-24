@@ -20,10 +20,7 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Create .env.local
-        run: |
-          cat << 'EOF' > .env.local
-          ${{ secrets.ENV_FILE }}
-          EOF
+        run: echo "${{ secrets.ENV_FILE }}" > .env.local
 
       - name: Install Dependencies
         run: bun install
@@ -36,7 +33,7 @@ jobs:
           # Copy static assets into standalone structure
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public
-          cp .env.local .next/standalone/.env.local
+          echo "${{ secrets.ENV_FILE }}" > .next/standalone/.env.local
           # Tar only the standalone folder
           tar -czf release.tar.gz -C .next/standalone .
 
