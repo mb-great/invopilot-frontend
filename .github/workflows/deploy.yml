@@ -77,8 +77,7 @@ jobs:
             mkdir -p $TMP_DIR
             
             # Clean previous build to prevent stale chunk references
-            rm -rf $TARGET_DIR
-            mkdir -p $TARGET_DIR
+            rm -rf $TARGET_DIR/.next
             
             # Extract standalone build
             tar -xzf $TMP_DIR/release.tar.gz -C $TARGET_DIR
