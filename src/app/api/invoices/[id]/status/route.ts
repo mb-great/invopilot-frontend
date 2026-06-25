@@ -38,7 +38,7 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = (await request.json()) as UpdateInvoiceBody;
+  const body = (await request.json().catch(() => ({}))) as UpdateInvoiceBody;
   const { payment_status, delivery_status } = body;
 
   const updateData: any = {};

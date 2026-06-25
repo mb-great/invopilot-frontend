@@ -75,15 +75,28 @@ export async function GET(req: Request) {
   }
 
   // Map to standardized output
-  const mappedData = data.map(inv => {
+  const mappedData = await Promise.all(data.map(async (inv) => {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3002';
+    
+    let pdf_download_url = null;
+    if (inv.pdf_url) {
+      try {
+        const { data: signedUrlData } = await supabaseAdmin.storage
+          .from('invoices')
+          .createSignedUrl(inv.pdf_url, 3600); // 1 hour expiry
+        pdf_download_url = signedUrlData?.signedUrl || `${backendUrl}/storage/v1/object/public/invoices/${inv.pdf_url}`;
+      } catch {
+        pdf_download_url = `${backendUrl}/storage/v1/object/public/invoices/${inv.pdf_url}`;
+      }
+    }
+    
     return {
       ...inv,
       form_data: mapFormDataToApi(inv.form_data),
-      pdf_download_url: inv.pdf_url ? `${backendUrl}/storage/v1/object/public/invoices/${inv.pdf_url}` : null,
+      pdf_download_url,
       view_url: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001'}/view/${inv.id}`
     };
-  });
+  }));
 
   return NextResponse.json({
     data: mappedData,
