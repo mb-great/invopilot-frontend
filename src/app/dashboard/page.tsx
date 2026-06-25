@@ -162,7 +162,7 @@ export default async function DashboardPage({
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between shrink-0 gap-4 md:gap-0">
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-ink-900 flex items-center gap-3">
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-ink-900 flex items-center gap-3">
               Your <span className="headline-accent italic font-serif font-normal">dashboard</span>
               <HelpPopover 
                 title="Dashboard Overview"

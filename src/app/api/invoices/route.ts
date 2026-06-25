@@ -33,6 +33,10 @@ export async function GET(request: Request) {
 
   const offset = (page - 1) * limit;
 
+  // Sanitize search input — escape % and _ for ilike
+  const sanitizeSearch = (s: string) => s.replace(/%/g, '\\%').replace(/_/g, '\\_').slice(0, 100);
+  const safeSearch = search ? sanitizeSearch(search) : '';
+
   let queryUserId = user.id;
 
   // Admin Check
@@ -75,8 +79,8 @@ export async function GET(request: Request) {
     query = query.eq('business_profile_name', targetBusiness);
   }
 
-  if (search) {
-    query = query.or(`client_name.ilike.%${search}%,invoice_number.ilike.%${search}%,nickname.ilike.%${search}%,client_email.ilike.%${search}%,currency.ilike.%${search}%,form_data->>clientName.ilike.%${search}%,form_data->>invoiceNumber.ilike.%${search}%,form_data->>issueDate.ilike.%${search}%,form_data->>dueDate.ilike.%${search}%,form_data->>currency.ilike.%${search}%`);
+  if (safeSearch) {
+    query = query.or(`client_name.ilike.%${safeSearch}%,invoice_number.ilike.%${safeSearch}%,nickname.ilike.%${safeSearch}%,client_email.ilike.%${safeSearch}%,currency.ilike.%${safeSearch}%,form_data->>clientName.ilike.%${safeSearch}%,form_data->>invoiceNumber.ilike.%${safeSearch}%,form_data->>issueDate.ilike.%${safeSearch}%,form_data->>dueDate.ilike.%${safeSearch}%,form_data->>currency.ilike.%${safeSearch}%`);
   }
 
   if (status) {

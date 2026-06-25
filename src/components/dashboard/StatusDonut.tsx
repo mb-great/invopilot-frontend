@@ -167,7 +167,7 @@ export default function StatusDonut({ activeWorkspaceId, businessFilter }: Props
         {isLoading ? (
           <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
         ) : (
-          <div className="w-[200px] h-[200px]">
+          <div className="w-full max-w-[200px] aspect-square">
             <Doughnut data={chartData} options={options} plugins={[centerTextPlugin]} />
           </div>
         )}

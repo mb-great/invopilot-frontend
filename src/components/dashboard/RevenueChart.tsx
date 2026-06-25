@@ -406,7 +406,7 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
       </div>
 
       {rangeType === 'custom' && (
-        <div className="px-6 py-3 bg-ink-50/50 border-b border-ink-100 flex flex-wrap items-center gap-4 text-xs font-bold text-ink-650 shrink-0">
+        <div className="px-6 py-3 bg-ink-50/50 border-b border-ink-100 flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-bold text-ink-650 shrink-0">
           <div className="flex items-center gap-2">
             <span>From:</span>
             <input
