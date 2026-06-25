@@ -83,7 +83,7 @@ export async function GET(req: Request) {
       try {
         const { data: signedUrlData } = await supabaseAdmin.storage
           .from('invoices')
-          .createSignedUrl(inv.pdf_url, 3600); // 1 hour expiry
+          .createSignedUrl(inv.pdf_url, 60); // 1 minute expiry — refreshes on every API hit
         pdf_download_url = signedUrlData?.signedUrl || `${backendUrl}/storage/v1/object/public/invoices/${inv.pdf_url}`;
       } catch {
         pdf_download_url = `${backendUrl}/storage/v1/object/public/invoices/${inv.pdf_url}`;
