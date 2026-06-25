@@ -76,12 +76,12 @@ describe('Invoice Builder Navigation & Layout UX', () => {
     });
   });
 
-  it('verifies Preview Side is height-constrained (h-full)', () => {
+  it('verifies Preview Side is scrollable on desktop', () => {
     render(<InvoiceBuilder />);
     const previewContainer = document.querySelector('.flex-1.h-full.bg-\\[\\#f9fafb\\]');
-    expect(previewContainer).toHaveClass('overflow-hidden');
+    expect(previewContainer).toHaveClass('overflow-y-auto');
     
-    const previewWrapper = previewContainer?.querySelector('.h-full.w-auto');
+    const previewWrapper = previewContainer?.querySelector('.w-full.flex.justify-center');
     expect(previewWrapper).toBeInTheDocument();
   });
 });

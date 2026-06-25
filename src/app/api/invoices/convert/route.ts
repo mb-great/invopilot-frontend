@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { requireBillingProfile } from '@/lib/auth/guards';
+import { canCreateInvoice } from '@/lib/billing/tiers';
 
 export const dynamic = 'force-dynamic';
-
-const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
 
 /**
  * POST /api/invoices/convert
@@ -55,27 +54,31 @@ export async function POST(request: Request) {
     );
   }
 
-
-
   if (quote.type !== 'quote' || quote.payment_status === 'converted') {
     return NextResponse.json({ error: 'This quote has already been converted or is not a quote' }, { status: 409 });
   }
 
-  // Get next invoice number — use MAX to avoid duplicates from deleted invoices
-  const { data: maxRow } = await supabase
-    .from('invoices')
-    .select('invoice_number')
-    .eq('workspace_id', quote.workspace_id)
-    .not('invoice_number', 'is', null)
-    .order('invoice_number', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Billing quota check (same as generate route)
+  if (!access.isAdmin) {
+    const { count: lifetimeGenerated } = await supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', quote.workspace_id)
+      .is('deleted_at', null);
 
-  const lastNum = maxRow?.invoice_number
-    ? parseInt(maxRow.invoice_number.replace(/\D/g, ''), 10) || 0
-    : 0;
-  const nextNum = lastNum + 1;
-  const newInvoiceNumber = `INV-${new Date().getFullYear()}-${String(nextNum).padStart(5, '0')}`;
+    const maxInv = access.plan.maxInvoices;
+    if (typeof maxInv === 'number' && (lifetimeGenerated ?? 0) >= maxInv) {
+      return NextResponse.json(
+        { error: `Invoice limit reached. Upgrade to convert more quotes.`, code: 'TIER_LIMIT_REACHED' },
+        { status: 402 }
+      );
+    }
+  }
+
+  // Get next invoice number — use random suffix to avoid race condition
+  const timestamp = Date.now().toString().slice(-6);
+  const randomSuffix = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+  const newInvoiceNumber = `INV-${new Date().getFullYear()}-${timestamp}${randomSuffix}`;
 
   // Update form_data and invoice number for the NEW invoice
   const updatedFormData = {
@@ -90,7 +93,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       workspace_id: quote.workspace_id,
       form_data: updatedFormData,
-      nickname: quote.nickname, // keep original clean nickname
+      nickname: quote.nickname,
       status: 'queued',
       amount: quote.amount,
       currency: quote.currency,
@@ -121,7 +124,7 @@ export async function POST(request: Request) {
   // Notify backend queue to generate PDF for the NEW INVOICE
   let dispatchFailed = false;
   try {
-    const backendUrl = BACKEND_URL.replace('localhost', '127.0.0.1');
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3002';
     const res = await fetch(`${backendUrl}/queue`, {
       method: 'POST',
       headers: { 
