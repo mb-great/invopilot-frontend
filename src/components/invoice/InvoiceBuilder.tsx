@@ -17,7 +17,7 @@ import { resolvePlanAccess } from "@/lib/billing/tiers";
 import InvoPilotBusinessProfilesModal from "@/components/dashboard/InvoPilotBusinessProfilesModal";
 import UpgradeLimitModal from "@/components/billing/UpgradeLimitModal";
 import { toast } from "sonner";
-import { clearInvoiceDraft } from "@/lib/invoiceStorage";
+import { clearInvoiceDraft, saveInvoiceDraft, loadInvoiceDraft } from "@/lib/invoiceStorage";
 import ImportSelectionModal, { ImportItem } from "@/components/invoice/ImportSelectionModal";
 
 export default function InvoiceBuilder() {
@@ -40,6 +40,7 @@ export default function InvoiceBuilder() {
   const [isProfilesModalOpen, setIsProfilesModalOpen] = useState(false);
   const [importModalType, setImportModalType] = useState<"business" | "client" | "template" | null>(null);
   const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; type: "invoice" | "storage"; max?: number; used?: number }>({ open: false, type: "invoice" });
+  const [mobileView, setMobileView] = useState<"form" | "preview">("form");
   const importRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -178,14 +179,13 @@ export default function InvoiceBuilder() {
 
     mappings.forEach(({ formField, val }) => {
       methods.setValue(formField, val);
-      if (typeof window !== "undefined") {
-        if (val) {
-          localStorage.setItem(formField, val);
-        } else {
-          localStorage.removeItem(formField);
-        }
-      }
     });
+
+    // Save updated draft
+    const current = loadInvoiceDraft() || {};
+    const update: Record<string, any> = { ...current };
+    mappings.forEach(({ formField, val }) => { update[formField] = val; });
+    saveInvoiceDraft(update);
 
     toast.success(`Imported business profile "${biz.name}"`);
     setIsImportOpen(false);
@@ -205,14 +205,13 @@ export default function InvoiceBuilder() {
 
     mappings.forEach(({ formField, val }) => {
       methods.setValue(formField, val);
-      if (typeof window !== "undefined") {
-        if (val) {
-          localStorage.setItem(formField, val);
-        } else {
-          localStorage.removeItem(formField);
-        }
-      }
     });
+
+    // Save updated draft
+    const current = loadInvoiceDraft() || {};
+    const update: Record<string, any> = { ...current };
+    mappings.forEach(({ formField, val }) => { update[formField] = val; });
+    saveInvoiceDraft(update);
 
     toast.success(`Imported client "${client.name}"`);
     setIsImportOpen(false);
@@ -222,29 +221,27 @@ export default function InvoiceBuilder() {
     const data = template.form_data;
     if (!data) return;
 
+    // Set form values, but skip issueDate/dueDate (user sets these manually)
     Object.keys(data).forEach((key) => {
       if (key === "issueDate" || key === "dueDate") return;
       const val = data[key];
       methods.setValue(key, val);
-      if (typeof window !== "undefined") {
-        if (typeof val === "string") {
-          localStorage.setItem(key, val);
-        } else if (val !== null && val !== undefined) {
-          localStorage.setItem(key, JSON.stringify(val));
-        } else {
-          localStorage.removeItem(key);
-        }
-      }
     });
 
     if (data.items) {
       methods.setValue("items", data.items);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("items", JSON.stringify(data.items));
-      }
     }
 
-    toast.success(`Loaded template "${template.nickname}"`);
+    // Save as single draft object (without dates)
+    const draftData = { ...data };
+    delete draftData.issueDate;
+    delete draftData.dueDate;
+    saveInvoiceDraft(draftData);
+
+    // Navigate to step 5 (Invoice Terms) so user can set dates
+    methods.setValue("step", "5");
+    toast.success(`Template "${template.nickname}" loaded`);
+    toast.info("Please set new issue & due dates — old template dates may be outdated", { duration: Infinity });
     setIsImportOpen(false);
   };
 
@@ -264,10 +261,9 @@ export default function InvoiceBuilder() {
     if (typeof window !== "undefined") {
       setIsClient(true);
       
-      const savedItems = localStorage.getItem("items");
-      const shouldReset = !savedItems || savedItems === '[{"itemDescription":""}]';
+      const draft = loadInvoiceDraft();
       
-      if (shouldReset) {
+      if (!draft || !draft.items || draft.items.length === 0 || (draft.items.length === 1 && !draft.items[0].itemDescription)) {
         methods.reset({
           step: "1",
           items: [{ itemDescription: "", qty: 1, amount: 0 }],
@@ -282,55 +278,68 @@ export default function InvoiceBuilder() {
           businessId: ""
         });
       } else {
-        let savedStep = localStorage.getItem("step") || "1";
-        // Never load directly into the "Generated" step (6). If they reload, reset to step 1 so they can edit.
+        let savedStep = draft.step || "1";
         if (savedStep === "6") {
           savedStep = "1";
-          localStorage.setItem("step", "1");
         }
 
         methods.reset({
           step: savedStep,
-          yourName: localStorage.getItem("yourName") || "",
-          yourEmail: localStorage.getItem("yourEmail") || "",
-          yourAddress: localStorage.getItem("yourAddress") || "",
-          yourCity: localStorage.getItem("yourCity") || "",
-          yourState: localStorage.getItem("yourState") || "",
-          yourZip: localStorage.getItem("yourZip") || "",
-          yourCountry: localStorage.getItem("yourCountry") || "India",
-          yourTaxId: localStorage.getItem("yourTaxId") || "",
-          yourLogo: localStorage.getItem("yourLogo") || "",
-          companyName: localStorage.getItem("companyName") || "",
-          email: localStorage.getItem("email") || "",
-          companyAddress: localStorage.getItem("companyAddress") || "",
-          companyCity: localStorage.getItem("companyCity") || "",
-          companyState: localStorage.getItem("companyState") || "",
-          companyZip: localStorage.getItem("companyZip") || "",
-          companyCountry: localStorage.getItem("companyCountry") || "India",
-          companyTaxId: localStorage.getItem("companyTaxId") || "",
-          companyLogo: localStorage.getItem("companyLogo") || "",
-          invoiceNumber: localStorage.getItem("invoiceNumber") || "",
-          issueDate: localStorage.getItem("issueDate") ? new Date(localStorage.getItem("issueDate")!) : new Date(),
-          dueDate: localStorage.getItem("dueDate") ? new Date(localStorage.getItem("dueDate")!) : undefined,
-          currency: localStorage.getItem("currency") || "INR",
-          taxRate: localStorage.getItem("taxRate") || "0",
-          discount: localStorage.getItem("discount") || "0",
-          note: localStorage.getItem("note") || "",
-          bankName: localStorage.getItem("bankName") || "",
-          accountName: localStorage.getItem("accountName") || "",
-          accountNumber: localStorage.getItem("accountNumber") || "",
-          ifscCode: localStorage.getItem("ifscCode") || "",
-          routingCode: localStorage.getItem("routingCode") || "",
-          swiftCode: localStorage.getItem("swiftCode") || "",
-          items: JSON.parse(savedItems || '[{"itemDescription":""}]'),
-          signatureMode: localStorage.getItem("signatureMode") || "none",
-          signatureUrl: localStorage.getItem("signatureUrl") || "",
-          customSignatureUrl: localStorage.getItem("customSignatureUrl") || "",
-          businessId: localStorage.getItem("businessId") || "",
+          yourName: draft.yourName || "",
+          yourEmail: draft.yourEmail || "",
+          yourAddress: draft.yourAddress || "",
+          yourCity: draft.yourCity || "",
+          yourState: draft.yourState || "",
+          yourZip: draft.yourZip || "",
+          yourCountry: draft.yourCountry || "India",
+          yourTaxId: draft.yourTaxId || "",
+          yourLogo: draft.yourLogo || "",
+          companyName: draft.companyName || "",
+          email: draft.email || "",
+          companyAddress: draft.companyAddress || "",
+          companyCity: draft.companyCity || "",
+          companyState: draft.companyState || "",
+          companyZip: draft.companyZip || "",
+          companyCountry: draft.companyCountry || "India",
+          companyTaxId: draft.companyTaxId || "",
+          companyLogo: draft.companyLogo || "",
+          invoiceNumber: draft.invoiceNumber || "",
+          issueDate: draft.issueDate ? new Date(draft.issueDate) : new Date(),
+          dueDate: draft.dueDate ? new Date(draft.dueDate) : undefined,
+          currency: draft.currency || "INR",
+          taxRate: draft.taxRate || "0",
+          discount: draft.discount || "0",
+          note: draft.note || "",
+          bankName: draft.bankName || "",
+          accountName: draft.accountName || "",
+          accountNumber: draft.accountNumber || "",
+          ifscCode: draft.ifscCode || "",
+          routingCode: draft.routingCode || "",
+          swiftCode: draft.swiftCode || "",
+          items: draft.items || [{ itemDescription: "", qty: 1, amount: 0 }],
+          selectedMethods: draft.selectedMethods || [],
+          upiId: draft.upiId || "",
+          upiLockAmount: draft.upiLockAmount || false,
+          showUpiQr: draft.showUpiQr !== false,
+          signatureMode: draft.signatureMode || "none",
+          signatureUrl: draft.signatureUrl || "",
+          customSignatureUrl: draft.customSignatureUrl || "",
+          businessId: draft.businessId || "",
         });
       }
     }
   }, [methods]);
+
+  // Auto-save draft whenever form values change
+  useEffect(() => {
+    if (!isClient) return;
+    const subscription = methods.watch((values) => {
+      if (values && typeof values === 'object') {
+        saveInvoiceDraft(values);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [methods, isClient]);
 
   // Load existing quote for editing
   const searchParams = useSearchParams();
@@ -450,8 +459,28 @@ export default function InvoiceBuilder() {
           />
 
           <div className="h-[100dvh] w-full flex flex-col md:flex-row bg-white overflow-hidden">
+            {/* Mobile Toggle Bar */}
+            <div className="md:hidden flex border-b border-ink-100 shrink-0">
+              <button
+                onClick={() => setMobileView("form")}
+                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                  mobileView === "form" ? "text-brand-600 border-b-2 border-brand-500 bg-brand-50/50" : "text-ink-400 hover:text-ink-600"
+                }`}
+              >
+                Form
+              </button>
+              <button
+                onClick={() => setMobileView("preview")}
+                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                  mobileView === "preview" ? "text-brand-600 border-b-2 border-brand-500 bg-brand-50/50" : "text-ink-400 hover:text-ink-600"
+                }`}
+              >
+                Preview
+              </button>
+            </div>
+
             {/* Form Side */}
-            <div className="w-full md:w-[450px] lg:w-[500px] h-full bg-white border-r border-ink-100 flex flex-col shrink-0">
+            <div className={`w-full md:w-[450px] lg:w-[500px] h-full bg-white border-r border-ink-100 flex flex-col shrink-0 ${mobileView !== "form" ? "hidden md:flex" : ""}`}>
               
               {/* Sticky Header */}
               <div className="p-6 md:p-10 lg:p-12 pb-0 shrink-0">
@@ -571,9 +600,9 @@ export default function InvoiceBuilder() {
             </div>
 
             {/* Preview Side */}
-            <div className="flex-1 h-full bg-[#f9fafb] relative flex justify-center items-center p-4 md:p-12 overflow-hidden">
+            <div className={`flex-1 h-full bg-[#f9fafb] relative overflow-y-auto ${mobileView !== "preview" ? "hidden md:block" : ""}`}>
               <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
-              <div className="h-full w-auto">
+              <div className="w-full flex justify-center py-4">
                 <UserDataPreview />
               </div>
             </div>

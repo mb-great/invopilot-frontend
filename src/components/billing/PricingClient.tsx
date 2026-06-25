@@ -282,7 +282,7 @@ export default function PricingClient({ profile }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         {PLANS.map((plan) => {
           const isCurrent = access.effectiveTier === plan.tier && !access.isAdmin;
           const isFeatured = plan.tier === 'pro';

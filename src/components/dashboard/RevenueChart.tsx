@@ -40,11 +40,12 @@ interface Props {
   targetCurrency?: string;
   profile?: any;
   businessFilter?: string | null;
+  refreshKey?: number;
 }
 
 type RangeType = '30days' | '1year' | 'lifetime' | 'custom';
 
-export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD', profile, businessFilter }: Props) {
+export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD', profile, businessFilter, refreshKey = 0 }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [rangeType, setRangeType] = useState<RangeType>('30days');
@@ -61,12 +62,34 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
         const { data: { user } } = await supabase.auth.getUser();
         let targetUser = user?.id;
 
+        const now = new Date();
+        let computedStartDate: string | null = null;
+        let computedEndDate: string | null = null;
+        let groupBy = 'day';
+
+        if (rangeType === '30days') {
+          const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30, 0, 0, 0);
+          computedStartDate = d.toISOString();
+          computedEndDate = now.toISOString();
+          groupBy = 'day';
+        } else if (rangeType === '1year') {
+          const d = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate(), 0, 0, 0);
+          computedStartDate = d.toISOString();
+          computedEndDate = now.toISOString();
+          groupBy = 'month';
+        } else if (rangeType === 'custom') {
+          if (startDate) computedStartDate = new Date(startDate).toISOString();
+          if (endDate) computedEndDate = new Date(endDate + 'T23:59:59').toISOString();
+          groupBy = 'day';
+        }
+        // lifetime: start_date=null, end_date=null (all data)
+
         const { data } = await supabase.rpc('get_revenue_chart_series', {
           target_workspace_id: activeWorkspaceId || null,
           target_user_id: !activeWorkspaceId ? targetUser : null,
-          start_date: null,
-          end_date: null,
-          group_by: 'day',
+          start_date: computedStartDate,
+          end_date: computedEndDate,
+          group_by: groupBy,
           target_business: businessFilter || null
         });
         
@@ -78,7 +101,7 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
       }
     }
     fetchInvoices();
-  }, [activeWorkspaceId, businessFilter]);
+  }, [activeWorkspaceId, businessFilter, refreshKey, rangeType, startDate, endDate]);
 
   const currencies = useMemo(() => {
     const list = new Set<string>();

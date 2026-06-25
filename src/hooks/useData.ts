@@ -77,6 +77,7 @@ export const useData = () => {
         return typeof selectedMethods === 'string' ? JSON.parse(selectedMethods) : selectedMethods;
       } catch { return []; }
     })(),
+    signatureUrl: signatureMode === 'custom' ? customSignatureUrl : signatureMode === 'none' ? null : signatureUrl,
   };
 
   const yourDetails = {
@@ -109,6 +110,5 @@ export const useData = () => {
     paymentDetails,
     invoiceTerms,
     invoiceDetails,
-    signatureUrl: signatureMode === 'custom' ? customSignatureUrl : signatureMode === 'none' ? null : signatureUrl,
   };
 };

@@ -223,7 +223,7 @@ export default async function DashboardPage({
         {access.effectiveTier !== 'free' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
             <div className="lg:col-span-2">
-              <RevenueChart activeWorkspaceId={activeWorkspace?.id} targetCurrency={stats.top_currencies?.[0]?.currency || 'USD'} profile={profile} businessFilter={businessFilter} />
+              <RevenueChart activeWorkspaceId={activeWorkspace?.id} targetCurrency={stats.top_currencies?.[0]?.currency || 'USD'} profile={profile} businessFilter={businessFilter} refreshKey={Date.now()} />
             </div>
             <div className="lg:col-span-1">
               <StatusDonut activeWorkspaceId={activeWorkspace?.id} businessFilter={businessFilter} />

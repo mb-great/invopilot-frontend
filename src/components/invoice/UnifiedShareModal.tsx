@@ -29,11 +29,15 @@ function ChipInput({
   setChips,
   placeholder,
   disabled,
+  commitRef,
+  onValueChange,
 }: {
   chips: string[];
   setChips: (c: string[]) => void;
   placeholder: string;
   disabled?: boolean;
+  commitRef?: React.MutableRefObject<() => void>;
+  onValueChange?: (v: string) => void;
 }) {
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +51,23 @@ function ChipInput({
     }
     setChips([...chips, email]);
     setValue('');
+    onValueChange?.('');
   };
+
+  const commitPending = () => {
+    if (value.trim()) {
+      const email = value.trim().replace(/[,\s]+$/, '');
+      if (EMAIL_RE.test(email)) {
+        setChips([...chips, email]);
+        setValue('');
+        onValueChange?.('');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (commitRef) commitRef.current = commitPending;
+  });
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',' || e.key === ' ' || e.key === 'Tab') {
@@ -63,6 +83,7 @@ function ChipInput({
       commit(raw);
     } else {
       setValue(raw);
+      onValueChange?.(raw);
     }
   };
 
@@ -119,6 +140,8 @@ export default function UnifiedShareModal({
   const [tab, setTab] = useState<'email' | 'share'>(initialTab);
   const [toChips, setToChips] = useState<string[]>(clientEmail ? [clientEmail] : []);
   const [ccChips, setCcChips] = useState<string[]>([]);
+  const [pendingTo, setPendingTo] = useState('');
+  const toCommitRef = useRef<() => void>(() => {});
   const [sending, setSending] = useState(false);
   const [attachPdf, setAttachPdf] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
@@ -164,6 +187,7 @@ export default function UnifiedShareModal({
     : 'Email not configured';
 
   const handleSend = async () => {
+    toCommitRef.current();
     if (!toChips.length) return;
     setSending(true);
     try {
@@ -295,7 +319,7 @@ export default function UnifiedShareModal({
               <div className="flex gap-3 items-start">
                 <span className="text-sm font-semibold text-ink-500 w-8 pt-1.5 shrink-0">To</span>
                 <div className={`flex-1 ${!senderConfig ? 'opacity-50' : ''}`}>
-                  <ChipInput chips={toChips} setChips={setToChips} placeholder="Add email" disabled={!senderConfig} />
+                  <ChipInput chips={toChips} setChips={setToChips} placeholder="Add email" disabled={!senderConfig} commitRef={toCommitRef} onValueChange={setPendingTo} />
                 </div>
               </div>
 
@@ -443,7 +467,7 @@ export default function UnifiedShareModal({
             </div>
             <button
               onClick={handleSend}
-              disabled={sending || !toChips.length || !senderConfig}
+              disabled={sending || (!toChips.length && !pendingTo.trim()) || !senderConfig}
               className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-brand-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               <Send className="w-4 h-4" />

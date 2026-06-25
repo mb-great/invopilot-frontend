@@ -94,6 +94,8 @@ export const GenerateInvoiceButton = ({ profile }: { profile: any }) => {
       invoiceNumber: liveFormValues.invoiceNumber || invoiceTerms.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
       ...(liveFormValues.signatureMode === 'custom' && liveFormValues.customSignatureUrl
         ? { signatureUrl: liveFormValues.customSignatureUrl }
+        : liveFormValues.signatureMode === 'default' && liveFormValues.signatureUrl
+        ? { signatureUrl: liveFormValues.signatureUrl }
         : liveFormValues.signatureMode === 'none'
         ? { signatureUrl: null }
         : {}),

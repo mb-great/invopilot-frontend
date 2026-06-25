@@ -56,6 +56,7 @@ interface PaymentDetails {
   upiLockAmount?: boolean;
   showUpiQr?: boolean;
   currency?: string;
+  signatureUrl?: string | null;
 }
 
 type InvoiceData = PaymentDetails &

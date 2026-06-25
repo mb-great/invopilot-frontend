@@ -28,7 +28,8 @@ export default function RightSidebar({
   // Calculate storage usage
   const storageLimit = access.plan.maxStorageBytes;
   const storageUsed = currentStorageBytes || 0;
-  const storagePercentage = Math.min((storageUsed / storageLimit) * 100, 100);
+  const isStorageUnlimited = access.isAdmin;
+  const storagePercentage = isStorageUnlimited ? 0 : Math.min((storageUsed / storageLimit) * 100, 100);
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -38,7 +39,7 @@ export default function RightSidebar({
   };
 
   const formattedStorageUsed = formatBytes(storageUsed);
-  const formattedStorageLimit = formatBytes(storageLimit);
+  const formattedStorageLimit = isStorageUnlimited ? '∞' : formatBytes(storageLimit);
 
   // Derive Insights (Overdue / Unpaid)
   const unpaidInvoices = recentInvoices.filter(i => i.payment_status !== 'paid');
@@ -57,7 +58,7 @@ export default function RightSidebar({
         <div className="px-5 py-4 border-b border-ink-100 flex items-center justify-between">
           <h2 className="font-bold text-ink-800 tracking-tight text-sm uppercase">Your Plan</h2>
           <span className="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[10px] font-bold uppercase tracking-wider border border-brand-100">
-            {access.plan.name}
+            {access.plan.name}{access.isAdmin ? ' (Admin)' : ''}
           </span>
         </div>
         <div className="p-5">
@@ -83,19 +84,21 @@ export default function RightSidebar({
               {formattedStorageUsed} / {formattedStorageLimit}
             </span>
             
-            {storagePercentage >= 100 && (
+            {storagePercentage >= 100 && !isStorageUnlimited && (
               <div className="absolute right-0 top-6 w-56 p-3 bg-red-950 text-red-50 text-[11px] font-medium leading-relaxed rounded-xl shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none border border-red-900/50">
                 <strong className="block text-white mb-1">Storage Limit Reached</strong>
                 Generating a new invoice will automatically purge your oldest PDF to make room. Upgrade your plan for more space.
               </div>
             )}
           </div>
-          <div className="w-full h-2 bg-ink-100 rounded-full overflow-hidden mb-4">
-            <div 
-              className={`h-full rounded-full transition-all duration-500 ${storagePercentage >= 100 ? 'bg-red-500' : storagePercentage > 90 ? 'bg-amber-500' : 'bg-brand-500'}`}
-              style={{ width: `${storagePercentage}%` }}
-            />
-          </div>
+          {!isStorageUnlimited && (
+            <div className="w-full h-2 bg-ink-100 rounded-full overflow-hidden mb-4">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${storagePercentage >= 100 ? 'bg-red-500' : storagePercentage > 90 ? 'bg-amber-500' : 'bg-brand-500'}`}
+                style={{ width: `${storagePercentage}%` }}
+              />
+            </div>
+          )}
           
           {access.effectiveTier === 'free' && (
             <Link href="/pricing" className="block w-full text-center py-2 rounded-lg bg-ink-900 text-white text-xs font-bold hover:bg-ink-800 transition-colors">
