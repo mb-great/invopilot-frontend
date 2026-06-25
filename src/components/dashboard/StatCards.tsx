@@ -102,7 +102,7 @@ export default function StatCards({ topCurrencies, otherCurrencies, businessFilt
       return (
         <div key={c.currency} className="flex flex-col">
           <div className={`font-bold text-ink-900 flex items-baseline gap-2 ${
-            i === 0 ? 'text-4xl tracking-tight' : 
+            i === 0 ? 'text-3xl sm:text-4xl tracking-tight' : 
             i === 1 ? 'text-xl text-ink-800' : 
             'text-base text-ink-600'
           }`}>

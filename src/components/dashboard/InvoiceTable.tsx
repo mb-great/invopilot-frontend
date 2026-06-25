@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X, Columns, ArrowUpDown, ArrowUp, ArrowDown, Link2, Pencil } from 'lucide-react';
+import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X, Columns, ArrowUpDown, ArrowUp, ArrowDown, Link2, Pencil, MoreVertical } from 'lucide-react';
 import { flexRender, getCoreRowModel, useReactTable, ColumnDef, VisibilityState, SortingState } from '@tanstack/react-table';
 import UnifiedShareModal from '@/components/invoice/UnifiedShareModal';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
@@ -112,6 +112,8 @@ export default function InvoiceTable({
   // Modal State
   const [unifiedModal, setUnifiedModal] = useState<{ isOpen: boolean; invoiceId: string; invoiceNumber: string; clientEmail: string; shareSlug?: string; pdfUrl?: string; initialTab?: 'email' | 'share' }>({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; isBulk?: boolean }>({ isOpen: false, id: null });
+  const [mobileActionsId, setMobileActionsId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -540,79 +542,92 @@ export default function InvoiceTable({
       enableSorting: false,
       cell: ({ row }) => {
         const inv = row.original;
+        const isDropdownOpen = mobileActionsId === inv.id;
         return (
-          <div className="flex justify-end items-center gap-1 flex-wrap min-w-[140px]">
-            {inv.status === 'done' ? (
-              <>
-                <a href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
-                <a href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`} className="p-1.5 text-ink-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></a>
-                <button onClick={() => handleShare(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Share</button>
-                <button onClick={() => handleSendEmail(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Email</button>
-                {inv.pdf_url && (
-                  <button 
-                    onClick={() => { 
-                      const newStatus = inv.delivery_status === 'sent' ? 'unsent' : 'sent';
-                      setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: newStatus } : i));
-                      pendingStatusChanges.set(inv.id, newStatus);
-                      if (debounceTimer) clearTimeout(debounceTimer);
-                      debounceTimer = setTimeout(() => {
-                        const changes = Array.from(pendingStatusChanges.entries());
-                        pendingStatusChanges.clear();
-                        for (const [id, status] of changes) {
-                          fetch(`/api/invoices/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_status: status }) })
-                            .catch(() => toast.error('Failed to update status'));
-                        }
-                      }, 500);
-                    }}
-                    className={`text-[11px] font-bold px-2 py-1 ${inv.delivery_status === 'sent' ? 'text-green-600 hover:text-green-700' : 'text-ink-400 hover:text-green-600'}`}
-                  >{inv.delivery_status === 'sent' ? ' Mark Unsent' : 'Mark Sent'}</button>
-                )}
-                {inv.type === 'quote' && inv.payment_status === 'draft' && (
-                  <>
-                    <button
-                      onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`}
-                      className="text-[11px] font-bold px-2 py-1 text-ink-500 hover:text-brand-600 flex items-center gap-1"
-                      title="Edit Quote"
-                    >
-                      <Pencil className="w-3 h-3" /> Edit
-                    </button>
-                    <button
-                      onClick={() => canUseQuotes ? handleConvert(inv.id) : toast.error('Upgrade to Pro to convert quotes')}
-                      disabled={convertingId === inv.id}
-                      className={`text-[11px] font-bold px-2 py-1 transition-colors flex items-center gap-1 ${canUseQuotes ? 'text-purple-600 hover:text-purple-700' : 'text-ink-300 cursor-not-allowed'}`}
-                      title={canUseQuotes ? 'Convert to Invoice' : 'Pro+ required'}
-                    >
-                      {convertingId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRightLeft className="w-3 h-3" />}
-                      Convert
-                    </button>
-                  </>
-                )}
-                {showPaymentToggle && (
-                  <button 
-                    onClick={() => handleUpdateStatus(inv.id, inv.payment_status)}
-                    disabled={loadingId === inv.id}
-                    className={`text-[11px] font-bold px-2 py-1 transition-colors min-w-[75px] text-center ${inv.payment_status === 'paid' ? 'text-ink-400 hover:text-ink-600' : 'text-emerald-600 hover:text-emerald-700'}`}
-                  >
-                    {inv.payment_status === 'paid' ? 'Unmark' : 'Mark Paid'}
-                  </button>
-                )}
-                <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1" title="Delete">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </>
-            ) : inv.status === 'failed' ? (
-              <>
-                <div className="flex items-center gap-1.5 text-red-500 mr-2"><AlertCircle className="w-3 h-3" /><span className="text-[10px] font-bold uppercase tracking-tight">Failed</span></div>
-                <button onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Retry</button>
-                <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
-              </>
-            ) : inv.status === 'processing' ? (
-              <>
-                <div className="flex items-center gap-1.5 text-amber-500 mr-2"><Loader2 className="w-3 h-3 animate-spin" /><span className="text-[10px] font-bold uppercase tracking-tight">Processing</span></div>
-                <button onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Retry</button>
-                <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1" title="Delete"><Trash2 className="w-4 h-4" /></button>
-              </>
-            ) : null}
+          <div className="flex justify-end items-center gap-1">
+            {/* Desktop: show all actions inline */}
+            <div className="hidden md:flex items-center gap-1 flex-wrap">
+              {inv.status === 'done' ? (
+                <>
+                  <a href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="text-ink-500 hover:text-brand-600 text-[11px] font-bold px-2 py-1">View</a>
+                  <a href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`} className="p-1.5 text-ink-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Download PDF"><Download className="w-4 h-4" /></a>
+                  <button onClick={() => handleShare(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Share</button>
+                  <button onClick={() => handleSendEmail(inv.id)} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Email</button>
+                  {inv.pdf_url && (
+                    <button 
+                      onClick={() => { 
+                        const newStatus = inv.delivery_status === 'sent' ? 'unsent' : 'sent';
+                        setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: newStatus } : i));
+                        pendingStatusChanges.set(inv.id, newStatus);
+                        if (debounceTimer) clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(() => {
+                          const changes = Array.from(pendingStatusChanges.entries());
+                          pendingStatusChanges.clear();
+                          for (const [id, status] of changes) {
+                            fetch(`/api/invoices/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_status: status }) })
+                              .catch(() => toast.error('Failed to update status'));
+                          }
+                        }, 500);
+                      }}
+                      className={`text-[11px] font-bold px-2 py-1 ${inv.delivery_status === 'sent' ? 'text-green-600 hover:text-green-700' : 'text-ink-400 hover:text-green-600'}`}
+                    >{inv.delivery_status === 'sent' ? ' Mark Unsent' : 'Mark Sent'}</button>
+                  )}
+                  {inv.type === 'quote' && inv.payment_status === 'draft' && (
+                    <>
+                      <button onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`} className="text-[11px] font-bold px-2 py-1 text-ink-500 hover:text-brand-600 flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>
+                      <button onClick={() => canUseQuotes ? handleConvert(inv.id) : toast.error('Upgrade to Pro to convert quotes')} disabled={convertingId === inv.id} className={`text-[11px] font-bold px-2 py-1 transition-colors flex items-center gap-1 ${canUseQuotes ? 'text-purple-600 hover:text-purple-700' : 'text-ink-300 cursor-not-allowed'}`}>{convertingId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRightLeft className="w-3 h-3" />} Convert</button>
+                    </>
+                  )}
+                  {showPaymentToggle && (
+                    <button onClick={() => handleUpdateStatus(inv.id, inv.payment_status)} disabled={loadingId === inv.id} className={`text-[11px] font-bold px-2 py-1 transition-colors min-w-[75px] text-center ${inv.payment_status === 'paid' ? 'text-ink-400 hover:text-ink-600' : 'text-emerald-600 hover:text-emerald-700'}`}>{inv.payment_status === 'paid' ? 'Unmark' : 'Mark Paid'}</button>
+                  )}
+                  <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                </>
+              ) : inv.status === 'failed' ? (
+                <>
+                  <div className="flex items-center gap-1.5 text-red-500 mr-2"><AlertCircle className="w-3 h-3" /><span className="text-[10px] font-bold uppercase tracking-tight">Failed</span></div>
+                  <button onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Retry</button>
+                  <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                </>
+              ) : inv.status === 'processing' ? (
+                <>
+                  <div className="flex items-center gap-1.5 text-amber-500 mr-2"><Loader2 className="w-3 h-3 animate-spin" /><span className="text-[10px] font-bold uppercase tracking-tight">Processing</span></div>
+                  <button onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="text-brand-600 hover:text-brand-700 text-[11px] font-bold px-2 py-1">Retry</button>
+                  <button onClick={() => setDeleteModal({ isOpen: true, id: inv.id })} disabled={loadingId === inv.id} className="p-1.5 text-ink-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1"><Trash2 className="w-4 h-4" /></button>
+                </>
+              ) : null}
+            </div>
+            {/* Mobile: dropdown menu */}
+            <div className="md:hidden relative">
+              <button onClick={() => setMobileActionsId(isDropdownOpen ? null : inv.id)} className="p-1.5 text-ink-400 hover:text-ink-600 hover:bg-ink-50 rounded-lg transition-colors">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-ink-150 rounded-xl shadow-2xl z-50 py-1 animate-in fade-in duration-100">
+                  {inv.status === 'done' ? (
+                    <>
+                      <a href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="block px-3 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50">View PDF</a>
+                      <a href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`} className="block px-3 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50">Download</a>
+                      <button onClick={() => { handleShare(inv.id); setMobileActionsId(null); }} className="block w-full text-left px-3 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50">Share</button>
+                      <button onClick={() => { handleSendEmail(inv.id); setMobileActionsId(null); }} className="block w-full text-left px-3 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50">Email</button>
+                      {showPaymentToggle && <button onClick={() => { handleUpdateStatus(inv.id, inv.payment_status); setMobileActionsId(null); }} className="block w-full text-left px-3 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50">{inv.payment_status === 'paid' ? 'Unmark Paid' : 'Mark Paid'}</button>}
+                      <div className="border-t border-ink-100 my-1"></div>
+                      <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="block w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50">Delete</button>
+                    </>
+                  ) : inv.status === 'failed' ? (
+                    <>
+                      <button onClick={() => { handleRetry(inv.id); setMobileActionsId(null); }} className="block w-full text-left px-3 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50">Retry</button>
+                      <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="block w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50">Delete</button>
+                    </>
+                  ) : inv.status === 'processing' ? (
+                    <>
+                      <button onClick={() => { handleRetry(inv.id); setMobileActionsId(null); }} className="block w-full text-left px-3 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50">Retry</button>
+                      <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="block w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50">Delete</button>
+                    </>
+                  ) : null}
+                </div>
+              )}
+            </div>
           </div>
         );
       }
@@ -736,7 +751,16 @@ export default function InvoiceTable({
             />
           </div>
           
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Mobile filter toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="md:hidden flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-ink-200 rounded-lg text-xs font-bold text-ink-600 hover:bg-ink-50"
+          >
+            <Columns className="w-3.5 h-3.5" />
+            Filters
+          </button>
+
+          <div className={`flex flex-wrap items-center gap-2 w-full md:w-auto ${showFilters ? '' : 'hidden md:flex'}`}>
             {availableCurrencies.length > 0 && (
               <select 
                 value={currencyFilter}

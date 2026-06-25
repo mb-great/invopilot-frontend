@@ -386,15 +386,18 @@ export default function RevenueChart({ activeWorkspaceId, targetCurrency = 'USD'
 
           <div className="flex bg-ink-50 p-0.5 rounded-lg border border-ink-100">
             {(['30days', '1year', 'lifetime', 'custom'] as const).map((range) => {
-              const label = range === '30days' ? 'Last 30 Days' : range === '1year' ? '1 Year' : range === 'lifetime' ? 'Lifetime' : 'Custom Range';
+              const label = range === '30days' ? '30D' : range === '1year' ? '1Y' : range === 'lifetime' ? 'All' : 'Custom';
+              const fullLabel = range === '30days' ? 'Last 30 Days' : range === '1year' ? '1 Year' : range === 'lifetime' ? 'Lifetime' : 'Custom Range';
               const active = rangeType === range;
               return (
                 <button
                   key={range}
                   onClick={() => handleRangeChange(range)}
+                  title={fullLabel}
                   className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${active ? 'bg-white text-brand-600 shadow-sm border border-ink-100' : 'text-ink-500 hover:text-ink-900'}`}
                 >
-                  {label}
+                  <span className="sm:hidden">{label}</span>
+                  <span className="hidden sm:inline">{fullLabel}</span>
                 </button>
               );
             })}
