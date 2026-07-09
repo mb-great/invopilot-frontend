@@ -46,6 +46,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/billing/unsubscribe') ||
+    pathname.startsWith('/tools/') || // public SEO tools (MSME calculator, etc.)
     pathname.startsWith('/api/share') || // public invoice share links
     pathname.startsWith('/view/') || // public invoice view by filename
     pathname.startsWith('/i/') || // legacy share links
