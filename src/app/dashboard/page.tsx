@@ -14,6 +14,7 @@ import HelpPopover from '@/components/ui/HelpPopover'
 import { resolvePlanAccess } from '@/lib/billing/tiers';
 import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { Lock, Sparkles } from 'lucide-react'
+import ReviewReminderBanner from '@/components/dashboard/ReviewReminderBanner'
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -30,7 +31,7 @@ export default async function DashboardPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end, cancel_requested_at, defaults')
+    .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end, cancel_requested_at, defaults, subscription_source, review_status, review_deadline, review_submitted_at')
     .eq('id', user.id)
     .single()
 
@@ -208,6 +209,16 @@ export default async function DashboardPage({
             </Link>
           </div>
         </div>
+
+        {/* Beta Review Reminder */}
+        {profile?.subscription_source === 'manual' && (
+          <ReviewReminderBanner
+            reviewStatus={profile.review_status}
+            reviewDeadline={profile.review_deadline}
+            reviewSubmittedAt={profile.review_submitted_at}
+            userId={user.id}
+          />
+        )}
 
         {/* Metric Cards */}
         <div className="shrink-0">

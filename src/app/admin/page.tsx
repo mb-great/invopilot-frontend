@@ -6,6 +6,7 @@ import AdminTable from '@/components/admin/AdminTable'
 import RecentActivity from '@/components/admin/RecentActivity'
 import InviteUserForm from '@/components/admin/InviteUserForm'
 import ErrorLogs from '@/components/admin/ErrorLogs'
+import BetaReviews from '@/components/admin/BetaReviews'
 import { Activity } from 'lucide-react'
 import Link from 'next/link'
 import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
@@ -104,6 +105,13 @@ export default async function AdminPage({
     .order('created_at', { ascending: false })
     .limit(10);
 
+  // 4. Fetch Beta Reviews (only when tab=beta)
+  let betaUsers: any[] = [];
+  if (tab === 'beta') {
+    const { data } = await supabase.rpc('get_beta_review_status');
+    betaUsers = data || [];
+  }
+
   const totalPages = Math.ceil((totalCount || 0) / limit);
 
   return (
@@ -146,6 +154,12 @@ export default async function AdminPage({
                 >
                   Deleted Archive
                 </Link>
+                <Link 
+                  href="/admin?tab=beta"
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === 'beta' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-700'}`}
+                >
+                  Beta Reviews
+                </Link>
               </div>
 
               <form method="GET" action="/admin">
@@ -160,7 +174,9 @@ export default async function AdminPage({
               </form>
             </div>
             <div className="p-2">
-              {displayData && displayData.length > 0 ? (
+              {tab === 'beta' ? (
+                <BetaReviews users={betaUsers} />
+              ) : displayData && displayData.length > 0 ? (
                 <AdminTable 
                   users={displayData} 
                   pagination={{

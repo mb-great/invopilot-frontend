@@ -8,6 +8,7 @@ export type BillingGuardProfile = BillingProfile & {
   total_invoices_generated?: number | null;
   purchase_reminders_enabled?: boolean | null;
   purchase_reminder_unsubscribe_token?: string | null;
+  review_status?: string | null;
 };
 
 type ProfileQuery = {
@@ -48,7 +49,8 @@ export async function requireBillingProfile(supabase: unknown) {
       total_invoices_generated,
       purchase_reminders_enabled,
       purchase_reminder_unsubscribe_token,
-      razorpay_sub_id
+      razorpay_sub_id,
+      review_status
     `)
     .eq('id', user.id)
     .single();

@@ -230,7 +230,9 @@ export function resolvePlanAccess(profile?: BillingProfile | null, now = new Dat
     !!periodEnd &&
     periodEnd.getTime() >= now.getTime();
 
-  const effectiveTier: BillingTier = isAdmin ? 'business' : hasActivePaidPeriod ? tier : 'free';
+  // BETA: all features free until September 2026 — uncomment original line after beta ends
+  // const effectiveTier: BillingTier = isAdmin ? 'business' : hasActivePaidPeriod ? tier : 'free';
+  const effectiveTier: BillingTier = 'business' as BillingTier;
 
   return {
     profile,

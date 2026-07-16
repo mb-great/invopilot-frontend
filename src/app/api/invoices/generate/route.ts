@@ -20,6 +20,14 @@ export async function POST(request: Request) {
   }
   const { user, profile } = auth;
 
+  // 0. Review overdue gate — block invoice creation for overdue reviewers
+  if (profile.review_status === 'review_overdue') {
+    return NextResponse.json(
+      { error: 'Review overdue. Please submit your G2 review to continue.', code: 'REVIEW_OVERDUE' },
+      { status: 403 }
+    );
+  }
+
   // 1. Rate limit — 10/min per IP
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
   if (process.env.NODE_ENV !== 'development' && !rateLimit(ip, 10, 60_000))

@@ -282,7 +282,26 @@ export default function PricingClient({ profile }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+      {/* BETA: pricing hidden — all features free until September 2026 */}
+      {/* Uncomment plan cards below after beta ends */}
+      <div className="flex flex-col items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-8 py-12 text-center">
+        <div className="mb-4 rounded-full bg-green-100 p-3">
+          <Check className="h-8 w-8 text-green-600" />
+        </div>
+        <h2 className="text-2xl font-black text-ink-900">You have free access to InvoPilot Beta</h2>
+        <p className="mt-2 max-w-md text-sm text-ink-500">
+          All features are unlocked until September 2026. No limits on invoices, clients, quotes, recurring templates, or team members.
+        </p>
+        <div className="mt-6 rounded-lg bg-white border border-ink-100 px-6 py-4 text-sm text-ink-700">
+          <p className="font-bold text-ink-900">As part of the beta program:</p>
+          <p className="mt-1">You agreed to submit one honest public review on G2 within 10 days of approval.</p>
+          <a href="https://www.g2.com" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-bold text-brand-600 hover:text-brand-700">
+            Submit your G2 review →
+          </a>
+        </div>
+      </div>
+
+      {/* <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         {PLANS.map((plan) => {
           const isCurrent = access.effectiveTier === plan.tier && !access.isAdmin;
           const isFeatured = plan.tier === 'pro';
@@ -373,7 +392,7 @@ export default function PricingClient({ profile }: Props) {
             </section>
           );
         })}
-      </div>
+      </div> */}
 
     </div>
   );
