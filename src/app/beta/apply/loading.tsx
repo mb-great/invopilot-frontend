@@ -1,5 +1,5 @@
 import SyncingLoader from '@/components/ui/SyncingLoader'
 
-export default function DashboardLoading() {
+export default function BetaApplyLoading() {
   return <SyncingLoader />
 }

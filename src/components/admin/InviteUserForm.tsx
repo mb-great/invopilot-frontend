@@ -6,7 +6,7 @@ import { UserPlus } from "lucide-react";
 
 export default function InviteUserForm() {
   const [email, setEmail] = useState("");
-  const [tier, setTier] = useState("pro");
+  const [tier, setTier] = useState("business");
   const [duration, setDuration] = useState("1_month");
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
@@ -49,8 +49,11 @@ export default function InviteUserForm() {
         <UserPlus className="w-5 h-5 text-brand-500" />
         Invite & Grant Tier
       </h3>
-      <p className="text-xs text-ink-500 mb-4">
+      <p className="text-xs text-ink-500 mb-2">
         Invites a new user via email and pre-grants them a subscription tier immediately.
+      </p>
+      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+        <strong>Beta note:</strong> All users currently get Business-tier access automatically. Tier selection here is for post-beta prep.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -78,8 +81,9 @@ export default function InviteUserForm() {
               onChange={(e) => setTier(e.target.value)}
               className="w-full bg-white border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 transition-all"
             >
+              <option value="business">Business Plan</option>
               <option value="pro">Pro Plan</option>
-              <option value="enterprise">Enterprise Plan</option>
+              <option value="starter">Starter Plan</option>
               <option value="free">Free Plan</option>
             </select>
           </div>

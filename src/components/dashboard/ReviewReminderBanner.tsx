@@ -12,7 +12,7 @@ type Props = {
   userId: string;
 };
 
-const G2_REVIEW_URL = 'https://www.g2.com';
+const G2_REVIEW_URL = 'https://www.g2.com/products/invopilot/reviews/new';
 
 function isHardBanner(status: string | null, daysLeft: number | null): boolean {
   if (status === 'review_overdue') return true;

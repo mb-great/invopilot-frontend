@@ -29,8 +29,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    if (!['free', 'pro', 'enterprise'].includes(tier)) {
-      return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
+    if (!['free', 'starter', 'pro', 'business'].includes(tier)) {
+      return NextResponse.json({ error: 'Invalid tier. Must be: free, starter, pro, or business' }, { status: 400 });
     }
 
     // 4. Calculate subscription end date

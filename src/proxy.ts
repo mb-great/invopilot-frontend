@@ -29,11 +29,6 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Do not add logic between createServerClient and getUser()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
 
   // Public routes — no auth required
@@ -50,12 +45,24 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/share') || // public invoice share links
     pathname.startsWith('/view/') || // public invoice view by filename
     pathname.startsWith('/i/') || // legacy share links
+    pathname.startsWith('/beta/apply') || // beta application form (accessible to logged-in unapplied users)
     (pathname.startsWith('/invoices/') && pathname !== '/invoices/new' && pathname !== '/invoices') // public share: /invoices/:slug (redirects to /view/)
+
+  // Short-circuit public routes — skip getUser() entirely to avoid
+  // stale refresh token errors (AuthApiError: Refresh Token Not Found)
+  if (isPublicRoute) {
+    return supabaseResponse
+  }
+
+  // IMPORTANT: Do not add logic between createServerClient and getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const isAdminRoute = pathname.startsWith('/admin')
 
   // Unauthenticated user on protected route
-  if (!user && !isPublicRoute) {
+  if (!user) {
     if (!pathname.startsWith('/api/')) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
@@ -63,17 +70,28 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Admin role check
-  if (isAdminRoute && user) {
+  // Beta gate — require beta application before dashboard access
+  // Admins bypass; API routes bypass (let individual endpoints enforce)
+  if (user && !pathname.startsWith('/api/')) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, beta_applied')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
+
+    // Admin role check for /admin routes
+    if (isAdminRoute && !isAdmin) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // Beta gate: redirect non-applied users to beta form (admins bypass)
+    if (!isAdmin && profile?.beta_applied !== true) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/beta/apply'
       return NextResponse.redirect(url)
     }
   }

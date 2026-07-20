@@ -295,7 +295,7 @@ export default function PricingClient({ profile }: Props) {
         <div className="mt-6 rounded-lg bg-white border border-ink-100 px-6 py-4 text-sm text-ink-700">
           <p className="font-bold text-ink-900">As part of the beta program:</p>
           <p className="mt-1">You agreed to submit one honest public review on G2 within 10 days of approval.</p>
-          <a href="https://www.g2.com" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-bold text-brand-600 hover:text-brand-700">
+          <a href="https://www.g2.com/products/invopilot/reviews/new" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-bold text-brand-600 hover:text-brand-700">
             Submit your G2 review →
           </a>
         </div>
