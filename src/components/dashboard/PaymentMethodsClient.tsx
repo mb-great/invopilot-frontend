@@ -124,9 +124,6 @@ function MethodPickerModal({ onSelect, onClose, canUseUpi }: { onSelect: (id: st
                   UPI
                 </div>
                 <span className="text-[17px] font-semibold text-ink-900 flex-1">UPI</span>
-                {!canUseUpi && (
-                  <span className="text-[10px] font-bold text-brand-600 bg-[#ffedd9] px-2 py-0.5 rounded-[7px] tracking-widest">PRO</span>
-                )}
                 <ChevronRight className="w-[18px] h-[18px] text-gray-400 group-hover:text-brand-500 transition-colors" />
               </button>
             </div>
