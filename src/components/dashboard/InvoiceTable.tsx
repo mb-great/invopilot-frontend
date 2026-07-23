@@ -491,7 +491,7 @@ export default function InvoiceTable({
         return (
           <div className="flex flex-col min-w-0 max-w-[250px]">
             <div className="flex items-center gap-2">
-              <span className="truncate font-bold text-sm text-ink-900" title={title}>
+              <span className="truncate text-[14.5px] font-[800] text-ink-900" title={title}>
                 {title}
               </span>
               {row.original.type === 'quote' && (
@@ -500,25 +500,19 @@ export default function InvoiceTable({
             </div>
             
             {client && (
-              <span className="text-[12px] text-ink-600 truncate mt-0.5" title={client}>
+              <span className="text-[12px] text-slate-500 truncate mt-[3px] leading-relaxed" title={client}>
                 To: <span className="font-medium">{client}</span>
               </span>
             )}
             
-            {business && (
-              <span className="text-[11px] text-ink-400 truncate mt-0.5" title={business}>
-                From: {business}
-              </span>
-            )}
-            
             {row.original.nickname && row.original.invoice_number && (
-              <span className="text-[10px] text-ink-400 font-mono uppercase mt-0.5">
+              <span className="text-[12px] text-slate-400 font-mono mt-[3px] leading-relaxed">
                 {row.original.invoice_number}
               </span>
             )}
 
             {row.original.profiles?.full_name && (
-              <span className="text-[10px] text-ink-400 mt-0.5">
+              <span className="text-[12px] text-slate-400 italic mt-[3px] leading-relaxed">
                 by {row.original.profiles.full_name}
               </span>
             )}
@@ -530,7 +524,7 @@ export default function InvoiceTable({
       accessorKey: 'amount',
       header: 'Amount',
       cell: ({ row }) => (
-        <span className="font-bold text-ink-900 whitespace-nowrap">
+        <span className="text-[15px] font-[800] text-ink-900 whitespace-nowrap">
           {formatCurrency(row.original.amount || 0, row.original.currency)}
         </span>
       )
@@ -540,20 +534,20 @@ export default function InvoiceTable({
       header: 'Issue Date',
       accessorFn: row => row.issue_date || row.form_data?.issueDate,
       meta: { className: 'hidden md:table-cell' },
-      cell: ({ getValue }) => <span className="text-[11px] font-medium text-ink-700 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
+      cell: ({ getValue }) => <span className="text-[13px] text-slate-500 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
     },
     {
       id: 'dueDate',
       header: 'Due Date',
       accessorFn: row => row.due_date || row.form_data?.dueDate,
       meta: { className: 'hidden sm:table-cell' },
-      cell: ({ getValue }) => <span className="text-[11px] font-medium text-ink-700 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
+      cell: ({ getValue }) => <span className="text-[13px] text-slate-500 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
     },
     {
       accessorKey: 'created_at',
       header: 'Created',
       meta: { className: 'hidden lg:table-cell' },
-      cell: ({ getValue }) => <span className="text-[10px] font-medium text-ink-400 italic whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, p')}</span>
+      cell: ({ getValue }) => <span className="text-[12px] text-slate-400 italic whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, p')}</span>
     },
     {
       accessorKey: 'payment_status',
@@ -587,7 +581,7 @@ export default function InvoiceTable({
         }
 
         return (
-          <span className={`inline-flex items-center gap-[7px] text-[12.5px] font-bold px-3 py-[5px] rounded-full border whitespace-nowrap ${pillBg} ${pillText} ${pillBorder}`}>
+          <span className={`inline-flex items-center gap-[7px] text-[12.5px] font-[700] px-3 py-[5px] rounded-full border whitespace-nowrap ${pillBg} ${pillText} ${pillBorder}`}>
             <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotBg}`} />
             {lifecycle}
           </span>
@@ -617,41 +611,41 @@ export default function InvoiceTable({
 
         // === PRIMARY (lg) — one filled button per status ===
         if (isFailed) {
-          actions.push({ key: 'retry', priority: 1, size: 'lg', el: <button key="retry" onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-bold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"><RotateCcw className="w-[15px] h-[15px]" /> Retry</button> });
+          actions.push({ key: 'retry', priority: 1, size: 'lg', el: <button key="retry" onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"><RotateCcw className="w-[15px] h-[15px]" /> Retry</button> });
         } else if (isProcessing) {
           actions.push({ key: 'processing', priority: 1, size: 'lg', el: <div key="proc" className="inline-flex items-center gap-1.5 text-amber-500"><Loader2 className="w-3.5 h-3.5 animate-spin" /><span className="text-[11px] font-bold">Processing</span></div> });
         } else if (isDraft) {
-          actions.push({ key: 'send', priority: 1, size: 'lg', el: <button key="send" onClick={() => handleSendEmail(inv.id)} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-bold bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C] transition-colors"><Send className="w-[15px] h-[15px]" /> Send</button> });
+          actions.push({ key: 'send', priority: 1, size: 'lg', el: <button key="send" onClick={() => handleSendEmail(inv.id)} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C] transition-colors"><Send className="w-[15px] h-[15px]" /> Send</button> });
         } else if (isOverdue) {
-          actions.push({ key: 'remind', priority: 1, size: 'lg', el: <button key="remind" onClick={() => handleSendEmail(inv.id)} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-bold bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C] transition-colors"><Send className="w-[15px] h-[15px]" /> Remind</button> });
+          actions.push({ key: 'remind', priority: 1, size: 'lg', el: <button key="remind" onClick={() => handleSendEmail(inv.id)} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C] transition-colors"><Send className="w-[15px] h-[15px]" /> Remind</button> });
           if (showPaymentToggle) actions.push({ key: 'markpaid-overdue', priority: 2, size: 'md', el: <button key="mp" onClick={() => handleUpdateStatus(inv.id, inv.payment_status)} disabled={loadingId === inv.id} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#A7F3C6] bg-white text-[#16A34A] hover:bg-[#ECFDF3] transition-colors relative"><CheckCircle2 className="w-4 h-4" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Mark paid</span></button> });
         } else if (isPaid) {
-          actions.push({ key: 'view', priority: 1, size: 'lg', el: <a key="view" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-bold bg-white text-[#0F172A] border border-[#E9EDF3] hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a> });
+          actions.push({ key: 'view', priority: 1, size: 'lg', el: <a key="view" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-white text-[#0F172A] border border-[#E9EDF3] hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a> });
         } else {
           // Sent / Awaiting payment
           if (showPaymentToggle) {
-            actions.push({ key: 'markpaid', priority: 1, size: 'lg', el: <button key="mp" onClick={() => handleUpdateStatus(inv.id, inv.payment_status)} disabled={loadingId === inv.id} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-bold bg-[#16A34A] text-white shadow-[0_2px_6px_rgba(22,163,74,.22)] hover:bg-[#15803D] transition-colors"><CheckCircle2 className="w-[15px] h-[15px]" /> Mark paid</button> });
+            actions.push({ key: 'markpaid', priority: 1, size: 'lg', el: <button key="mp" onClick={() => handleUpdateStatus(inv.id, inv.payment_status)} disabled={loadingId === inv.id} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-[#16A34A] text-white shadow-[0_2px_6px_rgba(22,163,74,.22)] hover:bg-[#15803D] transition-colors"><CheckCircle2 className="w-[15px] h-[15px]" /> Mark paid</button> });
           } else {
-            actions.push({ key: 'view', priority: 1, size: 'lg', el: <a key="view" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-bold bg-white text-[#0F172A] border border-[#E9EDF3] hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a> });
+            actions.push({ key: 'view', priority: 1, size: 'lg', el: <a key="view" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-white text-[#0F172A] border border-[#E9EDF3] hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a> });
           }
         }
 
         // === SECONDARY (md) — icon buttons, always visible ===
         if (done && !isFailed && !isProcessing) {
-          actions.push({ key: 'view-icon', priority: 10, size: 'md', el: <a key="vi" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Eye className="w-4 h-4" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">View</span></a> });
-          actions.push({ key: 'dl-icon', priority: 11, size: 'md', el: <a key="dl" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Download className="w-4 h-4" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Download</span></a> });
-          actions.push({ key: 'share-icon', priority: 12, size: 'md', el: <button key="sh" onClick={() => handleShare(inv.id)} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Share2 className="w-4 h-4" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Share</span></button> });
+          actions.push({ key: 'view-icon', priority: 10, size: 'md', el: <a key="vi" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Eye className="w-[16px] h-[16px]" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">View</span></a> });
+          actions.push({ key: 'dl-icon', priority: 11, size: 'md', el: <a key="dl" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Download className="w-[16px] h-[16px]" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Download</span></a> });
+          actions.push({ key: 'share-icon', priority: 12, size: 'md', el: <button key="sh" onClick={() => handleShare(inv.id)} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Share2 className="w-[16px] h-[16px]" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Share</span></button> });
           if (inv.type === 'quote' && inv.payment_status === 'draft') {
-            actions.push({ key: 'edit-icon', priority: 13, size: 'md', el: <button key="ed" onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Pencil className="w-4 h-4" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Edit</span></button> });
+            actions.push({ key: 'edit-icon', priority: 13, size: 'md', el: <button key="ed" onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Pencil className="w-[16px] h-[16px]" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Edit</span></button> });
           }
         }
 
         // === HIDDEN MENU ITEMS (sm) — goes in ⋯ dropdown ===
         const menuItems: { key: string; label: string; icon: React.ReactNode; danger?: boolean; onClick: () => void }[] = [];
         if (done && !isFailed && !isProcessing) {
-          if (isSent && !isOverdue) menuItems.push({ key: 'unsent', label: 'Mark unsent', icon: <RotateCcw className="w-4 h-4 text-[#64748B]" />, onClick: () => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: 'unsent' } : i)); pendingStatusChanges.set(inv.id, 'unsent'); } });
-          if (isDraft) menuItems.push({ key: 'mark-sent', label: 'Mark as sent', icon: <Send className="w-4 h-4 text-[#64748B]" />, onClick: () => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: 'sent' } : i)); pendingStatusChanges.set(inv.id, 'sent'); } });
-          if (isPaid) menuItems.push({ key: 'unmark', label: 'Unmark paid', icon: <RotateCcw className="w-4 h-4 text-[#64748B]" />, onClick: () => handleUpdateStatus(inv.id, inv.payment_status) });
+          if (isSent && !isOverdue) menuItems.push({ key: 'unsent', label: 'Mark unsent', icon: <RotateCcw className="w-[16px] h-[16px] text-[#64748B]" />, onClick: () => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: 'unsent' } : i)); pendingStatusChanges.set(inv.id, 'unsent'); } });
+          if (isDraft) menuItems.push({ key: 'mark-sent', label: 'Mark as sent', icon: <Send className="w-[16px] h-[16px] text-[#64748B]" />, onClick: () => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: 'sent' } : i)); pendingStatusChanges.set(inv.id, 'sent'); } });
+          if (isPaid) menuItems.push({ key: 'unmark', label: 'Unmark paid', icon: <RotateCcw className="w-[16px] h-[16px] text-[#64748B]" />, onClick: () => handleUpdateStatus(inv.id, inv.payment_status) });
         }
 
         // Sort actions by priority
@@ -671,18 +665,18 @@ export default function InvoiceTable({
               {menuItems.length > 0 && (
                 <div className="relative">
                 <button data-overflow-trigger data-tooltip onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative">
-                  <MoreHorizontal className="w-4 h-4" />
+                  <MoreHorizontal className="w-[16px] h-[16px]" />
                   <span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">More</span>
                   </button>
                 {menuOpen && (
                   <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-[6px] min-w-[200px] bg-white border border-[#E9EDF3] rounded-xl shadow-[0_12px_34px_rgba(15,23,42,.16)] py-[6px] z-50">
                       {menuItems.map(item => (
-                        <button key={item.key} onClick={() => { item.onClick(); setMobileActionsId(null); }} className={`flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-lg bg-transparent border-none text-[13.5px] font-semibold text-left hover:bg-[#F5F6F8] ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
+                        <button key={item.key} onClick={() => { item.onClick(); setMobileActionsId(null); }} className={`flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-lg bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
                           {item.icon} {item.label}
                         </button>
                       ))}
                       <div className="h-px bg-[#F0F3F7] mx-[4px] my-[5px]" />
-                      <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-lg bg-transparent border-none text-[13.5px] font-semibold text-[#DC2626] text-left hover:bg-[#FEECEC]"><Trash2 className="w-4 h-4 text-[#DC2626]" /> Delete</button>
+                      <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-lg bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC]"><Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete</button>
                     </div>
                   )}
                 </div>
@@ -693,7 +687,7 @@ export default function InvoiceTable({
               {lgActions.map(a => <span key={a.key}>{a.el}</span>)}
               <div className="relative">
                 <button data-overflow-trigger onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] transition-colors">
-                  <MoreVertical className="w-4 h-4" />
+                  <MoreVertical className="w-[16px] h-[16px]" />
                 </button>
                 {menuOpen && (
                   <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-1 w-48 bg-white border border-[#E9EDF3] rounded-xl shadow-xl z-50 py-1">
@@ -704,7 +698,7 @@ export default function InvoiceTable({
                       </button>
                     ))}
                     <div className="border-t border-[#F0F3F7] my-1" />
-                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-[#DC2626] hover:bg-[#FEECEC]"><Trash2 className="w-4 h-4" /> Delete</button>
+                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-[#DC2626] hover:bg-[#FEECEC]"><Trash2 className="w-[16px] h-[16px]" /> Delete</button>
                   </div>
                 )}
               </div>
@@ -997,11 +991,11 @@ export default function InvoiceTable({
           <table className="w-full text-left border-collapse table-auto">
             <thead>
               {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id} className="text-ink-400 text-[10px] uppercase tracking-widest border-b border-ink-100 bg-ink-50/30">
+                <tr key={headerGroup.id} className="text-[11px] font-[800] uppercase tracking-[0.5px] text-slate-500 border-t border-b border-ink-100 bg-[#FBFCFD]">
                   {headerGroup.headers.map(header => (
                     <th 
                       key={header.id} 
-                      className={`py-3 px-4 font-bold cursor-pointer hover:bg-ink-100/50 transition-colors ${header.column.getCanSort() ? 'select-none' : ''} ${(header.column.columnDef.meta as any)?.className || ''}`}
+                      className={`py-[1.5vh] px-[2.2vw] font-[800] cursor-pointer hover:bg-ink-100/50 transition-colors ${header.column.getCanSort() ? 'select-none' : ''} ${(header.column.columnDef.meta as any)?.className || ''}`}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       <div className="flex items-center gap-1.5">
@@ -1024,7 +1018,7 @@ export default function InvoiceTable({
               {table.getRowModel().rows.map(row => (
                 <tr key={row.id} className={`group hover:bg-ink-50/50 transition-colors ${selectedIds.includes(row.original.id) ? 'bg-brand-50/30' : ''}`}>
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className={`py-2 px-4 ${cell.column.id === 'actions' ? 'text-right' : ''} ${(cell.column.columnDef.meta as any)?.className || ''}`}>
+                    <td key={cell.id} className={`py-[1.5vh] px-[2.2vw] ${cell.column.id === 'actions' ? 'text-right' : ''} ${(cell.column.columnDef.meta as any)?.className || ''}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

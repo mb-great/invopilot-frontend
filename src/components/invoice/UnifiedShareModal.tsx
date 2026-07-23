@@ -305,11 +305,11 @@ export default function UnifiedShareModal({
               <div className={`flex items-center justify-between text-xs rounded-lg px-3 py-2 ${senderConfig ? 'text-ink-500 bg-ink-50' : 'text-amber-600 bg-amber-50 border border-amber-200'}`}>
                 <span>{senderBar}</span>
                 {!senderConfig ? (
-                  <a href="/dashboard/settings" className="text-amber-600 font-semibold hover:underline">
+                  <a href="/dashboard/settings#email-settings" className="text-amber-600 font-semibold hover:underline">
                     Setup Email →
                   </a>
                 ) : (
-                  <Link href="/dashboard/settings" className="text-brand-500 font-semibold hover:underline">
+                  <Link href="/dashboard/settings#email-settings" className="text-brand-500 font-semibold hover:underline">
                     Change →
                   </Link>
                 )}

@@ -23,7 +23,7 @@ export default function EmailSettings() {
   const [config, setConfig] = useState<SenderConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [smtpHost, setSmtpHost] = useState('');
-  const [smtpPort, setSmtpPort] = useState('587');
+  const [smtpPort, setSmtpPort] = useState('465');
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
   const [smtpExpanded, setSmtpExpanded] = useState(false);
@@ -40,6 +40,14 @@ export default function EmailSettings() {
   }, [searchParams, router]);
 
   useEffect(() => {
+    if (window.location.hash === '#email-settings') {
+      setTimeout(() => {
+        document.getElementById('email-settings')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, []);
+
+  useEffect(() => {
     fetchConfig();
   }, []);
 
@@ -50,7 +58,7 @@ export default function EmailSettings() {
       if (json.data && json.data.method !== 'system') {
         setConfig(json.data);
         setSmtpHost(json.data.smtp_host || '');
-        setSmtpPort(String(json.data.smtp_port || 587));
+        setSmtpPort(String(json.data.smtp_port || 465));
         setSmtpUser(json.data.smtp_user || '');
         if (json.data.method === 'smtp') setSmtpExpanded(true);
       } else {
@@ -81,7 +89,7 @@ export default function EmailSettings() {
       if (!res.ok) throw new Error('Failed to disconnect');
       setConfig(null);
       setSmtpHost('');
-      setSmtpPort('587');
+      setSmtpPort('465');
       setSmtpUser('');
       setSmtpPass('');
       toast.success('Email sender disconnected.');
@@ -121,7 +129,7 @@ export default function EmailSettings() {
   const senderEmail = config?.method === 'gmail' ? config.gmail_email : config?.method === 'smtp' ? config.smtp_user : null;
 
   return (
-    <section className="glass-card p-8 bg-white border border-ink-100 shadow-sm mt-8">
+    <section id="email-settings" className="glass-card p-8 bg-white border border-ink-100 shadow-sm mt-8">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-ink-900 mb-2">Email Sender</h2>
         <p className="text-ink-500 text-sm">Connect your email to send invoices from your own address.</p>
@@ -229,7 +237,7 @@ export default function EmailSettings() {
                     type="number"
                     value={smtpPort}
                     onChange={(e) => setSmtpPort(e.target.value)}
-                    placeholder="587"
+                    placeholder="465"
                     className="mt-1 w-full px-3 py-2 rounded-lg border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   />
                 </div>
