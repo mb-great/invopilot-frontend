@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X, Columns, ArrowUpDown, ArrowUp, ArrowDown, Link2, Pencil, MoreVertical, MoreHorizontal, Eye, Send, Share2, Mail, Copy, RotateCcw } from 'lucide-react';
+import { Loader2, Search, ChevronLeft, ChevronRight, AlertCircle, Trash2, CheckCircle2, ArrowRightLeft, Download, X, Columns, ArrowUpDown, ArrowUp, ArrowDown, Link2, Pencil, MoreVertical, MoreHorizontal, Eye, Send, Share2, Mail, Copy, RotateCcw, Inbox } from 'lucide-react';
 import { flexRender, getCoreRowModel, useReactTable, ColumnDef, VisibilityState, SortingState } from '@tanstack/react-table';
 import UnifiedShareModal from '@/components/invoice/UnifiedShareModal';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
@@ -138,6 +138,82 @@ export default function InvoiceTable({
     document.addEventListener('keydown', escHandler);
     return () => { document.removeEventListener('click', handler); document.removeEventListener('keydown', escHandler); };
   }, []);
+
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [checkScroll, invoices]);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const hasFiredHint = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || invoices.length === 0 || hasFiredHint.current) return;
+    
+    const tableEl = scrollContainerRef.current;
+    if (!tableEl) return;
+
+    let checkInterval: NodeJS.Timeout;
+
+    const checkVisibility = () => {
+      if (hasFiredHint.current || !tableEl) return;
+      
+      const rect = tableEl.getBoundingClientRect();
+      const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+      
+      // If the top of the table is within the upper 90% of the screen, and bottom is below top 10%
+      if (rect.top < windowHeight * 0.9 && rect.bottom > windowHeight * 0.1) {
+        hasFiredHint.current = true;
+        window.removeEventListener('scroll', checkVisibility, true);
+        clearInterval(checkInterval);
+        
+        const lastHint = localStorage.getItem('last_scroll_hint');
+        const now = Date.now();
+        
+        // 3 hours = 10800000 ms
+        // if (!lastHint || now - parseInt(lastHint, 10) > 10800000) {
+          setTimeout(() => {
+            if (scrollContainerRef.current) {
+              const { scrollWidth, clientWidth, scrollLeft } = scrollContainerRef.current;
+              
+              // If the user already scrolled horizontally, abort the hint completely
+              if (scrollLeft > 10) return;
+              
+              // Only show hint if the table is actually scrollable (cramped layouts)
+              if (scrollWidth > clientWidth) {
+                setShowSwipeHint(true);
+                setTimeout(() => setShowSwipeHint(false), 4500); // Stay on screen for 4.5s
+                localStorage.setItem('last_scroll_hint', now.toString());
+              }
+            }
+          }, 600); // Show pill 600ms after it becomes visible
+        // }
+      }
+    };
+
+    window.addEventListener('scroll', checkVisibility, true); // true = capture nested scrolls
+    checkInterval = setInterval(checkVisibility, 500); // Fallback poller
+    checkVisibility(); // Check immediately
+
+    return () => {
+      window.removeEventListener('scroll', checkVisibility, true);
+      clearInterval(checkInterval);
+    };
+  }, [invoices.length]);
 
   // Tooltip hover controller — show only the hovered icon's tooltip
   useEffect(() => {
@@ -462,6 +538,7 @@ export default function InvoiceTable({
   const allColumns = useMemo<ColumnDef<Invoice>[]>(() => [
     {
       id: 'select',
+      meta: { className: 'w-[40px]' },
       header: ({ table }) => (
         <input 
           type="checkbox" 
@@ -483,6 +560,7 @@ export default function InvoiceTable({
     {
       accessorKey: 'nickname',
       header: 'Invoice Details',
+      meta: { className: 'w-[40%] lg:w-auto min-w-[200px]' },
       cell: ({ row }) => {
         const title = row.original.nickname || row.original.invoice_number || 'Unnamed Invoice';
         const client = row.original.client_name || row.original.client_email;
@@ -523,6 +601,7 @@ export default function InvoiceTable({
     {
       accessorKey: 'amount',
       header: 'Amount',
+      meta: { className: 'w-[15%] lg:w-[110px]' },
       cell: ({ row }) => (
         <span className="text-[15px] font-[800] text-ink-900 whitespace-nowrap">
           {formatCurrency(row.original.amount || 0, row.original.currency)}
@@ -533,25 +612,26 @@ export default function InvoiceTable({
       id: 'issueDate',
       header: 'Issue Date',
       accessorFn: row => row.issue_date || row.form_data?.issueDate,
-      meta: { className: 'hidden md:table-cell' },
+      meta: { className: 'hidden md:table-cell w-[10%] lg:w-[104px]' },
       cell: ({ getValue }) => <span className="text-[13px] text-slate-500 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
     },
     {
       id: 'dueDate',
       header: 'Due Date',
       accessorFn: row => row.due_date || row.form_data?.dueDate,
-      meta: { className: 'hidden sm:table-cell' },
+      meta: { className: 'hidden sm:table-cell w-[10%] lg:w-[104px]' },
       cell: ({ getValue }) => <span className="text-[13px] text-slate-500 whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, yyyy')}</span>
     },
     {
       accessorKey: 'created_at',
       header: 'Created',
-      meta: { className: 'hidden lg:table-cell' },
+      meta: { className: 'hidden lg:table-cell w-[124px]' },
       cell: ({ getValue }) => <span className="text-[12px] text-slate-400 italic whitespace-nowrap">{safeDate(getValue() as string, 'MMM d, p')}</span>
     },
     {
       accessorKey: 'payment_status',
       header: 'Status',
+      meta: { className: 'w-[15%] lg:w-[150px]' },
       cell: ({ row }) => {
         const inv = row.original;
         const isPastDue = inv.payment_status === 'unpaid' && inv.due_date && new Date(inv.due_date) < new Date();
@@ -559,13 +639,22 @@ export default function InvoiceTable({
         const isPaid = inv.payment_status === 'paid';
         const isSent = inv.delivery_status === 'sent';
 
+        const isFailed = inv.status === 'failed';
+        const isProcessing = inv.status === 'processing' || inv.status === 'queued';
+
         let lifecycle: string;
         let pillBg: string;
         let pillText: string;
         let pillBorder: string;
         let dotBg: string;
 
-        if (isPaid) {
+        if (isFailed) {
+          lifecycle = 'Failed';
+          pillBg = 'bg-red-50'; pillText = 'text-red-700'; pillBorder = 'border-red-200'; dotBg = 'bg-red-500';
+        } else if (isProcessing) {
+          lifecycle = 'Generating...';
+          pillBg = 'bg-amber-50'; pillText = 'text-amber-700'; pillBorder = 'border-amber-200'; dotBg = 'bg-amber-500 animate-pulse';
+        } else if (isPaid) {
           lifecycle = 'Paid';
           pillBg = 'bg-[#ECFDF3]'; pillText = 'text-[#15803D]'; pillBorder = 'border-[#A7F3C6]'; dotBg = 'bg-[#16A34A]';
         } else if (isOverdue) {
@@ -573,7 +662,7 @@ export default function InvoiceTable({
           lifecycle = days > 0 ? `Overdue · ${days}d` : 'Overdue';
           pillBg = 'bg-[#FEECEC]'; pillText = 'text-[#B91C1C]'; pillBorder = 'border-[#FBD0D0]'; dotBg = 'bg-[#DC2626]';
         } else if (isSent) {
-          lifecycle = 'Awaiting payment';
+          lifecycle = 'Unpaid';
           pillBg = 'bg-[#EFF4FF]'; pillText = 'text-[#1D4ED8]'; pillBorder = 'border-[#D5E2FF]'; dotBg = 'bg-[#2563EB]';
         } else {
           lifecycle = 'Draft';
@@ -582,7 +671,7 @@ export default function InvoiceTable({
 
         return (
           <span className={`inline-flex items-center gap-[7px] text-[12.5px] font-[700] px-3 py-[5px] rounded-full border whitespace-nowrap ${pillBg} ${pillText} ${pillBorder}`}>
-            <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotBg}`} />
+            {isProcessing ? <Loader2 className="w-[10px] h-[10px] animate-spin text-amber-600" /> : <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotBg}`} />}
             {lifecycle}
           </span>
         );
@@ -592,6 +681,7 @@ export default function InvoiceTable({
       id: 'actions',
       header: '',
       enableSorting: false,
+      meta: { className: 'w-[90px] lg:w-[300px]' },
       cell: ({ row }) => {
         const inv = row.original;
         const isPastDue = inv.payment_status === 'unpaid' && inv.due_date && new Date(inv.due_date) < new Date();
@@ -600,105 +690,212 @@ export default function InvoiceTable({
         const isSent = inv.delivery_status === 'sent';
         const isDraft = !isPaid && !isOverdue && !isSent;
         const isFailed = inv.status === 'failed';
-        const isProcessing = inv.status === 'processing';
+        const isProcessing = inv.status === 'processing' || inv.status === 'queued';
         const menuOpen = mobileActionsId === inv.id;
         const done = inv.status === 'done';
 
-        // Priority weights: lower = more important, shows first
-        // Size: lg=filled button, md=icon button, sm=hidden in menu
-        type ActionItem = { key: string; priority: number; size: 'lg' | 'md' | 'sm'; el: React.JSX.Element };
+        // Custom toast to match HTML prototype (Dark background + Green Dot)
+        const showToast = (msg: string) => {
+          toast(msg, {
+            icon: <span className="text-[#4ADE80] font-bold text-lg">●</span>,
+            style: { background: '#16233A', color: '#fff', border: 'none', borderRadius: '11px', padding: '12px 20px', fontWeight: 600, fontSize: '14px' },
+            duration: 2400
+          });
+        };
+
+        const onAction = (action: string) => {
+          if (action === 'view') showToast(`Opening ${inv.invoice_number || 'invoice'}`);
+          if (action === 'download') showToast(`Downloading ${inv.invoice_number || 'invoice'}.pdf`);
+          if (action === 'share') showToast('Payment link copied');
+          if (action === 'reminder') showToast('Reminder sent via Gmail');
+          // if (action === 'duplicate') showToast('Duplicated as a draft');
+        };
+
+        // Size: lg=primary slot, md=quick icon slots
+        type ActionItem = { key: string; size: 'lg' | 'md'; el: React.JSX.Element };
         const actions: ActionItem[] = [];
+        const menuItems: { key: string; label: string; icon: React.ReactNode; isToggle?: boolean; checked?: boolean; danger?: boolean; onClick: () => void }[] = [];
 
-        // === PRIMARY (lg) — one filled button per status ===
+        const PrimaryBtn = ({ cls, icon: Icon, label, onClick, disabled }: any) => (
+          <div className="w-[118px] flex-shrink-0 flex items-stretch">
+            <button onClick={onClick} disabled={disabled || loadingId === inv.id} className={`w-full h-[34px] px-[12px] rounded-[9px] border border-transparent inline-flex items-center justify-center gap-[7px] text-[13px] font-[700] whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${cls}`}>
+              <Icon className="w-[15px] h-[15px] flex-shrink-0" />
+              {label}
+            </button>
+          </div>
+        );
+
+        const IconBtn = ({ tip, icon: Icon, onClick, extraCls = '' }: any) => (
+          <button onClick={onClick} data-tooltip className={`w-[34px] h-[34px] flex-shrink-0 inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative ${extraCls}`}>
+            <Icon className="w-[16px] h-[16px]" />
+            <span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">{tip}</span>
+          </button>
+        );
+        
+        const LinkIconBtn = ({ tip, icon: Icon, href }: any) => (
+          <a href={href} onClick={() => onAction(tip.toLowerCase())} target="_blank" rel="noreferrer" data-tooltip className="w-[34px] h-[34px] flex-shrink-0 inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative">
+            <Icon className="w-[16px] h-[16px]" />
+            <span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">{tip}</span>
+          </a>
+        );
+
+        const viewUrl = inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`;
+        const downloadUrl = inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`;
+
+        // === Fixed Action Slots ===
         if (isFailed) {
-          actions.push({ key: 'retry', priority: 1, size: 'lg', el: <button key="retry" onClick={() => handleRetry(inv.id)} disabled={loadingId === inv.id} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"><RotateCcw className="w-[15px] h-[15px]" /> Retry</button> });
+          actions.push({ key: 'retry', size: 'lg', el: <PrimaryBtn cls="bg-red-50 text-red-600 border-red-200 hover:bg-red-100" icon={RotateCcw} label="Retry" onClick={() => handleRetry(inv.id)} /> });
         } else if (isProcessing) {
-          actions.push({ key: 'processing', priority: 1, size: 'lg', el: <div key="proc" className="inline-flex items-center gap-1.5 text-amber-500"><Loader2 className="w-3.5 h-3.5 animate-spin" /><span className="text-[11px] font-bold">Processing</span></div> });
+          actions.push({ key: 'proc', size: 'lg', el: <PrimaryBtn disabled cls="bg-[#F1F5F9] text-[#94A3B8]" icon={Loader2} label="Processing" /> });
         } else if (isDraft) {
-          actions.push({ key: 'send', priority: 1, size: 'lg', el: <button key="send" onClick={() => handleSendEmail(inv.id)} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C] transition-colors"><Send className="w-[15px] h-[15px]" /> Send</button> });
+          actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C]" icon={Send} label="Send" onClick={() => handleSendEmail(inv.id)} /> });
+          actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Edit" icon={Pencil} onClick={() => window.location.href = `/invoices/new?type=${inv.type}&edit=${inv.id}`} /> });
+          actions.push({ key: 'i2', size: 'md', el: <LinkIconBtn tip="View" icon={Eye} href={viewUrl} /> });
+          actions.push({ key: 'i3', size: 'md', el: <LinkIconBtn tip="Download" icon={Download} href={downloadUrl} /> });
+          
+          menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
+          menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
+          // menuItems.push({ key: 'dup', label: 'Duplicate', icon: <Copy className="w-4 h-4 text-[#64748B]"/>, onClick: () => onAction('duplicate') });
         } else if (isOverdue) {
-          actions.push({ key: 'remind', priority: 1, size: 'lg', el: <button key="remind" onClick={() => handleSendEmail(inv.id)} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C] transition-colors"><Send className="w-[15px] h-[15px]" /> Remind</button> });
-          if (showPaymentToggle) actions.push({ key: 'markpaid-overdue', priority: 2, size: 'md', el: <button key="mp" onClick={() => handleUpdateStatus(inv.id, inv.payment_status)} disabled={loadingId === inv.id} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#A7F3C6] bg-white text-[#16A34A] hover:bg-[#ECFDF3] transition-colors relative"><CheckCircle2 className="w-4 h-4" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Mark paid</span></button> });
+          actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C]" icon={Send} label="Remind" onClick={() => { handleSendEmail(inv.id); onAction('reminder'); }} /> });
+          actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Mark paid" icon={CheckCircle2} extraCls="text-[#16A34A] border-[#A7F3C6] hover:bg-[#ECFDF3]" onClick={() => { handleUpdateStatus(inv.id, inv.payment_status); showToast('Marked as paid'); }} /> });
+          actions.push({ key: 'i2', size: 'md', el: <LinkIconBtn tip="View" icon={Eye} href={viewUrl} /> });
+          actions.push({ key: 'i3', size: 'md', el: <LinkIconBtn tip="Download" icon={Download} href={downloadUrl} /> });
+
+          menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
+          menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
+          menuItems.push({ key: 'unsent', label: 'Mark unsent', icon: <RotateCcw className="w-4 h-4 text-[#64748B]"/>, onClick: () => { setInvoices(p => p.map(i => i.id === inv.id ? { ...i, delivery_status: 'unsent' } : i)); pendingStatusChanges.set(inv.id, 'unsent'); showToast('Marked as unsent'); } });
+          // menuItems.push({ key: 'dup', label: 'Duplicate', icon: <Copy className="w-4 h-4 text-[#64748B]"/>, onClick: () => onAction('duplicate') });
         } else if (isPaid) {
-          actions.push({ key: 'view', priority: 1, size: 'lg', el: <a key="view" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-white text-[#0F172A] border border-[#E9EDF3] hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a> });
+          actions.push({ key: 'pri', size: 'lg', el: <div className="w-[118px] flex-shrink-0 flex items-stretch"><a href={viewUrl} target="_blank" rel="noreferrer" onClick={() => onAction('view')} className="w-full h-[34px] px-[12px] rounded-[9px] border border-[#E9EDF3] bg-white text-[#0F172A] inline-flex items-center justify-center gap-[7px] text-[13px] font-[700] whitespace-nowrap hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a></div> });
+          actions.push({ key: 'i1', size: 'md', el: <LinkIconBtn tip="Download receipt" icon={Download} href={downloadUrl} /> });
+          actions.push({ key: 'i2', size: 'md', el: <IconBtn tip="Share link" icon={Share2} onClick={() => handleShare(inv.id)} /> });
+          // actions.push({ key: 'i3', size: 'md', el: <IconBtn tip="Duplicate" icon={Copy} onClick={() => onAction('duplicate')} /> });
+
+          menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
         } else {
-          // Sent / Awaiting payment
-          if (showPaymentToggle) {
-            actions.push({ key: 'markpaid', priority: 1, size: 'lg', el: <button key="mp" onClick={() => handleUpdateStatus(inv.id, inv.payment_status)} disabled={loadingId === inv.id} className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-[#16A34A] text-white shadow-[0_2px_6px_rgba(22,163,74,.22)] hover:bg-[#15803D] transition-colors"><CheckCircle2 className="w-[15px] h-[15px]" /> Mark paid</button> });
-          } else {
-            actions.push({ key: 'view', priority: 1, size: 'lg', el: <a key="view" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-[7px] h-[34px] px-[14px] rounded-[9px] text-[13px] font-[700] bg-white text-[#0F172A] border border-[#E9EDF3] hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a> });
-          }
+          // Awaiting
+          actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#16A34A] text-white shadow-[0_2px_6px_rgba(22,163,74,.22)] hover:bg-[#15803D]" icon={CheckCircle2} label="Mark paid" onClick={() => { handleUpdateStatus(inv.id, inv.payment_status); showToast('Marked as paid'); }} /> });
+          actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Send reminder" icon={Send} onClick={() => { handleSendEmail(inv.id); onAction('reminder'); }} /> });
+          actions.push({ key: 'i2', size: 'md', el: <LinkIconBtn tip="View" icon={Eye} href={viewUrl} /> });
+          actions.push({ key: 'i3', size: 'md', el: <LinkIconBtn tip="Download" icon={Download} href={downloadUrl} /> });
+
+          menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
+          menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
+          // menuItems.push({ key: 'dup', label: 'Duplicate', icon: <Copy className="w-4 h-4 text-[#64748B]"/>, onClick: () => onAction('duplicate') });
         }
 
-        // === SECONDARY (md) — icon buttons, always visible ===
-        if (done && !isFailed && !isProcessing) {
-          actions.push({ key: 'view-icon', priority: 10, size: 'md', el: <a key="vi" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`} target="_blank" rel="noreferrer" data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Eye className="w-[16px] h-[16px]" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">View</span></a> });
-          actions.push({ key: 'dl-icon', priority: 11, size: 'md', el: <a key="dl" href={inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Download className="w-[16px] h-[16px]" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Download</span></a> });
-          actions.push({ key: 'share-icon', priority: 12, size: 'md', el: <button key="sh" onClick={() => handleShare(inv.id)} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Share2 className="w-[16px] h-[16px]" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Share</span></button> });
-          if (inv.type === 'quote' && inv.payment_status === 'draft') {
-            actions.push({ key: 'edit-icon', priority: 13, size: 'md', el: <button key="ed" onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`} data-tooltip className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative"><Pencil className="w-[16px] h-[16px]" /><span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">Edit</span></button> });
-          }
+        if (inv.type !== 'quote' && !isFailed && !isProcessing) {
+          menuItems.push({ 
+            key: 'toggle-sent', label: 'Mark as Sent', icon: <Send className="w-4 h-4 text-[#64748B]"/>, isToggle: true, checked: isSent, 
+            onClick: () => { const newStatus = isSent ? 'unsent' : 'sent'; setInvoices(p => p.map(i => i.id === inv.id ? { ...i, delivery_status: newStatus } : i)); pendingStatusChanges.set(inv.id, newStatus); showToast(isSent ? 'Marked as unsent' : 'Marked as sent'); } 
+          });
+          menuItems.push({ 
+            key: 'toggle-paid', label: 'Mark as Paid', icon: <CheckCircle2 className="w-4 h-4 text-[#64748B]"/>, isToggle: true, checked: isPaid, 
+            onClick: () => { handleUpdateStatus(inv.id, inv.payment_status); showToast(isPaid ? 'Marked as unpaid' : 'Marked as paid'); } 
+          });
         }
 
-        // === HIDDEN MENU ITEMS (sm) — goes in ⋯ dropdown ===
-        const menuItems: { key: string; label: string; icon: React.ReactNode; danger?: boolean; onClick: () => void }[] = [];
-        if (done && !isFailed && !isProcessing) {
-          if (isSent && !isOverdue) menuItems.push({ key: 'unsent', label: 'Mark unsent', icon: <RotateCcw className="w-[16px] h-[16px] text-[#64748B]" />, onClick: () => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: 'unsent' } : i)); pendingStatusChanges.set(inv.id, 'unsent'); } });
-          if (isDraft) menuItems.push({ key: 'mark-sent', label: 'Mark as sent', icon: <Send className="w-[16px] h-[16px] text-[#64748B]" />, onClick: () => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, delivery_status: 'sent' } : i)); pendingStatusChanges.set(inv.id, 'sent'); } });
-          if (isPaid) menuItems.push({ key: 'unmark', label: 'Unmark paid', icon: <RotateCcw className="w-[16px] h-[16px] text-[#64748B]" />, onClick: () => handleUpdateStatus(inv.id, inv.payment_status) });
-        }
-
-        // Sort actions by priority
-        actions.sort((a, b) => a.priority - b.priority);
-
-        // Split: visible (lg + md) vs overflow (sm + remaining md on mobile)
         const lgActions = actions.filter(a => a.size === 'lg');
         const mdActions = actions.filter(a => a.size === 'md');
 
         return (
-          <div className="flex justify-end items-center gap-2">
-            {/* Desktop: lg + md icons + ⋯ */}
-            <div className="hidden md:flex items-center gap-2">
+          <div className="flex justify-end items-center gap-[8px]">
+            {/* Desktop (lg) shows all */}
+            <div className="hidden lg:flex items-center justify-end gap-[8px] w-full min-w-[286px]">
               {lgActions.map(a => <span key={a.key}>{a.el}</span>)}
               {mdActions.map(a => <span key={a.key}>{a.el}</span>)}
-              {/* ⋯ Overflow */}
-              {menuItems.length > 0 && (
-                <div className="relative">
+              
+              <div className="relative flex-shrink-0">
                 <button data-overflow-trigger data-tooltip onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative">
                   <MoreHorizontal className="w-[16px] h-[16px]" />
                   <span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">More</span>
-                  </button>
-                {menuOpen && (
-                  <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-[6px] min-w-[200px] bg-white border border-[#E9EDF3] rounded-xl shadow-[0_12px_34px_rgba(15,23,42,.16)] py-[6px] z-50">
-                      {menuItems.map(item => (
-                        <button key={item.key} onClick={() => { item.onClick(); setMobileActionsId(null); }} className={`flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-lg bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
-                          {item.icon} {item.label}
-                        </button>
-                      ))}
-                      <div className="h-px bg-[#F0F3F7] mx-[4px] my-[5px]" />
-                      <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-lg bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC]"><Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete</button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            {/* Mobile: lg only + ⋯ */}
-            <div className="md:hidden flex items-center gap-2">
-              {lgActions.map(a => <span key={a.key}>{a.el}</span>)}
-              <div className="relative">
-                <button data-overflow-trigger onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] transition-colors">
-                  <MoreVertical className="w-[16px] h-[16px]" />
                 </button>
                 {menuOpen && (
-                  <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-1 w-48 bg-white border border-[#E9EDF3] rounded-xl shadow-xl z-50 py-1">
-                    {mdActions.map(a => <div key={a.key} className="px-2 py-1">{a.el}</div>)}
+                  <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-[6px] min-w-[206px] bg-white border border-[#E9EDF3] rounded-[12px] shadow-[0_12px_34px_rgba(15,23,42,.16)] p-[6px] z-50 animate-in fade-in slide-in-from-top-2 duration-100">
                     {menuItems.map(item => (
-                      <button key={item.key} onClick={() => { item.onClick(); setMobileActionsId(null); }} className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-left hover:bg-[#F5F6F8] ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
-                        {item.icon} {item.label}
+                      <button key={item.key} onClick={(e) => { e.preventDefault(); e.stopPropagation(); item.onClick(); if (!item.isToggle) setMobileActionsId(null); }} className={`flex items-center justify-between w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] transition-colors ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
+                        <div className="flex items-center gap-[11px]">
+                          {item.icon} {item.label}
+                        </div>
+                        {item.isToggle && (
+                          <div className={`w-[28px] h-[16px] rounded-full flex items-center px-[2px] transition-colors ${item.checked ? 'bg-[#16A34A]' : 'bg-[#CBD5E1]'}`}>
+                            <div className={`w-[12px] h-[12px] bg-white rounded-full transition-transform duration-200 ${item.checked ? 'translate-x-[12px]' : 'translate-x-0'}`} />
+                          </div>
+                        )}
                       </button>
                     ))}
-                    <div className="border-t border-[#F0F3F7] my-1" />
-                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-[#DC2626] hover:bg-[#FEECEC]"><Trash2 className="w-[16px] h-[16px]" /> Delete</button>
+                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
+                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC] transition-colors"><Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete</button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tablet (md) shows primary + 1 icon. The rest move to menu. */}
+            <div className="hidden md:flex lg:hidden items-center justify-end gap-[8px]">
+              {lgActions.map(a => <span key={a.key}>{a.el}</span>)}
+              {mdActions.slice(0, 1).map(a => <span key={a.key}>{a.el}</span>)}
+              
+              <div className="relative flex-shrink-0">
+                <button data-overflow-trigger onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] transition-colors">
+                  <MoreHorizontal className="w-[16px] h-[16px]" />
+                </button>
+                {menuOpen && (
+                  <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-[6px] min-w-[206px] bg-white border border-[#E9EDF3] rounded-[12px] shadow-[0_12px_34px_rgba(15,23,42,.16)] p-[6px] z-50 animate-in fade-in slide-in-from-top-2 duration-100">
+                    <div className="flex gap-[4px] px-[4px] py-[2px] mb-[4px]">
+                      {mdActions.slice(1).map(a => (
+                        <div key={a.key}>{a.el}</div>
+                      ))}
+                    </div>
+                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
+                    {menuItems.map(item => (
+                      <button key={item.key} onClick={(e) => { e.preventDefault(); e.stopPropagation(); item.onClick(); if (!item.isToggle) setMobileActionsId(null); }} className={`flex items-center justify-between w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] transition-colors ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
+                        <div className="flex items-center gap-[11px]">
+                          {item.icon} {item.label}
+                        </div>
+                        {item.isToggle && (
+                          <div className={`w-[28px] h-[16px] rounded-full flex items-center px-[2px] transition-colors ${item.checked ? 'bg-[#16A34A]' : 'bg-[#CBD5E1]'}`}>
+                            <div className={`w-[12px] h-[12px] bg-white rounded-full transition-transform duration-200 ${item.checked ? 'translate-x-[12px]' : 'translate-x-0'}`} />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
+                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC] transition-colors"><Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete</button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile (sm) shows primary only. All icons move to menu. */}
+            <div className="flex md:hidden items-center justify-end gap-[8px] w-full mt-2 lg:mt-0">
+              {lgActions.map(a => <span key={a.key} className="flex-1 max-w-[150px]">{a.el}</span>)}
+              
+              <div className="relative flex-shrink-0">
+                <button data-overflow-trigger onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] transition-colors">
+                  <MoreHorizontal className="w-[16px] h-[16px]" />
+                </button>
+                {menuOpen && (
+                  <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute bottom-full right-0 mb-[6px] min-w-[206px] bg-white border border-[#E9EDF3] rounded-[12px] shadow-[0_12px_34px_rgba(15,23,42,.16)] p-[6px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-100">
+                    <div className="flex flex-wrap gap-[4px] px-[4px] py-[2px] mb-[4px]">
+                      {mdActions.map(a => <div key={a.key}>{a.el}</div>)}
+                    </div>
+                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
+                    {menuItems.map(item => (
+                      <button key={item.key} onClick={(e) => { e.preventDefault(); e.stopPropagation(); item.onClick(); if (!item.isToggle) setMobileActionsId(null); }} className={`flex items-center justify-between w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] transition-colors ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
+                        <div className="flex items-center gap-[11px]">
+                          {item.icon} {item.label}
+                        </div>
+                        {item.isToggle && (
+                          <div className={`w-[28px] h-[16px] rounded-full flex items-center px-[2px] transition-colors ${item.checked ? 'bg-[#16A34A]' : 'bg-[#CBD5E1]'}`}>
+                            <div className={`w-[12px] h-[12px] bg-white rounded-full transition-transform duration-200 ${item.checked ? 'translate-x-[12px]' : 'translate-x-0'}`} />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
+                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC] transition-colors"><Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete</button>
                   </div>
                 )}
               </div>
@@ -762,6 +959,20 @@ export default function InvoiceTable({
 
   return (
     <div className="w-full space-y-4 min-h-[65vh] flex flex-col">
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#16233A] text-white px-5 py-3 rounded-full flex items-center gap-4 shadow-2xl animate-in slide-in-from-bottom-5 fade-in duration-200">
+          <div className="flex items-center gap-2 pr-4 border-r border-[#2A3952]">
+            <span className="text-[13px] font-bold bg-[#2A3952] px-2 py-0.5 rounded-full">{selectedIds.length}</span>
+            <span className="text-[13px] font-medium text-slate-300">selected</span>
+          </div>
+          <button onClick={() => { setSelectedIds([]); toast.success(`Marked ${selectedIds.length} invoices as paid`, { style: { background: '#16233A', color: '#fff', border: 'none', borderRadius: '11px' }, icon: <span className="text-[#4ADE80] font-bold text-lg">●</span> }); }} className="text-[13px] font-bold text-slate-200 hover:text-white transition-colors">Mark Paid</button>
+          <button onClick={() => { setSelectedIds([]); toast.success(`Marked ${selectedIds.length} invoices as sent`, { style: { background: '#16233A', color: '#fff', border: 'none', borderRadius: '11px' }, icon: <span className="text-[#4ADE80] font-bold text-lg">●</span> }); }} className="text-[13px] font-bold text-slate-200 hover:text-white transition-colors">Mark Sent</button>
+          <button onClick={() => { setSelectedIds([]); toast.error(`Deleted ${selectedIds.length} invoices`, { style: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #FEE2E2', borderRadius: '11px' } }); }} className="text-[13px] font-bold text-red-400 hover:text-red-300 transition-colors">Delete</button>
+          <button onClick={() => setSelectedIds([])} className="ml-2 text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
       <UnifiedShareModal
         isOpen={unifiedModal.isOpen}
         onClose={() => setUnifiedModal({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' })}
@@ -985,17 +1196,42 @@ export default function InvoiceTable({
         </div>
       </div>
 
-      <div className="w-full flex-1 overflow-hidden">
-        <div className="overflow-x-auto pb-4 no-scrollbar w-full">
+      <div className="w-full flex-1 overflow-hidden max-w-[1400px] mx-auto relative group">
+        
+        {showSwipeHint && (
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md shadow-[-4px_0_24px_rgba(0,0,0,0.08)] border border-ink-100 border-r-0 rounded-l-full z-30 pointer-events-none flex items-center py-3 pl-5 pr-4 animate-in fade-in slide-in-from-right-8 duration-500">
+            <div className="flex items-center text-ink-500 mr-1">
+              <span className="text-[11px] uppercase font-[800] tracking-[1px] mr-1.5 text-brand-600 drop-shadow-sm">Swipe</span>
+              <div className="flex animate-pulse">
+                <ChevronRight className="w-4 h-4 -mr-2 opacity-40 text-brand-500" />
+                <ChevronRight className="w-4 h-4 -mr-2 opacity-70 text-brand-500" />
+                <ChevronRight className="w-4 h-4 text-brand-500" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {canScrollLeft && (
+          <button onClick={() => scrollContainerRef.current?.scrollBy({ left: -250, behavior: 'smooth' })} className="absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-white via-white/80 to-transparent z-20 flex items-center justify-start pl-2 opacity-0 md:group-hover:opacity-100 transition-opacity">
+            <div className="w-8 h-8 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)] flex items-center justify-center text-ink-600 hover:text-ink-900 border border-ink-100"><ChevronLeft className="w-5 h-5" /></div>
+          </button>
+        )}
+        {canScrollRight && (
+          <button onClick={() => scrollContainerRef.current?.scrollBy({ left: 250, behavior: 'smooth' })} className="absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-white via-white/80 to-transparent z-20 flex items-center justify-end pr-2 opacity-0 md:group-hover:opacity-100 transition-opacity">
+            <div className="w-8 h-8 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)] flex items-center justify-center text-ink-600 hover:text-ink-900 border border-ink-100"><ChevronRight className="w-5 h-5" /></div>
+          </button>
+        )}
+
+        <div ref={scrollContainerRef} onScroll={checkScroll} className="overflow-x-auto pb-4 no-scrollbar w-full">
           
-          <table className="w-full text-left border-collapse table-auto">
+          <table className="w-full text-left border-collapse min-w-[950px]">
             <thead>
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id} className="text-[11px] font-[800] uppercase tracking-[0.5px] text-slate-500 border-t border-b border-ink-100 bg-[#FBFCFD]">
                   {headerGroup.headers.map(header => (
                     <th 
                       key={header.id} 
-                      className={`py-[1.5vh] px-[2.2vw] font-[800] cursor-pointer hover:bg-ink-100/50 transition-colors ${header.column.getCanSort() ? 'select-none' : ''} ${(header.column.columnDef.meta as any)?.className || ''}`}
+                      className={`py-3 px-4 font-[800] cursor-pointer hover:bg-ink-100/50 transition-colors ${header.column.getCanSort() ? 'select-none' : ''} ${(header.column.columnDef.meta as any)?.className || ''}`}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       <div className="flex items-center gap-1.5">
@@ -1016,9 +1252,9 @@ export default function InvoiceTable({
             </thead>
             <tbody className="divide-y divide-ink-50">
               {table.getRowModel().rows.map(row => (
-                <tr key={row.id} className={`group hover:bg-ink-50/50 transition-colors ${selectedIds.includes(row.original.id) ? 'bg-brand-50/30' : ''}`}>
+                <tr key={row.id} className={`group bg-white hover:bg-[#FCFCFD] transition-colors ${selectedIds.includes(row.original.id) ? 'bg-brand-50/30' : ''}`}>
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className={`py-[1.5vh] px-[2.2vw] ${cell.column.id === 'actions' ? 'text-right' : ''} ${(cell.column.columnDef.meta as any)?.className || ''}`}>
+                    <td key={cell.id} className={`py-3 px-4 min-h-[64px] ${cell.column.id === 'actions' ? 'text-right' : ''} ${(cell.column.columnDef.meta as any)?.className || ''}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -1028,7 +1264,15 @@ export default function InvoiceTable({
           </table>
 
           {invoices.length === 0 && !loading && (
-            <div className="py-20 text-center text-ink-400 text-sm">No invoices found.</div>
+            <div className="py-24 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-ink-50 rounded-full flex items-center justify-center mb-4">
+                <Inbox className="w-8 h-8 text-ink-300" />
+              </div>
+              <h3 className="text-[15px] font-[800] text-ink-900 mb-1">No invoices found</h3>
+              <p className="text-[13px] text-ink-500 max-w-[250px]">
+                {search || statusFilter !== 'all' ? 'Try adjusting your filters to find what you are looking for.' : 'Get started by creating your first invoice or quote.'}
+              </p>
+            </div>
           )}
         </div>
 

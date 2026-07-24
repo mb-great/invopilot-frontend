@@ -206,7 +206,15 @@ export default function UnifiedShareModal({
         const err = await res.json().catch(() => ({}));
         throw new Error((err as { error?: string }).error || 'Failed to send');
       }
-      toast.success(`Sent to ${toChips[0]}`);
+      const showToast = (msg: string) => {
+        toast(msg, {
+          icon: <span className="text-[#4ADE80] font-bold text-lg">●</span>,
+          style: { background: '#16233A', color: '#fff', border: 'none', borderRadius: '11px', padding: '12px 20px', fontWeight: 600, fontSize: '14px' },
+          duration: 2400
+        });
+      };
+      
+      showToast(`${invoiceNumber || 'Invoice'} sent to ${toChips[0]} successfully`);
       onClose();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Send failed');
@@ -222,7 +230,14 @@ export default function UnifiedShareModal({
 
   const handleCopy = async () => {
     await copyToClipboard(shareUrl);
-    toast.success('Link copied');
+    const showToast = (msg: string) => {
+      toast(msg, {
+        icon: <span className="text-[#4ADE80] font-bold text-lg">●</span>,
+        style: { background: '#16233A', color: '#fff', border: 'none', borderRadius: '11px', padding: '12px 20px', fontWeight: 600, fontSize: '14px' },
+        duration: 2400
+      });
+    };
+    showToast('Payment link copied');
   };
 
   const handleNativeShare = async () => {

@@ -100,14 +100,14 @@ export default function StatCards({ topCurrencies, otherCurrencies, businessFilt
       if (val === 0 && displayedList.length > 1 && !showAll) return null; 
       
       return (
-        <div key={c.currency} className="flex flex-col">
+        <div key={c.currency} className="flex flex-col min-w-0">
           <div className={`font-bold text-ink-900 flex items-baseline gap-2 ${
-            i === 0 ? 'text-3xl sm:text-4xl tracking-tight' : 
-            i === 1 ? 'text-xl text-ink-800' : 
-            'text-base text-ink-600'
+            i === 0 ? 'text-3xl xl:text-4xl tracking-tight min-w-0' : 
+            i === 1 ? 'text-xl text-ink-800 min-w-0' : 
+            'text-base text-ink-600 min-w-0'
           }`}>
-            {formatCurrency(val, c.currency)}
-            <span className={`font-bold text-ink-400 uppercase tracking-widest ${
+            <span className="truncate">{formatCurrency(val, c.currency)}</span>
+            <span className={`font-bold text-ink-400 uppercase tracking-widest shrink-0 ${
               i === 0 ? 'text-xs' :
               i === 1 ? 'text-[10px]' :
               'text-[9px]'
@@ -121,10 +121,10 @@ export default function StatCards({ topCurrencies, otherCurrencies, businessFilt
       // If we filtered out everything (e.g. all multiple currencies had 0 for this metric), show the primary currency at 0
       const primaryCurrency = list[0]?.currency || 'USD';
       elements.push(
-        <div key="fallback" className="flex flex-col">
-          <div className="font-bold text-ink-900 flex items-baseline gap-2 text-4xl tracking-tight">
-            {formatCurrency(0, primaryCurrency)}
-            <span className="font-bold text-ink-400 uppercase tracking-widest text-xs">{primaryCurrency}</span>
+        <div key="fallback" className="flex flex-col min-w-0">
+          <div className="font-bold text-ink-900 flex items-baseline gap-2 text-3xl xl:text-4xl tracking-tight min-w-0">
+            <span className="truncate">{formatCurrency(0, primaryCurrency)}</span>
+            <span className="font-bold text-ink-400 uppercase tracking-widest text-xs shrink-0">{primaryCurrency}</span>
           </div>
         </div>
       );
@@ -136,7 +136,7 @@ export default function StatCards({ topCurrencies, otherCurrencies, businessFilt
         {!showAll && otherCurrencies && otherCurrencies.length > 0 && (
           <button 
             onClick={() => setShowAll(true)}
-            className="text-[10px] font-bold text-brand-600 uppercase tracking-widest hover:underline mt-2 bg-brand-50 px-2 py-1 rounded-md"
+            className="text-[10px] font-bold text-brand-600 uppercase tracking-widest hover:underline mt-2 bg-brand-50 px-2 py-1 rounded-md shrink-0"
           >
             + {otherCurrencies.length} more
           </button>
@@ -147,7 +147,7 @@ export default function StatCards({ topCurrencies, otherCurrencies, businessFilt
 
   return (
     <div className="space-y-6 w-full">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {/* Outstanding Card */}
         <div className="glass-card p-6 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
