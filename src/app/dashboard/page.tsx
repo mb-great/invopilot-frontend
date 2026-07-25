@@ -15,6 +15,7 @@ import { resolvePlanAccess } from '@/lib/billing/tiers';
 import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { Lock, Sparkles } from 'lucide-react'
 import ReviewReminderBanner from '@/components/dashboard/ReviewReminderBanner'
+import { BetaOnboardingCard } from '@/components/dashboard/BetaOnboardingCard'
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -219,6 +220,12 @@ export default async function DashboardPage({
             userId={user.id}
           />
         )}
+
+        {/* Beta Funnel v2 Onboarding Card */}
+        <BetaOnboardingCard 
+          claimToken={typeof searchParamsAwaited?.claim === 'string' ? searchParamsAwaited.claim : null}
+          pendingInvoiceId={profile?.defaults?.pending_send_invoice_id}
+        />
 
         {/* Metric Cards */}
         <div className="shrink-0">

@@ -58,12 +58,13 @@ export async function GET(request: Request) {
         { onConflict: 'user_id' }
       );
 
-    if (error) {
-      console.error('Failed to save Gmail config:', error.message);
-      return NextResponse.redirect(`${frontendUrl}/dashboard/settings?gmail=error`);
-    }
+    // Also update profiles table
+    await supabase
+      .from('profiles')
+      .update({ gmail_connected: true })
+      .eq('id', user.id);
 
-    return NextResponse.redirect(`${frontendUrl}/dashboard/settings?gmail=connected`);
+    return NextResponse.redirect(`${frontendUrl}/dashboard?gmail=connected`);
   } catch (err) {
     console.error('Gmail callback error:', err);
     return NextResponse.redirect(`${frontendUrl}/dashboard/settings?gmail=error`);
