@@ -747,6 +747,31 @@ export default function InvoiceTable({
           actions.push({ key: 'retry', size: 'lg', el: <PrimaryBtn cls="bg-red-50 text-red-600 border-red-200 hover:bg-red-100" icon={RotateCcw} label="Retry" onClick={() => handleRetry(inv.id)} /> });
         } else if (isProcessing) {
           actions.push({ key: 'proc', size: 'lg', el: <PrimaryBtn disabled cls="bg-[#F1F5F9] text-[#94A3B8]" icon={Loader2} label="Processing" /> });
+        } else if (inv.type === 'quote') {
+          const isConverted = inv.payment_status === 'converted';
+          
+          if (isConverted) {
+            actions.push({ key: 'pri', size: 'lg', el: <div className="w-[118px] flex-shrink-0 flex items-stretch"><a href={viewUrl} target="_blank" rel="noreferrer" className="w-full h-[34px] px-[12px] rounded-[9px] border border-[#E9EDF3] bg-white text-[#0F172A] inline-flex items-center justify-center gap-[7px] text-[13px] font-[700] whitespace-nowrap hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a></div> });
+            actions.push({ key: 'i1', size: 'md', el: <LinkIconBtn tip="Download" icon={Download} href={downloadUrl} /> });
+          } else if (isDraft) {
+            actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C]" icon={Send} label="Send" onClick={() => handleSendEmail(inv.id)} /> });
+            actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Edit" icon={Pencil} onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`} /> });
+            actions.push({ key: 'i2', size: 'md', el: <LinkIconBtn tip="View" icon={Eye} href={viewUrl} /> });
+            actions.push({ key: 'i3', size: 'md', el: <LinkIconBtn tip="Download" icon={Download} href={downloadUrl} /> });
+            
+            menuItems.push({ key: 'convert', label: 'Convert to Invoice', icon: <ArrowRightLeft className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleConvert(inv.id) });
+            menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
+            menuItems.push({ key: 'email', label: 'Email quote', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
+          } else {
+            // Sent Quote (Awaiting Conversion)
+            actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#16A34A] text-white shadow-[0_2px_6px_rgba(22,163,74,.22)] hover:bg-[#15803D]" icon={ArrowRightLeft} label="Convert" onClick={() => handleConvert(inv.id)} /> });
+            actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Edit" icon={Pencil} onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`} /> });
+            actions.push({ key: 'i2', size: 'md', el: <LinkIconBtn tip="View" icon={Eye} href={viewUrl} /> });
+            actions.push({ key: 'i3', size: 'md', el: <LinkIconBtn tip="Download" icon={Download} href={downloadUrl} /> });
+
+            menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
+            menuItems.push({ key: 'email', label: 'Email quote', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
+          }
         } else if (isDraft) {
           actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C]" icon={Send} label="Send" onClick={() => handleSendEmail(inv.id)} /> });
           actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Edit" icon={Pencil} onClick={() => window.location.href = `/invoices/new?type=${inv.type}&edit=${inv.id}`} /> });
@@ -755,7 +780,6 @@ export default function InvoiceTable({
           
           menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
           menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
-          // menuItems.push({ key: 'dup', label: 'Duplicate', icon: <Copy className="w-4 h-4 text-[#64748B]"/>, onClick: () => onAction('duplicate') });
         } else if (isOverdue) {
           actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C]" icon={Send} label="Remind" onClick={() => { handleSendEmail(inv.id); onAction('reminder'); }} /> });
           actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Mark paid" icon={CheckCircle2} extraCls="text-[#16A34A] border-[#A7F3C6] hover:bg-[#ECFDF3]" onClick={() => { handleUpdateStatus(inv.id, inv.payment_status); showToast('Marked as paid'); }} /> });
@@ -765,12 +789,10 @@ export default function InvoiceTable({
           menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
           menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
           menuItems.push({ key: 'unsent', label: 'Mark unsent', icon: <RotateCcw className="w-4 h-4 text-[#64748B]"/>, onClick: () => { setInvoices(p => p.map(i => i.id === inv.id ? { ...i, delivery_status: 'unsent' } : i)); pendingStatusChanges.set(inv.id, 'unsent'); showToast('Marked as unsent'); } });
-          // menuItems.push({ key: 'dup', label: 'Duplicate', icon: <Copy className="w-4 h-4 text-[#64748B]"/>, onClick: () => onAction('duplicate') });
         } else if (isPaid) {
           actions.push({ key: 'pri', size: 'lg', el: <div className="w-[118px] flex-shrink-0 flex items-stretch"><a href={viewUrl} target="_blank" rel="noreferrer" onClick={() => onAction('view')} className="w-full h-[34px] px-[12px] rounded-[9px] border border-[#E9EDF3] bg-white text-[#0F172A] inline-flex items-center justify-center gap-[7px] text-[13px] font-[700] whitespace-nowrap hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a></div> });
           actions.push({ key: 'i1', size: 'md', el: <LinkIconBtn tip="Download receipt" icon={Download} href={downloadUrl} /> });
           actions.push({ key: 'i2', size: 'md', el: <IconBtn tip="Share link" icon={Share2} onClick={() => handleShare(inv.id)} /> });
-          // actions.push({ key: 'i3', size: 'md', el: <IconBtn tip="Duplicate" icon={Copy} onClick={() => onAction('duplicate')} /> });
 
           menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
         } else {
@@ -782,7 +804,6 @@ export default function InvoiceTable({
 
           menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
           menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
-          // menuItems.push({ key: 'dup', label: 'Duplicate', icon: <Copy className="w-4 h-4 text-[#64748B]"/>, onClick: () => onAction('duplicate') });
         }
 
         if (inv.type !== 'quote' && !isFailed && !isProcessing) {
