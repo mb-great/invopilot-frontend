@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getFrontendUrl } from '@/lib/url';
+import { getFrontendUrl, getBackendUrl } from '@/lib/url';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,147 +18,76 @@ export async function GET(request: Request) {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // If a pending invoice token was passed, process the claim!
+        let claimedInvoiceId = null;
+
+        // If a pending invoice token was passed, delegate claim to backend
         if (token) {
           try {
-            console.log(`Auth Callback: Claiming pending invoice token ${token} for user ${user.id}`);
+            console.log(`Auth Callback: Delegating claim of token ${token} to backend for user ${user.id}`);
             
-            // 1. Fetch pending invoice record
-            const { data: pendingRecord } = await supabase
-              .from('pending_invoices')
-              .select('*')
-              .eq('id', token)
-              .is('claimed_by', null)
-              .gt('expires_at', new Date().toISOString())
-              .maybeSingle();
+            const backendUrl = getBackendUrl();
+            const claimRes = await fetch(`${backendUrl}/api/funnel/claim`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Worker-Secret': process.env.WORKER_SECRET || '',
+              },
+              body: JSON.stringify({ token, userId: user.id }),
+            });
 
-            if (pendingRecord) {
-              const payload = pendingRecord.invoice_data || {};
-              const company = payload.companyDetails || {};
-              const details = payload.invoiceDetails || {};
-              const terms = payload.invoiceTerms || {};
-              const your = payload.yourDetails || {};
-              const items = payload.paymentDetails?.items || payload.items || [];
+            const claimData = await claimRes.json();
 
-              // Get active workspace ID for user
-              const { data: member } = await supabase
-                .from('workspace_members')
-                .select('workspace_id')
-                .eq('user_id', user.id)
-                .limit(1)
-                .maybeSingle();
-
-              let workspaceId = member?.workspace_id;
-              if (!workspaceId) {
-                // Fetch default workspace or fallback
-                const { data: ws } = await supabase
-                  .from('workspaces')
-                  .select('id')
-                  .limit(1)
-                  .maybeSingle();
-                workspaceId = ws?.id;
+            if (claimRes.ok) {
+              if (claimData.deferred) {
+                console.log('Auth Callback: Claim deferred (new user, no workspace yet).');
+              } else {
+                console.log(`Auth Callback: Invoice ${claimData.invoiceId} claimed, PDF queued.`);
+                claimedInvoiceId = claimData.invoiceId;
               }
-
-              if (workspaceId) {
-                // Calculate amount
-                let amount = details.amount || 0;
-                if (!amount && Array.isArray(items)) {
-                  amount = items.reduce((acc: number, item: any) => {
-                    const qty = Number(item.quantity || item.qty || 1);
-                    const rate = Number(item.rate || item.price || item.amount || 0);
-                    return acc + qty * rate;
-                  }, 0);
-                }
-
-                const clientName = company.companyName || company.clientName || company.name || 'Client';
-                const clientEmail = company.companyEmail || company.email || null;
-                const invoiceNumber = terms.invoiceNumber || details.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`;
-
-                // 2. Insert into `invoices`
-                const { data: newInvoice, error: invErr } = await supabase
-                  .from('invoices')
-                  .insert({
-                    user_id: user.id,
-                    workspace_id: workspaceId,
-                    form_data: payload,
-                    nickname: `${invoiceNumber} · ${clientName}`,
-                    status: 'unsent',
-                    amount,
-                    currency: details.currency || 'INR',
-                    client_name: clientName,
-                    client_email: clientEmail,
-                    business_profile_name: your.name || null,
-                    type: 'invoice',
-                    payment_status: 'unpaid',
-                    delivery_status: 'unsent',
-                    invoice_number: invoiceNumber,
-                    issue_date: terms.issueDate || null,
-                    due_date: terms.dueDate || null,
-                  })
-                  .select('id')
-                  .single();
-
-                if (!invErr && newInvoice) {
-                  // 3. Mark pending invoice as claimed
-                  await supabase
-                    .from('pending_invoices')
-                    .update({ claimed_by: user.id })
-                    .eq('id', token);
-
-                  // 4. Update profile defaults with pending_send_invoice_id
-                  const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('defaults')
-                    .eq('id', user.id)
-                    .single();
-
-                  const existingDefaults = profile?.defaults || {};
-                  await supabase
-                    .from('profiles')
-                    .update({
-                      defaults: {
-                        ...existingDefaults,
-                        pending_send_invoice_id: newInvoice.id,
-                      }
-                    })
-                    .eq('id', user.id);
-
-                  // 5. Create client entry if not present
-                  if (clientName) {
-                    await supabase
-                      .from('clients')
-                      .insert({
-                        workspace_id: workspaceId,
-                        user_id: user.id,
-                        name: clientName,
-                        email: clientEmail,
-                      })
-                      .select()
-                      .maybeSingle();
-                  }
-
-                  console.log(`Auth Callback: Successfully claimed invoice ${newInvoice.id}`);
-                } else {
-                  console.error('Auth Callback: Failed to insert claimed invoice:', invErr);
-                }
-              }
+            } else {
+              console.error('Auth Callback: Claim failed:', claimData.error);
             }
           } catch (claimErr) {
-            console.error('Auth Callback: Exception during claim process:', claimErr);
+            console.error('Auth Callback: Exception during claim:', claimErr);
           }
         }
 
-        // Check if new user needs onboarding
+        // Check if new user needs onboarding (and update defaults with the claimed invoice ID if any)
         const { data: profile } = await supabase
           .from('profiles')
           .select('defaults')
           .eq('id', user.id)
           .single();
 
-        if (!profile?.defaults?.onboarding_seen) {
+        let updatedDefaults = profile?.defaults || {};
+        let needsUpdate = false;
+
+        // If we successfully claimed an invoice, store its ID for the onboarding card
+        if (claimedInvoiceId) {
+          updatedDefaults = { ...updatedDefaults, pending_send_invoice_id: claimedInvoiceId };
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          await supabase
+            .from('profiles')
+            .update({ defaults: updatedDefaults })
+            .eq('id', user.id);
+        }
+
+        if (!updatedDefaults?.onboarding_seen) {
           console.log('Auth Callback: New user, redirecting to onboarding.');
           return NextResponse.redirect(`${baseUrl}/onboarding`);
         }
+
+        // Returning user — add ?returning=true for welcome back notification
+        const separator = next.includes('?') ? '&' : '?';
+        const redirectUrl = token
+          ? `${baseUrl}${next}${separator}returning=true`
+          : `${baseUrl}${next}`;
+
+        console.log('Auth Callback: Redirecting to:', redirectUrl);
+        return NextResponse.redirect(redirectUrl);
       }
 
       console.log('Auth Callback: Redirecting to:', next);

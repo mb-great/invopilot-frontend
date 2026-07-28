@@ -77,7 +77,7 @@ export default function EmailSettings() {
       return;
     }
     const redirectUri = `${frontendUrl}/api/settings/sender-config/gmail-callback`;
-    const scope = 'https://www.googleapis.com/auth/gmail.send';
+    const scope = 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email';
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
     window.location.href = authUrl;
   }
@@ -150,8 +150,8 @@ export default function EmailSettings() {
             <p className="text-sm font-bold text-green-800">Email is configured</p>
             <p className="text-xs text-green-600 mt-1 font-semibold">
               {config?.method === 'gmail' 
-                ? `Using OAuth connected account: ${senderEmail}` 
-                : `Using SMTP username: ${senderEmail}`}
+                ? (senderEmail ? `Using OAuth connected account: ${senderEmail}` : `Connected via Google OAuth`)
+                : `Using SMTP username: ${senderEmail || 'Unknown'}`}
             </p>
           </div>
         </div>

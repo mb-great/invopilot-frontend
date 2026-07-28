@@ -661,12 +661,12 @@ export default function InvoiceTable({
           const days = inv.due_date ? Math.ceil((Date.now() - new Date(inv.due_date).getTime()) / 86400000) : 0;
           lifecycle = days > 0 ? `Overdue · ${days}d` : 'Overdue';
           pillBg = 'bg-[#FEECEC]'; pillText = 'text-[#B91C1C]'; pillBorder = 'border-[#FBD0D0]'; dotBg = 'bg-[#DC2626]';
-        } else if (isSent) {
-          lifecycle = 'Unpaid';
-          pillBg = 'bg-[#EFF4FF]'; pillText = 'text-[#1D4ED8]'; pillBorder = 'border-[#D5E2FF]'; dotBg = 'bg-[#2563EB]';
-        } else {
+        } else if (inv.type === 'quote' && !isSent && inv.payment_status === 'draft') {
           lifecycle = 'Draft';
           pillBg = 'bg-[#F1F5F9]'; pillText = 'text-[#475569]'; pillBorder = 'border-[#E2E8F0]'; dotBg = 'bg-[#94A3B8]';
+        } else {
+          lifecycle = 'Unpaid';
+          pillBg = 'bg-[#EFF4FF]'; pillText = 'text-[#1D4ED8]'; pillBorder = 'border-[#D5E2FF]'; dotBg = 'bg-[#2563EB]';
         }
 
         return (
@@ -688,7 +688,7 @@ export default function InvoiceTable({
         const isOverdue = inv.payment_status === 'overdue' || isPastDue;
         const isPaid = inv.payment_status === 'paid';
         const isSent = inv.delivery_status === 'sent';
-        const isDraft = !isPaid && !isOverdue && !isSent;
+        const isQuoteDraft = inv.type === 'quote' && inv.payment_status === 'draft';
         const isFailed = inv.status === 'failed';
         const isProcessing = inv.status === 'processing' || inv.status === 'queued';
         const menuOpen = mobileActionsId === inv.id;
@@ -753,7 +753,7 @@ export default function InvoiceTable({
           if (isConverted) {
             actions.push({ key: 'pri', size: 'lg', el: <div className="w-[118px] flex-shrink-0 flex items-stretch"><a href={viewUrl} target="_blank" rel="noreferrer" className="w-full h-[34px] px-[12px] rounded-[9px] border border-[#E9EDF3] bg-white text-[#0F172A] inline-flex items-center justify-center gap-[7px] text-[13px] font-[700] whitespace-nowrap hover:bg-[#F5F6F8] transition-colors"><Eye className="w-[15px] h-[15px]" /> View</a></div> });
             actions.push({ key: 'i1', size: 'md', el: <LinkIconBtn tip="Download" icon={Download} href={downloadUrl} /> });
-          } else if (isDraft) {
+          } else if (isQuoteDraft) {
             actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C]" icon={Send} label="Send" onClick={() => handleSendEmail(inv.id)} /> });
             actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Edit" icon={Pencil} onClick={() => window.location.href = `/invoices/new?type=quote&edit=${inv.id}`} /> });
             actions.push({ key: 'i2', size: 'md', el: <LinkIconBtn tip="View" icon={Eye} href={viewUrl} /> });
@@ -772,7 +772,7 @@ export default function InvoiceTable({
             menuItems.push({ key: 'share', label: 'Share link', icon: <Share2 className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleShare(inv.id) });
             menuItems.push({ key: 'email', label: 'Email quote', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
           }
-        } else if (isDraft) {
+        } else if (!isSent) {
           actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C]" icon={Send} label="Send" onClick={() => handleSendEmail(inv.id)} /> });
           actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Edit" icon={Pencil} onClick={() => window.location.href = `/invoices/new?type=${inv.type}&edit=${inv.id}`} /> });
           actions.push({ key: 'i2', size: 'md', el: <LinkIconBtn tip="View" icon={Eye} href={viewUrl} /> });

@@ -44,7 +44,13 @@ export function BetaOnboardingCard({
           .eq("id", user.id)
           .maybeSingle();
 
-        const connected = !!profile?.gmail_connected;
+        const { data: senderConfig } = await supabase
+          .from("user_sender_config")
+          .select("method")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        const connected = !!profile?.gmail_connected || senderConfig?.method === 'gmail' || senderConfig?.method === 'smtp';
         setGmailConnected(connected);
 
         const defaults: ProfileDefaults = profile?.defaults || {};
@@ -116,6 +122,7 @@ export function BetaOnboardingCard({
             ...existingDefaults,
             beta_onboarding_seen: currentSeen + 1,
             beta_onboarding_last_seen: new Date().toISOString(),
+            pending_send_invoice_id: null,
           },
         })
         .eq("id", user.id);
@@ -126,8 +133,7 @@ export function BetaOnboardingCard({
 
   const handleConnectGmail = () => {
     setConnectingGmail(true);
-    // Redirect to Gmail OAuth sender-config
-    window.location.href = `/api/settings/sender-config/gmail-connect`;
+    window.location.href = '/dashboard/settings#email-settings';
   };
 
   const handleSendInvoice = async () => {
@@ -185,6 +191,11 @@ export function BetaOnboardingCard({
           })
           .eq("id", user.id);
       }
+
+      // Smooth scroll to invoices table
+      setTimeout(() => {
+        document.getElementById('invoices-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
 
       setIsVisible(false);
     } catch (err) {
@@ -261,7 +272,7 @@ export function BetaOnboardingCard({
                 </span>
               )}
             </div>
-            <h4 className="font-bold text-slate-900 text-sm">Connect Gmail</h4>
+            <h4 className="font-bold text-slate-900 text-sm">Connect Email</h4>
             <p className="text-xs text-slate-500">
               Send invoices straight from your own inbox.
             </p>
@@ -269,7 +280,7 @@ export function BetaOnboardingCard({
 
           {gmailConnected ? (
             <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-              ✓ Gmail ready to send
+              ✓ Email ready to send
             </div>
           ) : (
             <button
@@ -282,7 +293,7 @@ export function BetaOnboardingCard({
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <>
-                  <Mail className="w-3.5 h-3.5" /> Connect Gmail
+                  <Mail className="w-3.5 h-3.5" /> Connect Email
                 </>
               )}
             </button>

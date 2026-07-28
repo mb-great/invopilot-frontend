@@ -16,6 +16,7 @@ import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess';
 import { Lock, Sparkles } from 'lucide-react'
 import ReviewReminderBanner from '@/components/dashboard/ReviewReminderBanner'
 import { BetaOnboardingCard } from '@/components/dashboard/BetaOnboardingCard'
+import { getBackendUrl } from '@/lib/url';
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -35,6 +36,39 @@ export default async function DashboardPage({
     .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end, cancel_requested_at, defaults, subscription_source, review_status, review_deadline, review_submitted_at')
     .eq('id', user.id)
     .single()
+
+  let currentDefaults = profile?.defaults || {};
+
+  // Process deferred claim token if it exists (for new users who just finished onboarding)
+  if (currentDefaults.pending_claim_token) {
+    try {
+      const backendUrl = getBackendUrl();
+      const claimRes = await fetch(`${backendUrl}/api/funnel/claim`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Worker-Secret': process.env.WORKER_SECRET || '',
+        },
+        body: JSON.stringify({ token: currentDefaults.pending_claim_token, userId: user.id }),
+      });
+
+      const claimData = await claimRes.json();
+      if (claimRes.ok && !claimData.deferred && claimData.invoiceId) {
+        // Successfully claimed! Remove token and set pending_send_invoice_id
+        currentDefaults = {
+          ...currentDefaults,
+          pending_claim_token: null,
+          pending_send_invoice_id: claimData.invoiceId
+        };
+        await supabase
+          .from('profiles')
+          .update({ defaults: currentDefaults })
+          .eq('id', user.id);
+      }
+    } catch (err) {
+      console.error('Failed to process deferred claim:', err);
+    }
+  }
 
   // Await cookies since Next.js 15
   const cookieStore = await cookies();
@@ -224,7 +258,7 @@ export default async function DashboardPage({
         {/* Beta Funnel v2 Onboarding Card */}
         <BetaOnboardingCard 
           claimToken={typeof searchParamsAwaited?.claim === 'string' ? searchParamsAwaited.claim : null}
-          pendingInvoiceId={profile?.defaults?.pending_send_invoice_id}
+          pendingInvoiceId={currentDefaults?.pending_send_invoice_id}
         />
 
         {/* Metric Cards */}

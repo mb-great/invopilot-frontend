@@ -27,13 +27,14 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
 
   const isLogin = mode === 'login'
 
-  // Step 0: Check for stray 'code' (Magic Link) parameters
+  // Step 0: Check for stray 'code' (OAuth or Magic Link) parameters
   useEffect(() => {
-    const code = searchParams.get('code')
+    const code = searchParams.get('code');
     if (code) {
-      setError('Invalid login method detected. Our system requires an 8-digit code for security. Please request a new code below.')
+      // If Supabase fell back to the Site URL instead of the callback, forward it
+      router.push(`/api/auth/callback?${searchParams.toString()}`);
     }
-  }, [searchParams])
+  }, [searchParams, router]);
 
   // Step 1: Send OTP via Backend Proxy
   const handleSendOtp = async () => {
@@ -162,10 +163,15 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
         setError("The connection to Google took too long or was blocked. Please try again.");
       }, 6000);
 
+      const callbackUrl = new URL(`${FRONTEND_URL}/api/auth/callback`);
+      searchParams.forEach((value, key) => {
+        callbackUrl.searchParams.append(key, value);
+      });
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${FRONTEND_URL}/api/auth/callback`,
+          redirectTo: callbackUrl.toString(),
           queryParams: {
             prompt: 'select_account'
           }

@@ -27,8 +27,8 @@ export function BetaLoginForm({ token }: { token?: string }) {
 
     const fetchSummary = async () => {
       try {
-        const backendUrl =
-          process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3002";
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+        if (!backendUrl) throw new Error("Missing NEXT_PUBLIC_BACKEND_URL");
         const res = await fetch(`${backendUrl}/api/funnel/pending-invoice/${token}`);
         if (!res.ok) throw new Error("Could not fetch invoice details");
         const data = await res.json();

@@ -1,31 +1,23 @@
 /**
  * Shared URL resolution utilities.
- * In production: throws if env vars are missing (fail-fast).
- * In development: falls back to localhost defaults.
+ * Env vars MUST be set. No hardcoded fallbacks.
  */
-
-const isDev = process.env.NODE_ENV === 'development';
 
 /**
  * Get the backend API URL (Express server).
- * FE uses NEXT_PUBLIC_BACKEND_URL, BE uses BACKEND_URL.
  */
 export function getBackendUrl(): string {
   const url = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
   if (url) return url.replace(/\/$/, '');
-  if (isDev) return 'http://localhost:3002';
-  throw new Error('[URL] BACKEND_URL or NEXT_PUBLIC_BACKEND_URL must be set in production');
+  throw new Error('[URL] BACKEND_URL or NEXT_PUBLIC_BACKEND_URL must be set');
 }
 
 /**
  * Get the frontend URL (Next.js app).
- * Used for CORS origins, redirect URLs, share links.
  */
 export function getFrontendUrl(): string {
-  // Always use env var — no window.location.origin fallback
   const url = process.env.NEXT_PUBLIC_FRONTEND_URL;
   if (url) return url.replace(/\/$/, '');
   if (typeof window !== 'undefined') return window.location.origin;
-  if (isDev) return 'http://localhost:3001';
-  throw new Error('[URL] NEXT_PUBLIC_FRONTEND_URL must be set in production');
+  throw new Error('[URL] NEXT_PUBLIC_FRONTEND_URL must be set');
 }
