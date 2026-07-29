@@ -113,8 +113,24 @@ export default function InvoiceTable({
   const [unifiedModal, setUnifiedModal] = useState<{ isOpen: boolean; invoiceId: string; invoiceNumber: string; clientEmail: string; shareSlug?: string; pdfUrl?: string; initialTab?: 'email' | 'share' }>({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; isBulk?: boolean }>({ isOpen: false, id: null });
   const [mobileActionsId, setMobileActionsId] = useState<string | null>(null);
+  const [highlightedInvoiceId, setHighlightedInvoiceId] = useState<string | null>(null);
   const menuRef = useRef<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    const handleHighlight = (e: any) => {
+      const { invoiceId } = e.detail || {};
+      if (invoiceId) {
+        setHighlightedInvoiceId(invoiceId);
+        const timer = setTimeout(() => {
+          setHighlightedInvoiceId(null);
+        }, 2500);
+        return () => clearTimeout(timer);
+      }
+    };
+    window.addEventListener('invoice-highlight', handleHighlight as EventListener);
+    return () => window.removeEventListener('invoice-highlight', handleHighlight as EventListener);
+  }, []);
 
   // Single global click handler — closes menu if click is outside
   useEffect(() => {
@@ -141,7 +157,6 @@ export default function InvoiceTable({
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-  const [showSwipeHint, setShowSwipeHint] = useState(false);
 
   const checkScroll = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -152,68 +167,33 @@ export default function InvoiceTable({
   }, []);
 
   useEffect(() => {
-    checkScroll();
+    // Initial check with a small delay to ensure DOM is fully painted
+    const timer = setTimeout(checkScroll, 100);
+    
     window.addEventListener('resize', checkScroll);
-    return () => window.removeEventListener('resize', checkScroll);
+    
+    // Use ResizeObserver to detect changes in the table container size itself
+    let resizeObserver: ResizeObserver | null = null;
+    if (scrollContainerRef.current && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        checkScroll();
+      });
+      resizeObserver.observe(scrollContainerRef.current);
+      // Also observe the inner table to detect content changes
+      const tableEl = scrollContainerRef.current.querySelector('table');
+      if (tableEl) resizeObserver.observe(tableEl);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkScroll);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
   }, [checkScroll, invoices]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const hasFiredHint = useRef(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || invoices.length === 0 || hasFiredHint.current) return;
-    
-    const tableEl = scrollContainerRef.current;
-    if (!tableEl) return;
-
-    let checkInterval: NodeJS.Timeout;
-
-    const checkVisibility = () => {
-      if (hasFiredHint.current || !tableEl) return;
-      
-      const rect = tableEl.getBoundingClientRect();
-      const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-      
-      // If the top of the table is within the upper 90% of the screen, and bottom is below top 10%
-      if (rect.top < windowHeight * 0.9 && rect.bottom > windowHeight * 0.1) {
-        hasFiredHint.current = true;
-        window.removeEventListener('scroll', checkVisibility, true);
-        clearInterval(checkInterval);
-        
-        const lastHint = localStorage.getItem('last_scroll_hint');
-        const now = Date.now();
-        
-        // 3 hours = 10800000 ms
-        // if (!lastHint || now - parseInt(lastHint, 10) > 10800000) {
-          setTimeout(() => {
-            if (scrollContainerRef.current) {
-              const { scrollWidth, clientWidth, scrollLeft } = scrollContainerRef.current;
-              
-              // If the user already scrolled horizontally, abort the hint completely
-              if (scrollLeft > 10) return;
-              
-              // Only show hint if the table is actually scrollable (cramped layouts)
-              if (scrollWidth > clientWidth) {
-                setShowSwipeHint(true);
-                setTimeout(() => setShowSwipeHint(false), 4500); // Stay on screen for 4.5s
-                localStorage.setItem('last_scroll_hint', now.toString());
-              }
-            }
-          }, 600); // Show pill 600ms after it becomes visible
-        // }
-      }
-    };
-
-    window.addEventListener('scroll', checkVisibility, true); // true = capture nested scrolls
-    checkInterval = setInterval(checkVisibility, 500); // Fallback poller
-    checkVisibility(); // Check immediately
-
-    return () => {
-      window.removeEventListener('scroll', checkVisibility, true);
-      clearInterval(checkInterval);
-    };
-  }, [invoices.length]);
 
   // Tooltip hover controller — show only the hovered icon's tooltip
   useEffect(() => {
@@ -820,8 +800,10 @@ export default function InvoiceTable({
         const lgActions = actions.filter(a => a.size === 'lg');
         const mdActions = actions.filter(a => a.size === 'md');
 
+        const isHighlighted = highlightedInvoiceId === inv.id;
+
         return (
-          <div className="flex justify-end items-center gap-[8px]">
+          <div className={`flex justify-end items-center gap-[8px] transition-all ${isHighlighted ? 'animate-glass-magnify z-[70] relative p-[2px] -m-[2px]' : ''}`}>
             {/* Desktop (lg) shows all */}
             <div className="hidden lg:flex items-center justify-end gap-[8px] w-full min-w-[286px]">
               {lgActions.map(a => <span key={a.key}>{a.el}</span>)}
@@ -1218,29 +1200,22 @@ export default function InvoiceTable({
       </div>
 
       <div className="w-full flex-1 overflow-hidden max-w-[1400px] mx-auto relative group">
-        
-        {showSwipeHint && (
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md shadow-[-4px_0_24px_rgba(0,0,0,0.08)] border border-ink-100 border-r-0 rounded-l-full z-30 pointer-events-none flex items-center py-3 pl-5 pr-4 animate-in fade-in slide-in-from-right-8 duration-500">
-            <div className="flex items-center text-ink-500 mr-1">
-              <span className="text-[11px] uppercase font-[800] tracking-[1px] mr-1.5 text-brand-600 drop-shadow-sm">Swipe</span>
-              <div className="flex animate-pulse">
-                <ChevronRight className="w-4 h-4 -mr-2 opacity-40 text-brand-500" />
-                <ChevronRight className="w-4 h-4 -mr-2 opacity-70 text-brand-500" />
-                <ChevronRight className="w-4 h-4 text-brand-500" />
-              </div>
-            </div>
-          </div>
-        )}
 
         {canScrollLeft && (
-          <button onClick={() => scrollContainerRef.current?.scrollBy({ left: -250, behavior: 'smooth' })} className="absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-white via-white/80 to-transparent z-20 flex items-center justify-start pl-2 opacity-0 md:group-hover:opacity-100 transition-opacity">
-            <div className="w-8 h-8 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)] flex items-center justify-center text-ink-600 hover:text-ink-900 border border-ink-100"><ChevronLeft className="w-5 h-5" /></div>
-          </button>
+          <>
+            <div className="absolute left-0 top-0 bottom-4 w-10 bg-gradient-to-r from-white via-white/80 to-transparent z-[15] pointer-events-none" />
+            <button onClick={() => scrollContainerRef.current?.scrollBy({ left: -250, behavior: 'smooth' })} className="absolute left-0 top-0 bottom-4 w-16 z-20 flex items-center justify-start pl-2 opacity-100 transition-opacity">
+              <div className="w-8 h-8 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)] flex items-center justify-center text-ink-600 hover:text-ink-900 border border-ink-100"><ChevronLeft className="w-5 h-5" /></div>
+            </button>
+          </>
         )}
         {canScrollRight && (
-          <button onClick={() => scrollContainerRef.current?.scrollBy({ left: 250, behavior: 'smooth' })} className="absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-white via-white/80 to-transparent z-20 flex items-center justify-end pr-2 opacity-0 md:group-hover:opacity-100 transition-opacity">
-            <div className="w-8 h-8 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)] flex items-center justify-center text-ink-600 hover:text-ink-900 border border-ink-100"><ChevronRight className="w-5 h-5" /></div>
-          </button>
+          <>
+            <div className="absolute right-0 top-0 bottom-4 w-10 bg-gradient-to-l from-white via-white/80 to-transparent z-[15] pointer-events-none" />
+            <button onClick={() => scrollContainerRef.current?.scrollBy({ left: 250, behavior: 'smooth' })} className="absolute right-0 top-0 bottom-4 w-16 z-20 flex items-center justify-end pr-2 opacity-100 transition-opacity">
+              <div className="w-8 h-8 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)] flex items-center justify-center text-ink-600 hover:text-ink-900 border border-ink-100"><ChevronRight className="w-5 h-5" /></div>
+            </button>
+          </>
         )}
 
         <div ref={scrollContainerRef} onScroll={checkScroll} className="overflow-x-auto pb-4 no-scrollbar w-full">
@@ -1275,7 +1250,10 @@ export default function InvoiceTable({
               {table.getRowModel().rows.map(row => (
                 <tr key={row.id} className={`group bg-white hover:bg-[#FCFCFD] transition-colors ${selectedIds.includes(row.original.id) ? 'bg-brand-50/30' : ''}`}>
                   {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className={`py-3 px-4 min-h-[64px] ${cell.column.id === 'actions' ? 'text-right' : ''} ${(cell.column.columnDef.meta as any)?.className || ''}`}>
+                    <td 
+                      key={cell.id} 
+                      className={`py-3 px-4 min-h-[64px] ${cell.column.id === 'actions' ? 'text-right' : ''} ${(cell.column.id === 'actions' && mobileActionsId === row.original.id) ? 'relative z-[60]' : ''} ${(cell.column.columnDef.meta as any)?.className || ''}`}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

@@ -55,29 +55,19 @@ export function BetaOnboardingCard({
 
         const defaults: ProfileDefaults = profile?.defaults || {};
 
-        // Cooldown check (max 3 displays, 3 hours cooldown)
-        const seenCount = defaults.beta_onboarding_seen || 0;
-        const lastSeen = defaults.beta_onboarding_last_seen ? new Date(defaults.beta_onboarding_last_seen).getTime() : 0;
-        const threeHoursMs = 3 * 60 * 60 * 1000;
-
-        // If not explicit claim token and user skipped 3+ times or is in 3h cooldown:
-        if (!claimToken && defaults.beta_onboarding_completed) {
-          setIsVisible(false);
-          return;
-        }
-
-        if (!claimToken && seenCount >= 3) {
-          setIsVisible(false);
-          return;
-        }
-
-        if (!claimToken && lastSeen > 0 && Date.now() - lastSeen < threeHoursMs) {
-          setIsVisible(false);
-          return;
-        }
-
-        // Target invoice ID
+        // Only show when there's a claimed invoice (claimToken or pending_send_invoice_id)
         const targetInvId = initialInvoiceId || defaults.pending_send_invoice_id;
+        if (!claimToken && !targetInvId) {
+          setIsVisible(false);
+          return;
+        }
+
+        // If user already completed/skipped onboarding, don't show
+        if (defaults.beta_onboarding_completed) {
+          setIsVisible(false);
+          return;
+        }
+
         if (targetInvId) {
           setPendingInvoiceId(targetInvId);
           const { data: inv } = await supabase
@@ -113,15 +103,14 @@ export function BetaOnboardingCard({
         .maybeSingle();
 
       const existingDefaults: ProfileDefaults = profile?.defaults || {};
-      const currentSeen = existingDefaults.beta_onboarding_seen || 0;
 
+      // Permanently dismiss — only re-appears on next claimed invoice
       await supabase
         .from("profiles")
         .update({
           defaults: {
             ...existingDefaults,
-            beta_onboarding_seen: currentSeen + 1,
-            beta_onboarding_last_seen: new Date().toISOString(),
+            beta_onboarding_completed: true,
             pending_send_invoice_id: null,
           },
         })
@@ -192,9 +181,10 @@ export function BetaOnboardingCard({
           .eq("id", user.id);
       }
 
-      // Smooth scroll to invoices table
+      // Smooth scroll to invoices table and trigger highlight
       setTimeout(() => {
         document.getElementById('invoices-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.dispatchEvent(new CustomEvent('invoice-highlight', { detail: { invoiceId: pendingInvoiceId } }));
       }, 300);
 
       setIsVisible(false);
