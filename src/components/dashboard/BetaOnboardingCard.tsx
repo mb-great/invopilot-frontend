@@ -19,7 +19,7 @@ export function BetaOnboardingCard({
   claimToken?: string | null;
   pendingInvoiceId?: string | null;
 }) {
-  const [isVisible, setIsVisible] = useState<boolean>(true);
+  const [isVisible, setIsVisible] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [gmailConnected, setGmailConnected] = useState<boolean>(false);
   const [pendingInvoiceId, setPendingInvoiceId] = useState<string | null>(initialInvoiceId || null);
@@ -62,8 +62,9 @@ export function BetaOnboardingCard({
           return;
         }
 
-        // If user already completed/skipped onboarding, don't show
-        if (defaults.beta_onboarding_completed) {
+        // Check if user previously dismissed funnel onboarding in localStorage
+        const dismissed = localStorage.getItem("funnel_onboarding_dismissed");
+        if (dismissed === "true" && !claimToken) {
           setIsVisible(false);
           return;
         }
@@ -78,6 +79,7 @@ export function BetaOnboardingCard({
 
           if (inv) {
             setInvoiceName(inv.nickname || inv.invoice_number || `Invoice for ${inv.client_name}`);
+            setIsVisible(true); // Only show if we successfully loaded the pending invoice
           }
         }
       } catch (err) {
@@ -90,34 +92,9 @@ export function BetaOnboardingCard({
     initCard();
   }, [claimToken, initialInvoiceId]);
 
-  const handleSkip = async () => {
+  const handleSkip = () => {
+    localStorage.setItem("funnel_onboarding_dismissed", "true");
     setIsVisible(false);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("defaults")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const existingDefaults: ProfileDefaults = profile?.defaults || {};
-
-      // Permanently dismiss — only re-appears on next claimed invoice
-      await supabase
-        .from("profiles")
-        .update({
-          defaults: {
-            ...existingDefaults,
-            beta_onboarding_completed: true,
-            pending_send_invoice_id: null,
-          },
-        })
-        .eq("id", user.id);
-    } catch (err) {
-      console.warn("Could not save skip state:", err);
-    }
   };
 
   const handleConnectGmail = () => {
@@ -125,74 +102,18 @@ export function BetaOnboardingCard({
     window.location.href = '/dashboard/settings#email-settings';
   };
 
-  const handleSendInvoice = async () => {
-    if (!pendingInvoiceId) {
-      toast.error("No pending invoice found to send.");
-      return;
-    }
+  const handleSendInvoice = () => {
+    if (!pendingInvoiceId) return;
 
-    setSendingEmail(true);
-    try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3002";
-      const { data: { session } } = await supabase.auth.getSession();
+    // Immediately mark dismissed in localStorage and hide card
+    localStorage.setItem("funnel_onboarding_dismissed", "true");
+    setIsVisible(false);
 
-      const res = await fetch(`${backendUrl}/email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
-        body: JSON.stringify({
-          invoiceId: pendingInvoiceId,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to send email");
-      }
-
-      toast.success("Invoice sent successfully via Gmail!");
-
-      // Update invoice delivery_status to 'sent'
-      await supabase
-        .from("invoices")
-        .update({ delivery_status: "sent" })
-        .eq("id", pendingInvoiceId);
-
-      // Mark onboarding as completed
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("defaults")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        const existingDefaults: ProfileDefaults = profile?.defaults || {};
-        await supabase
-          .from("profiles")
-          .update({
-            defaults: {
-              ...existingDefaults,
-              beta_onboarding_completed: true,
-              pending_send_invoice_id: null,
-            },
-          })
-          .eq("id", user.id);
-      }
-
-      // Smooth scroll to invoices table and trigger highlight
-      setTimeout(() => {
-        document.getElementById('invoices-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.dispatchEvent(new CustomEvent('invoice-highlight', { detail: { invoiceId: pendingInvoiceId } }));
-      }, 300);
-
-      setIsVisible(false);
-    } catch (err) {
-      toast.error("Failed to send invoice email. Please try again.");
-    } finally {
-      setSendingEmail(false);
-    }
+    // Smooth scroll to invoices table and trigger highlight
+    setTimeout(() => {
+      document.getElementById('invoices-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.dispatchEvent(new CustomEvent('invoice-highlight', { detail: { invoiceId: pendingInvoiceId } }));
+    }, 100);
   };
 
   if (loading || !isVisible) return null;
@@ -308,7 +229,7 @@ export function BetaOnboardingCard({
           </div>
 
           <button
-            disabled={!gmailConnected || sendingEmail}
+            disabled={!gmailConnected}
             onClick={handleSendInvoice}
             type="button"
             className={`w-full h-9 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all ${
@@ -317,13 +238,7 @@ export function BetaOnboardingCard({
                 : "bg-slate-200 text-slate-400 cursor-not-allowed"
             }`}
           >
-            {sendingEmail ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <>
-                <Send className="w-3.5 h-3.5" /> Send Now <ArrowRight className="w-3 h-3" />
-              </>
-            )}
+            <Send className="w-3.5 h-3.5" /> Send Now <ArrowRight className="w-3 h-3" />
           </button>
         </div>
 
