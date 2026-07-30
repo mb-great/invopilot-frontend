@@ -39,10 +39,8 @@ export async function GET(request: Request) {
 
     const tokens = await tokenResponse.json();
 
-    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
-    const userInfo = await userInfoResponse.json();
+    // Get email from authenticated Supabase user (no need for separate userinfo scope)
+    const gmailEmail = user.email || '';
 
     const { error } = await supabase
       .from('user_sender_config')
@@ -52,7 +50,7 @@ export async function GET(request: Request) {
           method: 'gmail',
           gmail_access_token: tokens.access_token,
           gmail_refresh_token: tokens.refresh_token,
-          gmail_email: userInfo.email,
+          gmail_email: gmailEmail,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' }

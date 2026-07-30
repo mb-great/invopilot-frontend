@@ -77,8 +77,8 @@ export default function EmailSettings() {
       return;
     }
     const redirectUri = `${frontendUrl}/api/settings/sender-config/gmail-callback`;
-    const scope = 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email';
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent&include_granted_scopes=true`;
+    const scope = 'https://www.googleapis.com/auth/gmail.send';
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
     window.location.href = authUrl;
   }
 
