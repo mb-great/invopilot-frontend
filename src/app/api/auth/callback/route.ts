@@ -96,6 +96,22 @@ export async function GET(request: Request) {
           }
         }
 
+        // Dispatch welcome email for new account signups (guarded by welcome_email_sent in backend)
+        const backendUrl = getBackendUrl();
+        fetch(`${backendUrl}/api/funnel/welcome`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Worker-Secret': process.env.WORKER_SECRET || '',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            name: user.user_metadata?.full_name || user.user_metadata?.name || undefined,
+          }),
+        }).catch(err => {
+          console.warn('Auth Callback: Error triggering welcome email:', err);
+        });
+
         // Funnel Claim Flow: skip onboarding for Session 1 so the user lands straight on dashboard with their invoice
         if (token) {
           console.log(`Auth Callback: Funnel claim token ${token} detected. Redirecting straight to dashboard.`);
