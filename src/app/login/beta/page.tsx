@@ -18,10 +18,8 @@ export default async function BetaLoginPage({
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between items-center py-12 px-4">
       {/* Header Brand Mark */}
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white font-bold text-base shadow-sm">
-          📄
-        </div>
+      <div className="flex items-center gap-2.5">
+        <img src="/logo.webp" alt="InvoPilot Logo" className="w-8 h-8 object-contain drop-shadow-sm" />
         <span className="font-bold text-slate-900 text-lg tracking-tight">InvoPilot</span>
       </div>
 
