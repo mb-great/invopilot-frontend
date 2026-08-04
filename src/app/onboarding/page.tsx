@@ -19,6 +19,8 @@ export default async function OnboardingPage() {
     redirect('/dashboard')
   }
 
+  const suggestedCompany = profile?.company_name || profile?.defaults?.suggested_company_name || ''
+
   return (
     <main className="min-h-[100dvh] bg-ink-50 flex items-center justify-center px-4">
       <OnboardingForm
@@ -26,7 +28,7 @@ export default async function OnboardingPage() {
         fullName={profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || ''}
         avatarUrl={profile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null}
         email={user.email || ''}
-        existingCompany={profile?.company_name || ''}
+        existingCompany={suggestedCompany}
       />
     </main>
   )

@@ -1248,7 +1248,7 @@ export default function InvoiceTable({
             </thead>
             <tbody className="divide-y divide-ink-50">
               {table.getRowModel().rows.map(row => (
-                <tr key={row.id} className={`group bg-white hover:bg-[#FCFCFD] transition-colors ${selectedIds.includes(row.original.id) ? 'bg-brand-50/30' : ''}`}>
+                <tr key={row.id} id={`invoice-row-${row.original.id}`} className={`group bg-white hover:bg-[#FCFCFD] transition-colors ${selectedIds.includes(row.original.id) ? 'bg-brand-50/30' : ''}`}>
                   {row.getVisibleCells().map(cell => (
                     <td 
                       key={cell.id} 

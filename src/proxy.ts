@@ -88,8 +88,8 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Beta gate: redirect non-applied users to beta form (admins bypass)
-    if (!isAdmin && profile?.beta_applied !== true) {
+    // Beta gate: redirect non-applied users to beta form (admins and /onboarding bypass)
+    if (!isAdmin && profile?.beta_applied !== true && !pathname.startsWith('/onboarding')) {
       const url = request.nextUrl.clone()
       url.pathname = '/beta/apply'
       return NextResponse.redirect(url)

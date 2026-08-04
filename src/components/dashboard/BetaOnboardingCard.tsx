@@ -103,16 +103,24 @@ export function BetaOnboardingCard({
   };
 
   const handleSendInvoice = () => {
-    if (!pendingInvoiceId) return;
-
-    // Immediately mark dismissed in localStorage and hide card
+    // Mark dismissed in localStorage and hide card
     localStorage.setItem("funnel_onboarding_dismissed", "true");
     setIsVisible(false);
 
-    // Smooth scroll to invoices table and trigger highlight
+    // Smooth scroll to invoices table or specific row and trigger highlight
     setTimeout(() => {
-      document.getElementById('invoices-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      window.dispatchEvent(new CustomEvent('invoice-highlight', { detail: { invoiceId: pendingInvoiceId } }));
+      const rowElem = pendingInvoiceId ? document.getElementById(`invoice-row-${pendingInvoiceId}`) : null;
+      const tableElem = document.getElementById('invoices-table');
+
+      if (rowElem) {
+        rowElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (tableElem) {
+        tableElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      if (pendingInvoiceId) {
+        window.dispatchEvent(new CustomEvent('invoice-highlight', { detail: { invoiceId: pendingInvoiceId } }));
+      }
     }, 100);
   };
 

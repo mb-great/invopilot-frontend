@@ -75,6 +75,35 @@ export async function GET(request: Request) {
             .eq('id', user.id);
         }
 
+        // Check if user already submitted a beta application modal with this email
+        if (user.email) {
+          try {
+            const { data: betaApp } = await supabase
+              .from('beta_applications')
+              .select('id')
+              .eq('email', user.email.toLowerCase().trim())
+              .maybeSingle();
+
+            if (betaApp) {
+              console.log(`Auth Callback: Matching beta application found for ${user.email}, linking.`);
+              await supabase
+                .from('profiles')
+                .update({ beta_applied: true })
+                .eq('id', user.id);
+            }
+          } catch (e) {
+            console.warn('Auth Callback: Error checking beta application:', e);
+          }
+        }
+
+        // Funnel Claim Flow: skip onboarding for Session 1 so the user lands straight on dashboard with their invoice
+        if (token) {
+          console.log(`Auth Callback: Funnel claim token ${token} detected. Redirecting straight to dashboard.`);
+          const separator = next.includes('?') ? '&' : '?';
+          return NextResponse.redirect(`${baseUrl}/dashboard?claim=${token}`);
+        }
+
+        // Direct / returning users: if onboarding not completed, route to /onboarding
         if (!updatedDefaults?.onboarding_seen) {
           console.log('Auth Callback: New user, redirecting to onboarding.');
           return NextResponse.redirect(`${baseUrl}/onboarding`);
@@ -82,9 +111,7 @@ export async function GET(request: Request) {
 
         // Returning user — add ?returning=true for welcome back notification
         const separator = next.includes('?') ? '&' : '?';
-        const redirectUrl = token
-          ? `${baseUrl}${next}${separator}returning=true`
-          : `${baseUrl}${next}`;
+        const redirectUrl = `${baseUrl}${next}`;
 
         console.log('Auth Callback: Redirecting to:', redirectUrl);
         return NextResponse.redirect(redirectUrl);

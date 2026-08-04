@@ -26,10 +26,10 @@ export default function OnboardingForm({
   const handleContinue = async () => {
     setLoading(true)
     try {
-      // Update profile with company name and set onboarding flag
+      // Update profile with company name and set onboarding and beta flags
       const { data: existing } = await supabase
         .from('profiles')
-        .select('defaults, subscription_source, tier, subscription_period_end')
+        .select('defaults, subscription_source, tier, subscription_period_end, review_status, review_deadline, beta_applied')
         .eq('id', userId)
         .single()
 
@@ -38,10 +38,15 @@ export default function OnboardingForm({
         onboarding_seen: true,
       }
 
+      const reviewDeadline = existing?.review_deadline || new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
+
       await supabase
         .from('profiles')
         .update({
           company_name: companyName.trim() || null,
+          beta_applied: true,
+          review_status: existing?.review_status || 'pending',
+          review_deadline: reviewDeadline,
           defaults: updatedDefaults,
         })
         .eq('id', userId)
@@ -54,6 +59,7 @@ export default function OnboardingForm({
       }
 
       router.push('/dashboard')
+      router.refresh()
     } catch {
       // Even on error, don't block — just go to dashboard
       router.push('/dashboard')

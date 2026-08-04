@@ -287,7 +287,7 @@ export default async function DashboardPage({
         {/* Main Content Sections */}
         <div className="grid lg:grid-cols-3 gap-8 pb-4">
           <div className="lg:col-span-2 flex flex-col min-w-0">
-            <div className="glass-card flex flex-col min-w-0">
+            <div id="invoices-table" className="glass-card flex flex-col min-w-0">
               <div className="px-6 py-5 border-b border-ink-100 flex items-center justify-between shrink-0">
                 <h2 className="font-bold text-ink-800 tracking-tight">Recent Invoices</h2>
                 <Link href="/invoices" className="text-sm font-bold text-brand-600 hover:text-brand-700">View all</Link>
