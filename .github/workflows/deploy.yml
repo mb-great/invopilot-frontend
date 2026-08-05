@@ -21,7 +21,7 @@ jobs:
         run: echo "${{ secrets.ENV_FILE }}" > .env.local
 
       - name: Install Dependencies
-        run: npm ci || npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Build Next.js Application
         run: npm run build
