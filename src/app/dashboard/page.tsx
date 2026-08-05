@@ -33,14 +33,16 @@ export default async function DashboardPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end, cancel_requested_at, defaults, subscription_source, review_status, review_deadline, review_submitted_at')
+    .select('role, full_name, avatar_url, tier, subscription_status, subscription_period_end, cancel_requested_at, defaults, subscription_source, review_status, review_deadline, review_submitted_at, gmail_connected')
     .eq('id', user.id)
     .single()
 
   let currentDefaults = profile?.defaults || {};
 
-  // Process deferred claim token if it exists (for new users who just finished onboarding)
-  if (currentDefaults.pending_claim_token) {
+  // Process deferred claim token if it exists (for new users who just finished onboarding or arrived via ?claim=...)
+  const pendingToken = (typeof searchParamsAwaited?.claim === 'string' ? searchParamsAwaited.claim : null) || currentDefaults.pending_claim_token;
+
+  if (pendingToken) {
     try {
       const backendUrl = getBackendUrl();
       const claimRes = await fetch(`${backendUrl}/api/funnel/claim`, {
@@ -49,7 +51,7 @@ export default async function DashboardPage({
           'Content-Type': 'application/json',
           'X-Worker-Secret': process.env.WORKER_SECRET || '',
         },
-        body: JSON.stringify({ token: currentDefaults.pending_claim_token, userId: user.id }),
+        body: JSON.stringify({ token: pendingToken, userId: user.id }),
       });
 
       const claimData = await claimRes.json();
@@ -60,6 +62,7 @@ export default async function DashboardPage({
           pending_claim_token: null,
           pending_send_invoice_id: claimData.invoiceId,
           beta_onboarding_completed: false,
+          beta_onboarding_dismissed: false,
         };
         await supabase
           .from('profiles')
@@ -70,6 +73,33 @@ export default async function DashboardPage({
       console.error('Failed to process deferred claim:', err);
     }
   }
+
+  // Beta Onboarding Card: Server-side evaluation (False by default for everyone)
+  const isBetaOnboardingDismissed = !!currentDefaults.beta_onboarding_dismissed || !!currentDefaults.beta_onboarding_completed;
+  const pendingInvoiceId = (!isBetaOnboardingDismissed && currentDefaults.pending_send_invoice_id) ? currentDefaults.pending_send_invoice_id : null;
+
+  let pendingInvoice: { id: string; nickname?: string | null; invoice_number?: string | null; client_name?: string | null } | null = null;
+  if (pendingInvoiceId) {
+    const { data: inv } = await supabase
+      .from('invoices')
+      .select('id, nickname, invoice_number, client_name, delivery_status, payment_status')
+      .eq('id', pendingInvoiceId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (inv && inv.delivery_status !== 'sent' && inv.payment_status !== 'paid') {
+      pendingInvoice = inv;
+    }
+  }
+
+  // Check sender config for email connection state
+  const { data: senderConfig } = await supabase
+    .from('user_sender_config')
+    .select('method')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const isEmailConnected = !!profile?.gmail_connected || senderConfig?.method === 'gmail' || senderConfig?.method === 'smtp';
 
   // Await cookies since Next.js 15
   const cookieStore = await cookies();
@@ -138,7 +168,7 @@ export default async function DashboardPage({
   // Fetch recent invoices AND quotes
   let query = supabase
     .from('invoices')
-    .select('id, amount, currency, payment_status, created_at, nickname, invoice_number, share_slug, status, pdf_url, type, form_data->>dueDate')
+    .select('id, amount, currency, payment_status, created_at, nickname, invoice_number, share_slug, status, pdf_url, type, view_count, mail_views, whatsapp_views, telegram_views, direct_views, first_viewed_at, last_viewed_at, view_events, form_data->>dueDate')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(10);
@@ -256,11 +286,14 @@ export default async function DashboardPage({
           />
         )}
 
-        {/* Beta Funnel v2 Onboarding Card */}
-        <BetaOnboardingCard 
-          claimToken={typeof searchParamsAwaited?.claim === 'string' ? searchParamsAwaited.claim : null}
-          pendingInvoiceId={currentDefaults?.pending_send_invoice_id}
-        />
+        {/* Beta Funnel v2 Onboarding Card (Server-evaluated, False by default, Zero client waterfall) */}
+        {pendingInvoice && (
+          <BetaOnboardingCard 
+            pendingInvoiceId={pendingInvoice.id}
+            invoiceName={pendingInvoice.nickname || pendingInvoice.invoice_number || `Invoice for ${pendingInvoice.client_name}`}
+            gmailConnected={isEmailConnected}
+          />
+        )}
 
         {/* Metric Cards */}
         <div className="shrink-0">

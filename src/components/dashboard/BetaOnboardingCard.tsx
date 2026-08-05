@@ -1,100 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Check, Mail, Send, X, ArrowRight, Loader2, Sparkles } from "lucide-react";
-import { toast } from "sonner";
-
-interface ProfileDefaults {
-  beta_onboarding_seen?: number;
-  beta_onboarding_last_seen?: string | null;
-  pending_send_invoice_id?: string | null;
-  beta_onboarding_completed?: boolean;
-}
 
 export function BetaOnboardingCard({
-  claimToken,
-  pendingInvoiceId: initialInvoiceId,
+  pendingInvoiceId,
+  invoiceName = "Your Invoice",
+  gmailConnected = false,
 }: {
-  claimToken?: string | null;
-  pendingInvoiceId?: string | null;
+  pendingInvoiceId: string;
+  invoiceName?: string;
+  gmailConnected?: boolean;
 }) {
-  const [isVisible, setIsVisible] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [gmailConnected, setGmailConnected] = useState<boolean>(false);
-  const [pendingInvoiceId, setPendingInvoiceId] = useState<string | null>(initialInvoiceId || null);
-  const [invoiceName, setInvoiceName] = useState<string>("Your Invoice");
-  const [sendingEmail, setSendingEmail] = useState<boolean>(false);
+  const [isVisible, setIsVisible] = useState<boolean>(true);
   const [connectingGmail, setConnectingGmail] = useState<boolean>(false);
 
   const supabase = createClient();
 
-  useEffect(() => {
-    const initCard = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setIsVisible(false);
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("gmail_connected, defaults")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        const { data: senderConfig } = await supabase
-          .from("user_sender_config")
-          .select("method")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        const connected = !!profile?.gmail_connected || senderConfig?.method === 'gmail' || senderConfig?.method === 'smtp';
-        setGmailConnected(connected);
-
-        const defaults: ProfileDefaults = profile?.defaults || {};
-
-        // Only show when there's a claimed invoice (claimToken or pending_send_invoice_id)
-        const targetInvId = initialInvoiceId || defaults.pending_send_invoice_id;
-        if (!claimToken && !targetInvId) {
-          setIsVisible(false);
-          return;
-        }
-
-        // Check if user previously dismissed funnel onboarding in localStorage
-        const dismissed = localStorage.getItem("funnel_onboarding_dismissed");
-        if (dismissed === "true" && !claimToken) {
-          setIsVisible(false);
-          return;
-        }
-
-        if (targetInvId) {
-          setPendingInvoiceId(targetInvId);
-          const { data: inv } = await supabase
-            .from("invoices")
-            .select("nickname, invoice_number, client_name")
-            .eq("id", targetInvId)
-            .maybeSingle();
-
-          if (inv) {
-            setInvoiceName(inv.nickname || inv.invoice_number || `Invoice for ${inv.client_name}`);
-            setIsVisible(true); // Only show if we successfully loaded the pending invoice
-          }
-        }
-      } catch (err) {
-        console.error("Error initializing BetaOnboardingCard:", err);
-      } finally {
-        setLoading(false);
+  const handleDismiss = async () => {
+    setIsVisible(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from("profiles").select("defaults").eq("id", user.id).maybeSingle();
+        const updatedDefaults = { 
+          ...(profile?.defaults || {}), 
+          beta_onboarding_dismissed: true, 
+          beta_onboarding_completed: true,
+          pending_send_invoice_id: null 
+        };
+        await supabase.from("profiles").update({ defaults: updatedDefaults }).eq("id", user.id);
       }
-    };
-
-    initCard();
-  }, [claimToken, initialInvoiceId]);
+    } catch (err) {
+      console.error("Failed to persist onboarding dismissal:", err);
+    }
+  };
 
   const handleSkip = () => {
-    localStorage.setItem("funnel_onboarding_dismissed", "true");
-    setIsVisible(false);
+    handleDismiss();
   };
 
   const handleConnectGmail = () => {
@@ -103,9 +47,7 @@ export function BetaOnboardingCard({
   };
 
   const handleSendInvoice = () => {
-    // Mark dismissed in localStorage and hide card
-    localStorage.setItem("funnel_onboarding_dismissed", "true");
-    setIsVisible(false);
+    handleDismiss();
 
     // Smooth scroll to invoices table or specific row and trigger highlight
     setTimeout(() => {
@@ -124,7 +66,7 @@ export function BetaOnboardingCard({
     }, 100);
   };
 
-  if (loading || !isVisible) return null;
+  if (!isVisible) return null;
 
   return (
     <div className="w-full mb-8 relative rounded-3xl bg-gradient-to-r from-orange-50/90 via-white to-orange-50/50 border border-orange-200/80 p-6 md:p-8 shadow-sm transition-all animate-in fade-in slide-in-from-top-4 duration-300">

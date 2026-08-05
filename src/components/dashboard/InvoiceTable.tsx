@@ -10,6 +10,8 @@ import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { toast } from 'sonner';
 import PremiumBadge from '@/components/ui/PremiumBadge';
 import { clearInvoiceDraft } from '@/lib/invoiceStorage';
+import { InvoiceActivityModal } from '@/components/dashboard/InvoiceActivityModal';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 const pendingStatusChanges = new Map<string, string>();
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -61,6 +63,14 @@ interface Invoice {
   form_data?: {
     [key: string]: any;
   };
+  view_count?: number;
+  mail_views?: number;
+  whatsapp_views?: number;
+  telegram_views?: number;
+  direct_views?: number;
+  first_viewed_at?: string | null;
+  last_viewed_at?: string | null;
+  view_events?: any[];
 }
 
 export interface Meta {
@@ -108,6 +118,7 @@ export default function InvoiceTable({
   
   // Selection State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activityInvoice, setActivityInvoice] = useState<Invoice | null>(null);
   
   // Modal State
   const [unifiedModal, setUnifiedModal] = useState<{ isOpen: boolean; invoiceId: string; invoiceNumber: string; clientEmail: string; shareSlug?: string; pdfUrl?: string; initialTab?: 'email' | 'share' }>({ isOpen: false, invoiceId: '', invoiceNumber: '', clientEmail: '' });
@@ -650,10 +661,26 @@ export default function InvoiceTable({
         }
 
         return (
-          <span className={`inline-flex items-center gap-[7px] text-[12.5px] font-[700] px-3 py-[5px] rounded-full border whitespace-nowrap ${pillBg} ${pillText} ${pillBorder}`}>
-            {isProcessing ? <Loader2 className="w-[10px] h-[10px] animate-spin text-amber-600" /> : <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotBg}`} />}
-            {lifecycle}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-[7px] text-[12.5px] font-[700] px-3 py-[5px] rounded-full border whitespace-nowrap ${pillBg} ${pillText} ${pillBorder}`}>
+              {isProcessing ? <Loader2 className="w-[10px] h-[10px] animate-spin text-amber-600" /> : <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotBg}`} />}
+              {lifecycle}
+            </span>
+            {Boolean(inv.view_count && inv.view_count > 0) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivityInvoice(inv);
+                }}
+                className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-[3px] rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/90 transition-colors shadow-xs cursor-pointer"
+                title="Click to view open analytics & history"
+              >
+                <Eye className="w-3 h-3 text-slate-500" />
+                <span>{inv.view_count} {inv.view_count === 1 ? 'open' : 'opens'}</span>
+              </button>
+            )}
+          </div>
         );
       }
     },
@@ -719,7 +746,8 @@ export default function InvoiceTable({
           </a>
         );
 
-        const viewUrl = inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`;
+        const identifier = inv.share_slug || inv.id || (inv.pdf_url ? encodeURIComponent(inv.pdf_url) : '');
+        const viewUrl = identifier ? `/i/${identifier}` : (inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}` : `/api/invoices/${inv.id}/download?view=1`);
         const downloadUrl = inv.pdf_url ? `/view/${encodeURIComponent(inv.pdf_url)}/download` : `/api/invoices/${inv.id}/download`;
 
         // === Fixed Action Slots ===
@@ -754,7 +782,7 @@ export default function InvoiceTable({
           }
         } else if (!isSent) {
           actions.push({ key: 'pri', size: 'lg', el: <PrimaryBtn cls="bg-[#F97316] text-white shadow-[0_2px_6px_rgba(249,115,22,.25)] hover:bg-[#EA580C]" icon={Send} label="Send" onClick={() => handleSendEmail(inv.id)} /> });
-          actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Edit" icon={Pencil} onClick={() => window.location.href = `/invoices/new?type=${inv.type}&edit=${inv.id}`} /> });
+          actions.push({ key: 'i1', size: 'md', el: <IconBtn tip="Share link" icon={Share2} onClick={() => handleShare(inv.id)} /> });
           actions.push({ key: 'i2', size: 'md', el: <LinkIconBtn tip="View" icon={Eye} href={viewUrl} /> });
           actions.push({ key: 'i3', size: 'md', el: <LinkIconBtn tip="Download" icon={Download} href={downloadUrl} /> });
           
@@ -786,6 +814,15 @@ export default function InvoiceTable({
           menuItems.push({ key: 'email', label: 'Email invoice', icon: <Mail className="w-4 h-4 text-[#64748B]"/>, onClick: () => handleSendEmail(inv.id) });
         }
 
+        if (done && !isFailed && !isProcessing) {
+          menuItems.push({
+            key: 'activity',
+            label: 'Activity',
+            icon: <Eye className="w-4 h-4 text-[#64748B]"/>,
+            onClick: () => setActivityInvoice(inv),
+          });
+        }
+
         if (inv.type !== 'quote' && !isFailed && !isProcessing) {
           menuItems.push({ 
             key: 'toggle-sent', label: 'Mark as Sent', icon: <Send className="w-4 h-4 text-[#64748B]"/>, isToggle: true, checked: isSent, 
@@ -804,105 +841,90 @@ export default function InvoiceTable({
 
         return (
           <div className={`flex justify-end items-center gap-[8px] transition-all ${isHighlighted ? 'animate-glass-magnify z-[70] relative p-[2px] -m-[2px]' : ''}`}>
-            {/* Desktop (lg) shows all */}
+            {/* Desktop (lg) shows all icons + trigger */}
             <div className="hidden lg:flex items-center justify-end gap-[8px] w-full min-w-[286px]">
               {lgActions.map(a => <span key={a.key}>{a.el}</span>)}
               {mdActions.map(a => <span key={a.key}>{a.el}</span>)}
-              
-              <div className="relative flex-shrink-0">
-                <button data-overflow-trigger data-tooltip onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors relative">
-                  <MoreHorizontal className="w-[16px] h-[16px]" />
-                  <span className="icon-tip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#16233A] text-white text-[11px] font-semibold px-[9px] py-[5px] rounded-md whitespace-nowrap opacity-0 transition-opacity pointer-events-none z-40 before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-[#16233A]">More</span>
-                </button>
-                {menuOpen && (
-                  <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-[6px] min-w-[206px] bg-white border border-[#E9EDF3] rounded-[12px] shadow-[0_12px_34px_rgba(15,23,42,.16)] p-[6px] z-50 animate-in fade-in slide-in-from-top-2 duration-100">
-                    {menuItems.map(item => (
-                      <button key={item.key} onClick={(e) => { e.preventDefault(); e.stopPropagation(); item.onClick(); if (!item.isToggle) setMobileActionsId(null); }} className={`flex items-center justify-between w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] transition-colors ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
-                        <div className="flex items-center gap-[11px]">
-                          {item.icon} {item.label}
-                        </div>
-                        {item.isToggle && (
-                          <div className={`w-[28px] h-[16px] rounded-full flex items-center px-[2px] transition-colors ${item.checked ? 'bg-[#16A34A]' : 'bg-[#CBD5E1]'}`}>
-                            <div className={`w-[12px] h-[12px] bg-white rounded-full transition-transform duration-200 ${item.checked ? 'translate-x-[12px]' : 'translate-x-0'}`} />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
-                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC] transition-colors"><Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete</button>
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* Tablet (md) shows primary + 1 icon. The rest move to menu. */}
+            {/* Tablet (md) shows primary slot + 1 quick icon */}
             <div className="hidden md:flex lg:hidden items-center justify-end gap-[8px]">
               {lgActions.map(a => <span key={a.key}>{a.el}</span>)}
               {mdActions.slice(0, 1).map(a => <span key={a.key}>{a.el}</span>)}
-              
-              <div className="relative flex-shrink-0">
-                <button data-overflow-trigger onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] transition-colors">
-                  <MoreHorizontal className="w-[16px] h-[16px]" />
-                </button>
-                {menuOpen && (
-                  <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-[6px] min-w-[206px] bg-white border border-[#E9EDF3] rounded-[12px] shadow-[0_12px_34px_rgba(15,23,42,.16)] p-[6px] z-50 animate-in fade-in slide-in-from-top-2 duration-100">
-                    <div className="flex gap-[4px] px-[4px] py-[2px] mb-[4px]">
-                      {mdActions.slice(1).map(a => (
-                        <div key={a.key}>{a.el}</div>
-                      ))}
-                    </div>
-                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
-                    {menuItems.map(item => (
-                      <button key={item.key} onClick={(e) => { e.preventDefault(); e.stopPropagation(); item.onClick(); if (!item.isToggle) setMobileActionsId(null); }} className={`flex items-center justify-between w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] transition-colors ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
-                        <div className="flex items-center gap-[11px]">
-                          {item.icon} {item.label}
-                        </div>
-                        {item.isToggle && (
-                          <div className={`w-[28px] h-[16px] rounded-full flex items-center px-[2px] transition-colors ${item.checked ? 'bg-[#16A34A]' : 'bg-[#CBD5E1]'}`}>
-                            <div className={`w-[12px] h-[12px] bg-white rounded-full transition-transform duration-200 ${item.checked ? 'translate-x-[12px]' : 'translate-x-0'}`} />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
-                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC] transition-colors"><Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete</button>
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* Mobile (sm) shows primary only. All icons move to menu. */}
+            {/* Mobile (sm) shows primary only */}
             <div className="flex md:hidden items-center justify-end gap-[8px] w-full mt-2 lg:mt-0">
               {lgActions.map(a => <span key={a.key} className="flex-1 max-w-[150px]">{a.el}</span>)}
-              
-              <div className="relative flex-shrink-0">
-                <button data-overflow-trigger onClick={(e) => { e.stopPropagation(); const next = menuOpen ? null : inv.id; menuRef.current = next; setMobileActionsId(next); }} className="w-[34px] h-[34px] inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] transition-colors">
+            </div>
+
+            {/* Unified Radix Portal Popover (Never gets clipped by table overflow) */}
+            <Popover open={menuOpen} onOpenChange={(open) => setMobileActionsId(open ? inv.id : null)}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMobileActionsId(mobileActionsId === inv.id ? null : inv.id);
+                  }}
+                  className="w-[34px] h-[34px] flex-shrink-0 inline-flex items-center justify-center rounded-[9px] border border-[#E9EDF3] bg-white text-[#64748B] hover:bg-[#F5F6F8] hover:text-[#0F172A] hover:border-[#D8DFE9] transition-colors cursor-pointer"
+                  title="More actions"
+                >
                   <MoreHorizontal className="w-[16px] h-[16px]" />
                 </button>
-                {menuOpen && (
-                  <div data-overflow-menu onClick={(e) => e.stopPropagation()} className="absolute bottom-full right-0 mb-[6px] min-w-[206px] bg-white border border-[#E9EDF3] rounded-[12px] shadow-[0_12px_34px_rgba(15,23,42,.16)] p-[6px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-100">
-                    <div className="flex flex-wrap gap-[4px] px-[4px] py-[2px] mb-[4px]">
-                      {mdActions.map(a => <div key={a.key}>{a.el}</div>)}
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                side="bottom"
+                sideOffset={6}
+                collisionPadding={16}
+                className="z-50 min-w-[210px] w-auto bg-white border border-[#E9EDF3] rounded-[14px] shadow-[0_12px_34px_rgba(15,23,42,.16)] p-[6px] outline-none"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Quick actions for tablet/mobile inside the menu */}
+                <div className="flex lg:hidden flex-wrap gap-[4px] px-[4px] py-[2px] mb-[4px]">
+                  {mdActions.map(a => <div key={a.key}>{a.el}</div>)}
+                </div>
+                <div className="lg:hidden h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
+
+                {menuItems.map(item => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      item.onClick();
+                      if (!item.isToggle) setMobileActionsId(null);
+                    }}
+                    className={`flex items-center justify-between w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] transition-colors cursor-pointer ${
+                      item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-[11px]">
+                      {item.icon} {item.label}
                     </div>
-                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
-                    {menuItems.map(item => (
-                      <button key={item.key} onClick={(e) => { e.preventDefault(); e.stopPropagation(); item.onClick(); if (!item.isToggle) setMobileActionsId(null); }} className={`flex items-center justify-between w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-left hover:bg-[#F5F6F8] transition-colors ${item.danger ? 'text-[#DC2626] hover:bg-[#FEECEC]' : 'text-[#0F172A]'}`}>
-                        <div className="flex items-center gap-[11px]">
-                          {item.icon} {item.label}
-                        </div>
-                        {item.isToggle && (
-                          <div className={`w-[28px] h-[16px] rounded-full flex items-center px-[2px] transition-colors ${item.checked ? 'bg-[#16A34A]' : 'bg-[#CBD5E1]'}`}>
-                            <div className={`w-[12px] h-[12px] bg-white rounded-full transition-transform duration-200 ${item.checked ? 'translate-x-[12px]' : 'translate-x-0'}`} />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                    <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
-                    <button onClick={() => { setDeleteModal({ isOpen: true, id: inv.id }); setMobileActionsId(null); }} className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC] transition-colors"><Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete</button>
-                  </div>
-                )}
-              </div>
-            </div>
+                    {item.isToggle && (
+                      <div className={`w-[28px] h-[16px] rounded-full flex items-center px-[2px] transition-colors ${item.checked ? 'bg-[#16A34A]' : 'bg-[#CBD5E1]'}`}>
+                        <div className={`w-[12px] h-[12px] bg-white rounded-full transition-transform duration-200 ${item.checked ? 'translate-x-[12px]' : 'translate-x-0'}`} />
+                      </div>
+                    )}
+                  </button>
+                ))}
+                <div className="h-px bg-[#E9EDF3] mx-[4px] my-[5px]" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteModal({ isOpen: true, id: inv.id });
+                    setMobileActionsId(null);
+                  }}
+                  className="flex items-center gap-[11px] w-full px-[11px] py-[9px] rounded-[8px] bg-transparent border-none text-[13.5px] font-[600] text-[#DC2626] text-left hover:bg-[#FEECEC] transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-[16px] h-[16px] text-[#DC2626]" /> Delete
+                </button>
+              </PopoverContent>
+            </Popover>
           </div>
         );
       }
@@ -985,6 +1007,12 @@ export default function InvoiceTable({
         shareSlug={unifiedModal.shareSlug}
         pdfUrl={unifiedModal.pdfUrl}
         initialTab={unifiedModal.initialTab}
+      />
+
+      <InvoiceActivityModal
+        isOpen={!!activityInvoice}
+        onClose={() => setActivityInvoice(null)}
+        invoice={activityInvoice}
       />
 
       <ConfirmationModal

@@ -167,15 +167,16 @@ export default function UnifiedShareModal({
     }
   }, [isOpen]);
 
-  const shareUrl = pdfUrl && typeof window !== 'undefined'
-    ? `${window.location.origin}/view/${encodeURIComponent(pdfUrl)}`
-    : '';
+  const identifier = shareSlug || invoiceId || (pdfUrl ? encodeURIComponent(pdfUrl) : '');
+  const baseUrl = typeof window !== 'undefined' && identifier ? `${window.location.origin}/i/${identifier}` : '';
+  const shareUrl = baseUrl ? `${baseUrl}?src=directlink` : '';
+  const emailViewUrl = baseUrl ? `${baseUrl}?src=mail` : '';
 
   const [subject, setSubject] = useState(
     `Invoice #${invoiceNumber} from ${senderName || 'us'}`
   );
   const [message, setMessage] = useState(
-    `Hi ${clientName || 'there'},\n\nPlease find your invoice #${invoiceNumber}${attachPdf ? ' attached' : ''}.\n\nView it online: ${shareUrl}\n\nTotal: ${formData?.currency || ''} ${formData?.total || ''}\n\nLet me know if you have any questions.\n\nBest regards,\n${senderName || ''}`
+    `Hi ${clientName || 'there'},\n\nPlease find your invoice #${invoiceNumber}${attachPdf ? ' attached' : ''}.\n\nView it online: ${emailViewUrl || shareUrl}\n\nTotal: ${formData?.currency || ''} ${formData?.total || ''}\n\nLet me know if you have any questions.\n\nBest regards,\n${senderName || ''}`
   );
 
   if (!isOpen) return null;
@@ -407,7 +408,7 @@ export default function UnifiedShareModal({
             <div className="space-y-4">
               <div className="grid grid-cols-4 gap-4">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent('Here is your invoice: ' + shareUrl)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent('Here is your invoice: ' + (baseUrl ? baseUrl + '?src=whatsapp' : shareUrl))}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-2 group"
@@ -419,7 +420,7 @@ export default function UnifiedShareModal({
                 </a>
 
                 <a
-                  href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent('Here is your invoice.')}`}
+                  href={`https://t.me/share/url?url=${encodeURIComponent(baseUrl ? baseUrl + '?src=telegram' : shareUrl)}&text=${encodeURIComponent('Here is your invoice.')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-2 group"

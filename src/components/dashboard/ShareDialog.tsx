@@ -16,8 +16,23 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
   const [copied, setCopied] = useState(false);
   const shareText = "Here is your invoice.";
 
+  const getChannelUrl = (source: string) => {
+    try {
+      const url = new URL(shareUrl, typeof window !== 'undefined' ? window.location.origin : 'https://beta.invopilot.com');
+      url.searchParams.set('src', source);
+      return url.toString();
+    } catch {
+      return shareUrl;
+    }
+  };
+
+  const copyUrl = getChannelUrl('directlink');
+  const whatsappUrl = getChannelUrl('whatsapp');
+  const telegramUrl = getChannelUrl('telegram');
+  const messengerUrl = getChannelUrl('messenger');
+
   const handleCopy = async () => {
-    await copyToClipboard(shareUrl);
+    await copyToClipboard(copyUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -28,7 +43,7 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
         await navigator.share({
           title: 'Invoice',
           text: shareText,
-          url: shareUrl,
+          url: copyUrl,
         });
       } catch (err) {
         console.error('Error sharing natively', err);
@@ -48,7 +63,7 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
         
         <div className="grid grid-cols-4 gap-4 pb-4">
           <a
-            href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`}
+            href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + whatsappUrl)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex flex-col items-center gap-2 group"
@@ -60,7 +75,7 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
           </a>
 
           <a
-            href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`}
+            href={`https://t.me/share/url?url=${encodeURIComponent(telegramUrl)}&text=${encodeURIComponent(shareText)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex flex-col items-center gap-2 group"
@@ -72,7 +87,7 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
           </a>
 
           <a
-            href={`fb-messenger://share/?link=${encodeURIComponent(shareUrl)}`}
+            href={`fb-messenger://share/?link=${encodeURIComponent(messengerUrl)}`}
             className="flex flex-col items-center gap-2 group md:hidden"
           >
             <div className="w-14 h-14 bg-purple-50 rounded-full flex items-center justify-center text-purple-600 group-hover:bg-purple-100 transition-colors">
@@ -81,7 +96,7 @@ export function ShareDialog({ isOpen, onClose, shareUrl }: ShareDialogProps) {
             <span className="text-[10px] font-bold text-ink-600 uppercase tracking-tighter">Messenger</span>
           </a>
           <a
-            href={`https://www.facebook.com/dialog/send?link=${encodeURIComponent(shareUrl)}&app_id=123456789&redirect_uri=${encodeURIComponent(shareUrl)}`}
+            href={`https://www.facebook.com/dialog/send?link=${encodeURIComponent(messengerUrl)}&app_id=123456789&redirect_uri=${encodeURIComponent(messengerUrl)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden md:flex flex-col items-center gap-2 group"

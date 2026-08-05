@@ -8,14 +8,40 @@ export async function GET(
   const { filename } = await params;
   const decodedFilename = decodeURIComponent(filename);
 
-  const { data: invoice, error } = await supabaseAdmin
-    .from('invoices')
-    .select('pdf_url, nickname, invoice_number')
-    .eq('pdf_url', decodedFilename)
-    .is('deleted_at', null)
-    .single();
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let invoice: { pdf_url: string; nickname?: string | null; invoice_number?: string | null } | null = null;
 
-  if (error || !invoice?.pdf_url) {
+  if (UUID_RE.test(decodedFilename)) {
+    const { data } = await supabaseAdmin
+      .from('invoices')
+      .select('pdf_url, nickname, invoice_number')
+      .eq('id', decodedFilename)
+      .is('deleted_at', null)
+      .maybeSingle();
+    invoice = data;
+  }
+
+  if (!invoice?.pdf_url) {
+    const { data } = await supabaseAdmin
+      .from('invoices')
+      .select('pdf_url, nickname, invoice_number')
+      .eq('share_slug', decodedFilename)
+      .is('deleted_at', null)
+      .maybeSingle();
+    invoice = data;
+  }
+
+  if (!invoice?.pdf_url) {
+    const { data } = await supabaseAdmin
+      .from('invoices')
+      .select('pdf_url, nickname, invoice_number')
+      .eq('pdf_url', decodedFilename)
+      .is('deleted_at', null)
+      .maybeSingle();
+    invoice = data;
+  }
+
+  if (!invoice?.pdf_url) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
