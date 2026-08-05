@@ -28,8 +28,9 @@ jobs:
 
       - name: Prepare Standalone Release
         run: |
-          # Copy static assets into standalone structure
-          cp -r .next/static .next/standalone/.next/static
+          # Copy static assets cleanly into standalone structure
+          mkdir -p .next/standalone/.next/static
+          cp -r .next/static/* .next/standalone/.next/static/
           cp -r public .next/standalone/public
           echo "${{ secrets.ENV_FILE }}" > .next/standalone/.env.local
           # Tar standalone folder with dedicated filename
@@ -73,10 +74,7 @@ jobs:
             mkdir -p $TARGET_DIR
             mkdir -p $TMP_DIR
             
-            # Clean previous frontend build artifacts
-            rm -rf "$TARGET_DIR/.next" "$TARGET_DIR/public"
-            
-            # Extract isolated standalone build
+            # Extract standalone build directly over target (preserves old chunks for active user sessions)
             tar -xzf $TMP_DIR/frontend-release.tar.gz -C $TARGET_DIR
             rm -f $TMP_DIR/frontend-release.tar.gz
             
