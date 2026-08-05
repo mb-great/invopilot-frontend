@@ -28,12 +28,12 @@ jobs:
 
       - name: Prepare Standalone Release
         run: |
-          # Copy static assets cleanly into standalone structure
+          # Copy static assets into standalone structure
           rm -rf .next/standalone/.next/static
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public
           echo "${{ secrets.ENV_FILE }}" > .next/standalone/.env.local
-          # Tar standalone folder with dedicated filename
+          # Tar standalone folder
           tar -czf frontend-release.tar.gz -C .next/standalone .
 
       - name: Upload Artifact
@@ -62,24 +62,30 @@ jobs:
           source: "frontend-release.tar.gz"
           target: "~/tmp-deploy-frontend/"
 
-      - name: Extract Release and Restart PM2
+      - name: Extract Release (Clean Deploy)
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER || 'ubuntu' }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
             TARGET_DIR=~/invopilot-frontend
             TMP_DIR=~/tmp-deploy-frontend
             mkdir -p $TARGET_DIR
-            mkdir -p $TMP_DIR
-            
-            # Extract standalone build directly over target
+
+            # CRITICAL: Wipe old .next, node_modules, and server.js BEFORE extracting
+            # This prevents stale chunks from previous builds causing ChunkLoadErrors
+            rm -rf $TARGET_DIR/.next
+            rm -rf $TARGET_DIR/node_modules
+            rm -rf $TARGET_DIR/public
+            rm -f  $TARGET_DIR/server.js
+            rm -f  $TARGET_DIR/package.json
+            rm -f  $TARGET_DIR/bun.lock $TARGET_DIR/bun.lockb
+
+            # Extract fresh standalone build
             tar -xzf $TMP_DIR/frontend-release.tar.gz -C $TARGET_DIR
             rm -f $TMP_DIR/frontend-release.tar.gz
-            
-            # Restart PM2 process to load the new server bundle into memory
-            pm2 restart beta.invopilot.com || pm2 reload beta.invopilot.com || pm2 start $TARGET_DIR/server.js --name beta.invopilot.com
-            pm2 save
-            
-            echo "Frontend release successfully deployed and PM2 restarted."
+
+            echo "✅ Frontend extracted cleanly to $TARGET_DIR"
+            echo "⚠️  Run: pm2 restart beta.invopilot.com"
