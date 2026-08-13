@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { AnalyticsAuthListener } from "@/components/auth/AnalyticsAuthListener";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -52,6 +53,7 @@ export default function RootLayout({
       <body className="min-h-full font-sans text-ink-900" suppressHydrationWarning>
         {children}
         <Toaster position="bottom-center" richColors />
+        <AnalyticsAuthListener />
       </body>
     </html>
   );
