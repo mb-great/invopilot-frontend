@@ -126,6 +126,13 @@ export default async function AdminPage({
           System Admin
         </h1>
         <p className="text-ink-500 text-lg">Monitoring platform usage and health metrics</p>
+        <Link
+          href="/admin/tracking"
+          className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-lg border border-ink-200 bg-white text-sm text-ink-700 hover:border-ink-400 transition-colors"
+        >
+          <Activity className="w-4 h-4" />
+          Funnel Tracking
+        </Link>
       </div>
 
       <section className="mb-12">
