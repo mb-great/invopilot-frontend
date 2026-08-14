@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { clearAnonId } from '@/lib/track'
 import { Menu, X, LogOut, LayoutDashboard, FileText, Users, Settings, ShieldCheck, CreditCard, Repeat, Code, Wallet } from 'lucide-react'
 import { resolvePlanAccess } from '@/lib/billing/tiers'
 import PremiumBadge from '@/components/ui/PremiumBadge'
@@ -59,6 +60,7 @@ export default function DashboardShell({ children, userEmail, userName, avatarUr
 
   const handleSignOut = async () => {
     setIsLoggingOut(true)
+    clearAnonId() // fresh anon trail for next person on shared device
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
