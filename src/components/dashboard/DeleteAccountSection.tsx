@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { clearAnonId } from '@/lib/track';
 import { Trash2 } from 'lucide-react';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { toast } from 'sonner';
@@ -27,6 +28,7 @@ export default function DeleteAccountSection() {
       }
 
       toast.success("Your account has been scheduled for deletion. You can restore your data by signing up again with the same email within 90 days.");
+      clearAnonId();
       await supabase.auth.signOut();
       router.push('/login');
     } catch (err: unknown) {

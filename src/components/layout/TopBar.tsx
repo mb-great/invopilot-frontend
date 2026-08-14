@@ -8,11 +8,14 @@ interface TopBarProps {
   userEmail?: string
 }
 
+import { clearAnonId } from '@/lib/track'
+
 export default function TopBar({ userEmail }: TopBarProps) {
   const supabase = createClient()
   const router = useRouter()
 
   const handleLogout = async () => {
+    clearAnonId()
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
