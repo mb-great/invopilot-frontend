@@ -17,6 +17,18 @@ import { ArrowLeft, TrendingDown, Users2 } from 'lucide-react'
 
 type FunnelStat = { event: string; people: number; events: number }
 type DropoffRow = { last_event: string; last_step: string | null; viewport_bucket: string; people: number }
+type VisitorRow = {
+  visitor: string
+  converted: boolean
+  events: number
+  first_seen: string
+  last_seen: string
+  last_event: string
+  last_step: string | null
+  last_field: string | null
+  device: string
+  journey: string
+}
 
 /** Funnel order. Anything not listed still renders, just after these. */
 const FUNNEL_ORDER = [
@@ -65,13 +77,15 @@ export default async function AdminTrackingPage({
   const resolved = (await searchParams) || {}
   const days = typeof resolved.days === 'string' ? parseInt(resolved.days, 10) || 30 : 30
 
-  const [{ data: statsData }, { data: dropoffData }] = await Promise.all([
+  const [{ data: statsData }, { data: dropoffData }, { data: visitorData }] = await Promise.all([
     supabase.rpc('get_funnel_stats', { p_days: days }),
     supabase.rpc('get_funnel_dropoff', { p_days: days }),
+    supabase.rpc('get_funnel_visitors', { p_days: days, p_limit: 100 }),
   ])
 
   const stats: FunnelStat[] = (statsData || []) as FunnelStat[]
   const dropoff: DropoffRow[] = (dropoffData || []) as DropoffRow[]
+  const visitors: VisitorRow[] = (visitorData || []) as VisitorRow[]
 
   const byEvent = new Map(stats.map((s) => [s.event, s]))
   const ordered = [
@@ -233,6 +247,69 @@ export default async function AdminTrackingPage({
             </div>
           </div>
         </>
+      )}
+
+      {visitors.length > 0 && (
+        <div className="rounded-xl border border-ink-200 bg-white p-6 mt-8">
+          <h2 className="text-lg font-semibold text-ink-900 mb-2">Visitors</h2>
+          <p className="text-sm text-ink-500 mb-5">
+            One row per browser. Anonymous until they sign up — then the row resolves to their email
+            and keeps the journey they took <em>before</em> they had an account.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[720px]">
+              <thead>
+                <tr className="text-left text-ink-500 border-b border-ink-200">
+                  <th className="pb-2 font-medium">Visitor</th>
+                  <th className="pb-2 font-medium">Device</th>
+                  <th className="pb-2 font-medium">Stopped at</th>
+                  <th className="pb-2 font-medium">Field</th>
+                  <th className="pb-2 font-medium text-right">Events</th>
+                  <th className="pb-2 font-medium text-right">Last seen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visitors.map((v, i) => (
+                  <tr key={i} className="border-b border-ink-100 last:border-0 align-top">
+                    <td className="py-2.5">
+                      <span className={v.converted ? 'text-ink-900 font-medium' : 'text-ink-500 font-mono text-xs'}>
+                        {v.visitor}
+                      </span>
+                      {v.converted && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] uppercase tracking-wide">
+                          converted
+                        </span>
+                      )}
+                      <div className="text-[11px] text-ink-400 mt-1 max-w-[380px] truncate" title={v.journey}>
+                        {v.journey.replace(/ -> /g, ' → ')}
+                      </div>
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded text-xs ${
+                        v.device === 'mobile' ? 'bg-amber-100 text-amber-800' : 'bg-ink-100 text-ink-600'
+                      }`}>
+                        {v.device}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-ink-700">
+                      {LABELS[v.last_event] || v.last_event}
+                      {v.last_step && <span className="text-ink-400"> · step {v.last_step}</span>}
+                    </td>
+                    <td className="py-2.5 text-ink-500">{v.last_field || '—'}</td>
+                    <td className="py-2.5 text-right tabular-nums text-ink-900">{v.events}</td>
+                    <td className="py-2.5 text-right text-ink-400 text-xs whitespace-nowrap">
+                      {new Date(v.last_seen).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-ink-400 mt-4">
+            Showing up to 100 most recent. Anonymous ids are truncated — we store no name, email or
+            IP against them until the person chooses to sign up.
+          </p>
+        </div>
       )}
 
       <p className="text-xs text-ink-400 mt-8">
