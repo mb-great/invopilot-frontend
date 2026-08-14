@@ -47,6 +47,19 @@ export function getAnonId(): string | null {
   }
 }
 
+/**
+ * Strictly-increasing timestamp. Date.now() is millisecond-resolution, so events
+ * fired in the same tick collide and `ORDER BY created_at` becomes
+ * non-deterministic — which corrupts the last-event-per-person drop-off query.
+ * Mirror of invopilot-old/app/lib/track.ts.
+ */
+let lastStampMs = 0;
+function nextStamp(): string {
+  const now = Date.now();
+  lastStampMs = now > lastStampMs ? now : lastStampMs + 1;
+  return new Date(lastStampMs).toISOString();
+}
+
 export function track(
   event: string,
   props: Record<string, unknown> = {},
@@ -66,6 +79,8 @@ export function track(
         anon_id: anonId,
         event,
         funnel_token: funnelToken || undefined,
+        // See invopilot-old/app/lib/track.ts — action time, not arrival time.
+        occurred_at: nextStamp(),
         props: {
           ...(typeof window === "undefined" ? {} : { viewport_w: window.innerWidth }),
           ...props,
@@ -76,6 +91,19 @@ export function track(
     }).catch(() => {});
   } catch {
     /* analytics must never break the page */
+  }
+}
+
+/**
+ * Clear the anon_id cookie on logout so the next person on a shared device
+ * starts with a fresh trail. Spec: docs/ANALYTICS_FUNNEL_TRACKING.md Step 5.
+ */
+export function clearAnonId(): void {
+  try {
+    if (typeof document === "undefined") return;
+    document.cookie = `${COOKIE}=; path=/; max-age=0; SameSite=Lax${cookieDomain()}`;
+  } catch {
+    /* never break logout */
   }
 }
 
