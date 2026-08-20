@@ -2,6 +2,7 @@
 import { UserInputForm } from "@/components/invoice/form/userInputForm";
 import { FormSteps } from "@/components/invoice/form/step/formSteps";
 import { UserDataPreview } from "@/components/invoice/UserDataPreview";
+import { PreviewZoom } from "@/components/invoice/PreviewZoom";
 import { useForm, FormProvider } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
@@ -600,11 +601,11 @@ export default function InvoiceBuilder() {
             </div>
 
             {/* Preview Side */}
-            <div className={`flex-1 min-h-0 md:h-full bg-[#f9fafb] relative overflow-y-auto ${mobileView !== "preview" ? "hidden md:block" : ""}`}>
+            <div className={`flex-1 min-h-0 md:h-full bg-[#f9fafb] relative overflow-hidden ${mobileView !== "preview" ? "hidden md:block" : ""}`}>
               <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
-              <div className="w-full flex justify-center py-4">
+              <PreviewZoom>
                 <UserDataPreview />
-              </div>
+              </PreviewZoom>
             </div>
           </div>
           {profile && (

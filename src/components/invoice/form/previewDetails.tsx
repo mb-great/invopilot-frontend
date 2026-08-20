@@ -93,7 +93,7 @@ export const PreviewDetails = ({
   if (!needsPageBreak) {
     return (
       <div className={`overflow-x-auto ${GeistSans.className}`}>
-        <div className="w-[595px] min-h-[842px] bg-white rounded-[10px] shadow-[0_0_20px_rgba(0,0,0,0.05)] origin-top-left scale-[0.55] sm:scale-75 lg:scale-100">
+        <div className="w-[595px] min-h-[842px] bg-white rounded-[10px] shadow-[0_0_20px_rgba(0,0,0,0.05)]">
           {headerSection}
           <div className="flex flex-col justify-between">
             <div className="border-b justify-between border-dashed">
@@ -111,7 +111,7 @@ export const PreviewDetails = ({
   return (
     <div className={`overflow-x-auto flex flex-col gap-3 ${GeistSans.className}`}>
       {/* Page 1 */}
-      <div className="w-[595px] h-[842px] bg-white rounded-[10px] shadow-[0_0_20px_rgba(0,0,0,0.05)] flex flex-col origin-top-left scale-[0.55] sm:scale-75 lg:scale-100">
+      <div className="w-[595px] h-[842px] bg-white rounded-[10px] shadow-[0_0_20px_rgba(0,0,0,0.05)] flex flex-col">
         {headerSection}
         <div className="flex-1">
           <InvoiceDetailsPreview
@@ -133,7 +133,7 @@ export const PreviewDetails = ({
       </div>
 
       {/* Page 2 */}
-      <div className="w-[595px] h-[842px] bg-white rounded-[10px] shadow-[0_0_20px_rgba(0,0,0,0.05)] flex flex-col origin-top-left scale-[0.55] sm:scale-75 lg:scale-100">
+      <div className="w-[595px] h-[842px] bg-white rounded-[10px] shadow-[0_0_20px_rgba(0,0,0,0.05)] flex flex-col">
         <div className="flex flex-col justify-between flex-1">
           <div className="border-b justify-between border-dashed">
             <InvoiceDetailsPreview
