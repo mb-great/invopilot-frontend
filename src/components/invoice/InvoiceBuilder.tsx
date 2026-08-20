@@ -480,7 +480,7 @@ export default function InvoiceBuilder() {
             </div>
 
             {/* Form Side */}
-            <div className={`w-full md:w-[450px] lg:w-[500px] h-full bg-white border-r border-ink-100 flex flex-col shrink-0 ${mobileView !== "form" ? "hidden md:flex" : ""}`}>
+            <div className={`w-full md:w-[450px] lg:w-[500px] flex-1 min-h-0 md:flex-none md:h-full bg-white border-r border-ink-100 flex flex-col md:shrink-0 ${mobileView !== "form" ? "hidden md:flex" : ""}`}>
               
               {/* Sticky Header */}
               <div className="p-6 md:p-10 lg:p-12 pb-0 shrink-0">
@@ -594,13 +594,13 @@ export default function InvoiceBuilder() {
               </div>
 
               {/* Sticky Footer */}
-              <div className="p-6 md:p-10 lg:p-12 pt-6 border-t border-ink-50 shrink-0 bg-white">
+              <div className="p-6 md:p-10 lg:p-12 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-10 lg:pb-12 border-t border-ink-50 shrink-0 bg-white">
                 <FormSteps />
               </div>
             </div>
 
             {/* Preview Side */}
-            <div className={`flex-1 h-full bg-[#f9fafb] relative overflow-y-auto ${mobileView !== "preview" ? "hidden md:block" : ""}`}>
+            <div className={`flex-1 min-h-0 md:h-full bg-[#f9fafb] relative overflow-y-auto ${mobileView !== "preview" ? "hidden md:block" : ""}`}>
               <div className="absolute inset-0 -z-10 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
               <div className="w-full flex justify-center py-4">
                 <UserDataPreview />
