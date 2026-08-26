@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { pct as pctClamped, ratioLabel, isLowSample } from '@/lib/tracking/stats'
 import { redirect } from 'next/navigation'
 import DashboardShell from '@/components/layout/DashboardShell'
 import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess'
@@ -108,7 +109,9 @@ export default async function AdminTrackingPage({
   // Denominator = the widest step actually recorded, so percentages stay honest
   // even before the WordPress tag is live and landing events exist.
   const top = ordered.length ? Number(byEvent.get(ordered[0])?.people ?? 0) : 0
-  const pct = (n: number) => (top > 0 ? Math.round((n / top) * 1000) / 10 : 0)
+  // Clamped in lib/tracking/stats — a funnel step is a subset of the one above
+  // it, so a ratio over 100% means an event mis-fired, not that we did well.
+  const pctOf = (n: number) => pctClamped(n, top) ?? 0
 
   const sends = Number(byEvent.get('send_clicked')?.people ?? 0)
   const downloads = Number(byEvent.get('download_clicked')?.people ?? 0)
@@ -194,16 +197,20 @@ export default async function AdminTrackingPage({
               </div>
               <p className="text-xs text-ink-400 mt-1">
                 {sends + downloads > 0
-                  ? `${Math.round((sends / (sends + downloads)) * 100)}% chose Send`
+                  ? `${ratioLabel(sends, sends + downloads)} chose Send${isLowSample(sends + downloads) ? ' · low sample' : ''}`
                   : 'no choices recorded yet'}
               </p>
             </div>
             <div className="rounded-xl border border-ink-200 bg-white p-5">
               <div className="text-ink-500 text-xs uppercase tracking-wide mb-2">Auth survival</div>
               <div className="text-3xl font-bold text-ink-900">
-                {started > 0 ? `${Math.round((signups / started) * 100)}%` : '—'}
+                {ratioLabel(signups, started)}
               </div>
-              <p className="text-xs text-ink-400 mt-1">{signups} of {started} finished sign-in</p>
+              <p className="text-xs text-ink-400 mt-1">
+                {signups > started
+                  ? `${signups} of ${started} — signup_started under-fires through the OAuth redirect`
+                  : `${signups} of ${started} finished sign-in`}
+              </p>
             </div>
           </div>
 
@@ -214,13 +221,13 @@ export default async function AdminTrackingPage({
               {ordered.map((ev) => {
                 const s = byEvent.get(ev)!
                 const people = Number(s.people)
-                const width = Math.max(pct(people), 2)
+                const width = Math.max(pctOf(people), 2)
                 return (
                   <div key={ev}>
                     <div className="flex justify-between text-sm mb-1.5">
                       <span className="text-ink-700">{LABELS[ev] || ev}</span>
                       <span className="text-ink-500 tabular-nums">
-                        {people} {top > 0 && <span className="text-ink-400">· {pct(people)}%</span>}
+                        {people} {top > 0 && <span className="text-ink-400">· {pctOf(people)}%</span>}
                       </span>
                     </div>
                     <div className="h-2.5 w-full rounded-full bg-ink-100 overflow-hidden">
