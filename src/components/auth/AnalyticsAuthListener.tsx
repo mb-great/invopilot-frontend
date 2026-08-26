@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { track, identifyUser } from "@/lib/track";
+import { shouldFireSignupCompleted, markSignupFired } from "@/lib/tracking/signupOnce";
 
 /**
  * Funnel analytics: closes the loop at signup (ADR-032).
@@ -17,16 +18,11 @@ import { track, identifyUser } from "@/lib/track";
  * cross-domain cookie is blocked. Firing it here too would double-count.
  */
 export function AnalyticsAuthListener() {
-  const firedRef = useRef(false);
-
   useEffect(() => {
     const supabase = createClient();
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event !== "SIGNED_IN" || !session?.user) return;
-      // onAuthStateChange can re-fire (token refresh, tab focus) — guard per mount.
-      if (firedRef.current) return;
-      firedRef.current = true;
 
       // The claim token, when this login came from the beta funnel.
       let funnelToken: string | null = null;
@@ -37,7 +33,17 @@ export function AnalyticsAuthListener() {
         /* ignore */
       }
 
+      // Always link the anonymous trail to the account — that join is not a
+      // signup event and is safe to repeat.
       identifyUser(session.access_token, funnelToken);
+
+      // signup_completed is the *creation* of an account, not a sign-in.
+      // Supabase emits SIGNED_IN on every page load, so this must be bounded by
+      // the account's age and a persisted per-user flag. The previous useRef
+      // guard reset on every mount, which is why one account recorded three.
+      if (!shouldFireSignupCompleted({ userId: session.user.id, createdAt: session.user.created_at })) return;
+
+      markSignupFired(session.user.id);
       track("signup_completed", {}, funnelToken);
     });
 
