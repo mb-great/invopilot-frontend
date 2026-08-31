@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Mail, Lock, User, ShieldCheck } from 'lucide-react'
 import { getBackendUrl, getFrontendUrl } from '@/lib/url'
+import { track } from '@/lib/track'
+import { shouldFireSignupStarted, markSignupStartedFired } from '@/lib/tracking/signupStart'
 
 const BACKEND_URL = getBackendUrl();
 const FRONTEND_URL = getFrontendUrl();
@@ -156,6 +158,17 @@ function AuthFormContent({ mode = 'login' }: { mode?: 'login' | 'signup' }) {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+
+    // Funnel start. Emitted here because this page is where a DIRECT signup
+    // begins — someone who never touched the generator has no other place to
+    // enter the funnel, which is why signup_started had 2 rows all-time.
+    // A token in the query string means invopilot-old already fired it.
+    const funnelToken = searchParams.get('token') || searchParams.get('claim');
+    if (shouldFireSignupStarted({ funnelToken })) {
+      track('signup_started', { entry: 'login' });
+      markSignupStartedFired();
+    }
+
     try {
       // If the redirect doesn't happen within 6 seconds (e.g. blocked by mobile browser), reset it.
       const fallbackTimer = setTimeout(() => {

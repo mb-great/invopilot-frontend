@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getFrontendUrl } from "@/lib/url";
+import { track } from "@/lib/track";
+import { shouldFireSignupStarted, markSignupStartedFired } from "@/lib/tracking/signupStart";
 import { Check, FileText, Loader2 } from "lucide-react";
 
 interface Summary {
@@ -48,6 +50,16 @@ export function BetaLoginForm({ token }: { token?: string }) {
   const handleGoogleLogin = async () => {
     setAuthLoading(true);
     setError(null);
+
+    // Emit BEFORE handing the tab to Google — once the redirect is issued this
+    // code never runs again. track() uses fetch(keepalive), which is retained
+    // by the browser across the navigation; a sendBeacon here would need a CORS
+    // preflight it cannot complete during unload.
+    if (shouldFireSignupStarted({ funnelToken: token })) {
+      track("signup_started", { entry: "beta_login" });
+      markSignupStartedFired();
+    }
+
     try {
       const baseUrl = getFrontendUrl();
       const nextPath = token
