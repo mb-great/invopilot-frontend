@@ -38,6 +38,8 @@ type VisitorRow = {
   device: string
   country: string
   journey: string
+  /** Full count in the window, identical on every row — see migration 089. */
+  total: number
 }
 
 /** Funnel order. Anything not listed still renders, just after these. */
@@ -87,11 +89,21 @@ export default async function AdminTrackingPage({
   const resolved = (await searchParams) || {}
   const days = typeof resolved.days === 'string' ? parseInt(resolved.days, 10) || 30 : 30
 
+  // Page size is capped at 50 in the RPC too — the SQL is the authority, this
+  // constant only has to agree with it.
+  const PAGE_SIZE = 50
+  const pageParam = typeof resolved.page === 'string' ? parseInt(resolved.page, 10) : 1
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
+
   const [{ data: statsData }, { data: dropoffData }, { data: visitorData }, { data: countryData }] =
     await Promise.all([
       supabase.rpc('get_funnel_stats', { p_days: days }),
       supabase.rpc('get_funnel_dropoff', { p_days: days }),
-      supabase.rpc('get_funnel_visitors', { p_days: days, p_limit: 100 }),
+      supabase.rpc('get_funnel_visitors', {
+        p_days: days,
+        p_limit: PAGE_SIZE,
+        p_offset: (page - 1) * PAGE_SIZE,
+      }),
       supabase.rpc('get_funnel_countries', { p_days: days }),
     ])
 
@@ -99,6 +111,15 @@ export default async function AdminTrackingPage({
   const dropoff: DropoffRow[] = (dropoffData || []) as DropoffRow[]
   const visitors: VisitorRow[] = (visitorData || []) as VisitorRow[]
   const countries: CountryRow[] = (countryData || []) as CountryRow[]
+
+  // `total` is the same on every row (window function), so row 0 carries it.
+  // Zero rows means either an empty window or a page past the end — both render
+  // as "no visitors on this page" rather than a broken count.
+  const visitorTotal = visitors.length > 0 ? Number(visitors[0].total) : 0
+  const pageCount = Math.max(1, Math.ceil(visitorTotal / PAGE_SIZE))
+  const firstOnPage = visitorTotal === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const lastOnPage = (page - 1) * PAGE_SIZE + visitors.length
+  const pageHref = (n: number) => `/admin/tracking?days=${days}&page=${n}`
 
   const byEvent = new Map(stats.map((s) => [s.event, s]))
   const ordered = [
@@ -358,7 +379,7 @@ export default async function AdminTrackingPage({
         </>
       )}
 
-      {visitors.length > 0 && (
+      {(visitors.length > 0 || page > 1) && (
         <div className="rounded-xl border border-ink-200 bg-white p-6 mt-8">
           <h2 className="text-lg font-semibold text-ink-900 mb-2">Visitors</h2>
           <p className="text-sm text-ink-500 mb-5">
@@ -424,11 +445,59 @@ export default async function AdminTrackingPage({
               </tbody>
             </table>
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 mt-5 pt-4 border-t border-ink-100">
+            <p className="text-xs text-ink-500 tabular-nums">
+              {visitorTotal === 0 ? (
+                'No visitors on this page.'
+              ) : (
+                <>
+                  Showing <span className="text-ink-800 font-medium">{firstOnPage}–{lastOnPage}</span>{' '}
+                  of <span className="text-ink-800 font-medium">{visitorTotal}</span>{' '}
+                  {visitorTotal === 1 ? 'visitor' : 'visitors'}
+                  <span className="text-ink-400"> · page {page} of {pageCount}</span>
+                </>
+              )}
+            </p>
+
+            {/* A page past the end returns nothing, so pageCount collapses to 1 and
+                the normal nav disappears — without this the only way back is
+                editing the URL. */}
+            {visitorTotal === 0 && page > 1 && (
+              <Link href={pageHref(1)} className="px-2.5 py-1 rounded-md border border-ink-200 text-xs text-ink-700 hover:bg-ink-50">
+                Back to first page
+              </Link>
+            )}
+
+            {pageCount > 1 && (
+              <nav className="flex items-center gap-1.5" aria-label="Visitors pagination">
+                {page > 1 ? (
+                  <Link href={pageHref(page - 1)} className="px-2.5 py-1 rounded-md border border-ink-200 text-xs text-ink-700 hover:bg-ink-50">
+                    Previous
+                  </Link>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-md border border-ink-100 text-xs text-ink-300">Previous</span>
+                )}
+                {page < pageCount ? (
+                  <Link href={pageHref(page + 1)} className="px-2.5 py-1 rounded-md border border-ink-200 text-xs text-ink-700 hover:bg-ink-50">
+                    Next
+                  </Link>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-md border border-ink-100 text-xs text-ink-300">Next</span>
+                )}
+                {page !== pageCount && (
+                  <Link href={pageHref(pageCount)} className="px-2.5 py-1 rounded-md text-xs text-ink-500 hover:text-ink-800">
+                    Last
+                  </Link>
+                )}
+              </nav>
+            )}
+          </div>
+
           <p className="text-xs text-ink-400 mt-4">
-            Showing up to 100 most recent. Anonymous ids are truncated — we store no name, email or
-            IP against them until the person chooses to sign up. Country is a two-letter code
-            resolved at the edge and is the only location we keep; the IP it came from is never
-            written down.
+            Anonymous ids are truncated to their first 8 characters — we store no name, email or IP
+            against them until the person chooses to sign up. Country is a two-letter code resolved
+            server-side from the visitor IP and is the only location we keep; the IP itself is read
+            in memory and never written down.
           </p>
         </div>
       )}
