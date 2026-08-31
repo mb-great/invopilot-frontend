@@ -57,6 +57,16 @@ const BOT_PATTERNS = [
   // Automated Tools / Headless Browsers
   /headlesschrome/i,
   /phantomjs/i,
+  // T6 (audit 1.4): the driver frameworks, not just the headless build string.
+  // A Playwright or Puppeteer run drives a NORMAL Chrome whose UA contains no
+  // "HeadlessChrome" — so every automated visit this project makes was being
+  // counted as a person. This repo ships Playwright, so that was our own traffic.
+  /puppeteer/i,
+  /playwright/i,
+  /selenium/i,
+  /webdriver/i,
+  /chrome-lighthouse/i,
+  /lighthouse/i,
   /preview/i,
   /urlscan/i,
   /virustotal/i,
