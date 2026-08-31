@@ -1,15 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  escapeCsvValue,
-  toCsv,
-  exportFilename,
-  visitorsToCsv,
-  visitorsToJson,
-  funnelToCsv,
-  dropoffToCsv,
-  type VisitorCsvInput,
-  type DropoffCsvInput,
-} from './csv';
+import { escapeCsvValue, toCsv, exportFilename, visitorsToCsv, visitorsToJson, funnelToCsv, dropoffToCsv, type VisitorCsvInput, type DropoffCsvInput, visitorsToCsvWithoutEmails, anonymiseVisitor } from './csv';
 
 const labelFor = (event: string) =>
   ({ invoice_ready_viewed: 'Reached "invoice ready"', signup_completed: 'Finished signing up' })[
@@ -208,5 +198,45 @@ describe('dropoffToCsv', () => {
   it('renders a null step as an empty cell rather than the word null', () => {
     const csv = dropoffToCsv(dropoffFixture, labelFor);
     expect(csv).not.toContain('null');
+  });
+});
+
+describe('T12 · email-free export variant (audit Part 9)', () => {
+  const rows = [
+    {
+      visitor: 'karan@saasknot.com', converted: true, device: 'desktop', country: 'IN',
+      last_event: 'signup_completed', last_step: null, events: 9,
+      first_seen: '2026-08-01T00:00:00Z', last_seen: '2026-08-02T00:00:00Z', journey: 'a -> b',
+    },
+    {
+      visitor: 'anon:11533b47', converted: false, device: 'mobile', country: 'ZZ',
+      last_event: 'builder_step_viewed', last_step: '1', events: 3,
+      first_seen: '2026-08-01T00:00:00Z', last_seen: '2026-08-01T00:05:00Z', journey: 'a',
+    },
+  ];
+  const label = (e: string) => e;
+
+  it('strips the email from a converted row', () => {
+    const csv = visitorsToCsvWithoutEmails(rows, label);
+    expect(csv).not.toContain('karan@saasknot.com');
+    expect(csv).not.toContain('@');
+  });
+
+  it('leaves already-anonymous rows untouched', () => {
+    expect(anonymiseVisitor('anon:11533b47')).toBe('anon:11533b47');
+  });
+
+  it('is stable, so the same person correlates across exports', () => {
+    expect(anonymiseVisitor('a@b.com')).toBe(anonymiseVisitor('a@b.com'));
+    expect(anonymiseVisitor('a@b.com')).not.toBe(anonymiseVisitor('c@d.com'));
+  });
+
+  it('keeps every other column and the column order identical', () => {
+    const plain = visitorsToCsv(rows, label).split('\n');
+    const safe = visitorsToCsvWithoutEmails(rows, label).split('\n');
+    expect(safe[0]).toBe(plain[0]);
+    expect(safe).toHaveLength(plain.length);
+    expect(safe[1]).toContain('desktop');
+    expect(safe[1]).toContain('IN');
   });
 });

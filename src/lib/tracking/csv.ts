@@ -115,6 +115,44 @@ export interface VisitorJsonRow {
   event_path: string[];
 }
 
+/**
+ * The Visitor column with any email removed.
+ *
+ * T12 (audit Part 9): "Handle exports containing emails as personal data; prefer
+ * an email-free variant." A converted row's `visitor` IS the person's real email,
+ * so the default export is personal data the moment anyone has signed up. This
+ * gives the same rows with the identity stripped: every visitor becomes a stable
+ * token, so behaviour is still analysable and rows still correlate across
+ * exports, but the file carries no address.
+ *
+ * Anonymous rows are already `anon:xxxxxxxx` and pass through unchanged — they
+ * never held an email in the first place.
+ */
+export function anonymiseVisitor(visitor: string): string {
+  if (!visitor.includes('@')) return visitor;
+  // Stable per email, non-reversible, and short enough to read in a spreadsheet.
+  let h = 0;
+  for (let i = 0; i < visitor.length; i += 1) {
+    h = (h * 31 + visitor.charCodeAt(i)) | 0;
+  }
+  return `user:${(h >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+/**
+ * Email-free variant of the Visitors export — same columns, same order, same
+ * rows, with the Visitor column anonymised. Preferred over visitorsToCsv when
+ * the file is leaving the admin's machine.
+ */
+export function visitorsToCsvWithoutEmails(
+  visitors: VisitorCsvInput[],
+  labelFor: (event: string) => string,
+): string {
+  return visitorsToCsv(
+    visitors.map((v) => ({ ...v, visitor: anonymiseVisitor(v.visitor) })),
+    labelFor,
+  );
+}
+
 export function visitorsToJson(visitors: VisitorCsvInput[]): string {
   const rows: VisitorJsonRow[] = visitors.map((v) => ({
     visitor: v.visitor,

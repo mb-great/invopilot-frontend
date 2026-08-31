@@ -6,7 +6,7 @@ import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess'
 import Link from 'next/link'
 import { ArrowLeft, TrendingDown, Users2, Globe } from 'lucide-react'
 import { countryName, countryFlag } from '@/lib/tracking/countries'
-import { visitorsToCsv, visitorsToJson, funnelToCsv, dropoffToCsv, exportFilename } from '@/lib/tracking/csv'
+import { visitorsToCsv, visitorsToCsvWithoutEmails, visitorsToJson, funnelToCsv, dropoffToCsv, exportFilename } from '@/lib/tracking/csv'
 import TrackingExportButton from '@/components/admin/TrackingExportButton'
 
 /**
@@ -200,12 +200,16 @@ export default async function AdminTrackingPage({
     })
 
   const visitorsCsv = visitorsToCsv(visitors, labelFor)
+  // T12: the default export carries real emails on converted rows. This one does
+  // not, and is the one to use when the file leaves this machine.
+  const visitorsCsvSafe = visitorsToCsvWithoutEmails(visitors, labelFor)
   const visitorsJson = visitorsToJson(visitors)
   const toolFunnelCsv = funnelToCsv(toFunnelCsvRows(toolFunnel), labelFor)
   const directFunnelCsv = funnelToCsv(toFunnelCsvRows(directFunnel), labelFor)
   const dropoffCsv = dropoffToCsv(dropoff, labelFor)
 
   const visitorsCsvFilename = exportFilename('visitors', days, page)
+  const visitorsCsvSafeFilename = visitorsCsvFilename.replace(/\.csv$/, '-no-emails.csv')
   const visitorsJsonFilename = visitorsCsvFilename.replace(/\.csv$/, '.json')
   const toolFunnelCsvFilename = exportFilename('funnel_tool', days)
   const directFunnelCsvFilename = exportFilename('funnel_direct', days)
@@ -654,6 +658,11 @@ export default async function AdminTrackingPage({
             <h2 className="text-lg font-semibold text-ink-900">Visitors</h2>
             <div className="flex items-center gap-2">
               <TrackingExportButton content={visitorsCsv} filename={visitorsCsvFilename} />
+              <TrackingExportButton
+                content={visitorsCsvSafe}
+                filename={visitorsCsvSafeFilename}
+                label="CSV (no emails)"
+              />
               <TrackingExportButton
                 content={visitorsJson}
                 filename={visitorsJsonFilename}
