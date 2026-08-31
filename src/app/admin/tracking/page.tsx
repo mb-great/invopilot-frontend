@@ -209,13 +209,26 @@ export default async function AdminTrackingPage({
                 <Users2 className="w-4 h-4" /> People seen
               </div>
               <div className="text-3xl font-bold text-ink-900">{totalPeople}</div>
-              <p className="text-xs text-ink-400 mt-1">distinct browsers in range</p>
+              <p className="text-xs text-ink-400 mt-1">
+                Distinct browsers in range, including people who never reached a tracked
+                funnel step below.
+              </p>
+              {top > 0 && ordered.length > 0 && (
+                <p className="text-xs text-ink-400 mt-1">
+                  The funnel starts lower, at {top} — only people who reached its first
+                  step, &ldquo;{LABELS[ordered[0]] || ordered[0]}&rdquo;.
+                </p>
+              )}
             </div>
             <div className="rounded-xl border border-ink-200 bg-white p-5">
               <div className="text-ink-500 text-xs uppercase tracking-wide mb-2">Send vs Download</div>
               <div className="text-3xl font-bold text-ink-900">
                 {sends} <span className="text-ink-300 font-normal">/</span> {downloads}
               </div>
+              <p className="text-xs text-ink-400 mt-1">
+                Of people who finished an invoice, how many clicked &ldquo;Send &amp; get
+                paid&rdquo; instead of &ldquo;Download PDF only.&rdquo;
+              </p>
               <p className="text-xs text-ink-400 mt-1">
                 {sends + downloads > 0
                   ? `${ratioLabel(sends, sends + downloads)} chose Send${isLowSample(sends + downloads) ? ' · low sample' : ''}`
@@ -228,8 +241,11 @@ export default async function AdminTrackingPage({
                 {ratioLabel(signups, started)}
               </div>
               <p className="text-xs text-ink-400 mt-1">
+                Of people who started Google sign-in, how many finished creating an account.
+              </p>
+              <p className="text-xs text-ink-400 mt-1">
                 {signups > started
-                  ? `${signups} of ${started} — signup_started under-fires through the OAuth redirect`
+                  ? `${signups} of ${started} — signup_started under-fires through the OAuth redirect, so this will read "check data" until that's fixed`
                   : `${signups} of ${started} finished sign-in`}
               </p>
             </div>
@@ -237,7 +253,11 @@ export default async function AdminTrackingPage({
 
           {/* Funnel */}
           <div className="rounded-xl border border-ink-200 bg-white p-6 mb-8">
-            <h2 className="text-lg font-semibold text-ink-900 mb-5">Funnel</h2>
+            <h2 className="text-lg font-semibold text-ink-900 mb-2">Funnel</h2>
+            <p className="text-sm text-ink-500 mb-5">
+              How many people reached each step, as a percentage of the widest step actually
+              recorded — not the &ldquo;People seen&rdquo; number above (see the note there for why).
+            </p>
             <div className="space-y-3">
               {ordered.map((ev) => {
                 const s = byEvent.get(ev)!
@@ -270,8 +290,9 @@ export default async function AdminTrackingPage({
               <h2 className="text-lg font-semibold text-ink-900">Traffic by country</h2>
             </div>
             <p className="text-sm text-ink-500 mb-5">
-              Where visitors connected from, by browser. Country comes from the network edge —
-              we never store an IP address, city or location.
+              Where visitors connected from, by browser. Country is resolved server-side from
+              the visitor&apos;s IP using an offline lookup table — the IP itself is read in
+              memory and never stored, only the two-letter country code.
             </p>
 
             {countryTotal === 0 ? (
@@ -318,8 +339,8 @@ export default async function AdminTrackingPage({
                   {knownCountries} {knownCountries === 1 ? 'country' : 'countries'} identified
                   {restCountries.length > 0 && `, top ${COUNTRY_ROWS} shown`}.
                   Bar length is relative to the largest country; the percentage is of all visitors.
-                  &ldquo;Unknown&rdquo; means the request did not reach us through the edge — expect
-                  it to dominate until Cloudflare fronts every domain.
+                  &ldquo;Unknown&rdquo; means the event happened before country lookup went live —
+                  since the IP was never stored, those historical rows can&apos;t be backfilled.
                 </p>
               </>
             )}
