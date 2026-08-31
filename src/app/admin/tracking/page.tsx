@@ -6,6 +6,8 @@ import { getWorkspaceAccess } from '@/lib/billing/getWorkspaceAccess'
 import Link from 'next/link'
 import { ArrowLeft, TrendingDown, Users2, Globe } from 'lucide-react'
 import { countryName, countryFlag } from '@/lib/tracking/countries'
+import { visitorsToCsv, visitorsToJson, funnelToCsv, dropoffToCsv, exportFilename } from '@/lib/tracking/csv'
+import TrackingExportButton from '@/components/admin/TrackingExportButton'
 
 /**
  * Admin → Funnel Tracking. Spec: docs/ANALYTICS_FUNNEL_TRACKING.md (ADR-032).
@@ -174,6 +176,29 @@ export default async function AdminTrackingPage({
   const toolFunnel = orderFunnel(toolStats)
   const directFunnel = orderFunnel(directStats)
 
+  // T8 (audit Part 5): exports are a browser-side Blob of the rows already
+  // loaded above — those rows already reflect both active filters (`days`
+  // and, for Visitors, `page`), so serialising them as-is is what makes the
+  // export match the screen, with no second query to keep in sync.
+  const labelFor = (event: string) => LABELS[event] || event
+  const toFunnelCsvRows = (f: ReturnType<typeof orderFunnel>) =>
+    f.ord.map((ev) => {
+      const people = Number(f.byEv.get(ev)!.people)
+      return { event: ev, people, percent: f.pct(people) }
+    })
+
+  const visitorsCsv = visitorsToCsv(visitors, labelFor)
+  const visitorsJson = visitorsToJson(visitors)
+  const toolFunnelCsv = funnelToCsv(toFunnelCsvRows(toolFunnel), labelFor)
+  const directFunnelCsv = funnelToCsv(toFunnelCsvRows(directFunnel), labelFor)
+  const dropoffCsv = dropoffToCsv(dropoff, labelFor)
+
+  const visitorsCsvFilename = exportFilename('visitors', days, page)
+  const visitorsJsonFilename = visitorsCsvFilename.replace(/\.csv$/, '.json')
+  const toolFunnelCsvFilename = exportFilename('funnel_tool', days)
+  const directFunnelCsvFilename = exportFilename('funnel_direct', days)
+  const dropoffCsvFilename = exportFilename('dropoff', days)
+
   // Ranked bars, not a pie: country traffic is a long tail — one dominant market
   // plus a fan of sub-1% slivers that no angle comparison can separate (ADR-033).
   const countryTotal = countries.reduce((a, c) => a + Number(c.people), 0)
@@ -288,7 +313,10 @@ export default async function AdminTrackingPage({
           {/* Tool funnel — people who came to build an invoice. Scoped to
               anon_ids that reached invoice_ready_viewed (migration 093, T4). */}
           <div className="rounded-xl border border-ink-200 bg-white p-6 mb-8">
-            <h2 className="text-lg font-semibold text-ink-900 mb-2">Tool funnel</h2>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h2 className="text-lg font-semibold text-ink-900">Tool funnel</h2>
+              <TrackingExportButton content={toolFunnelCsv} filename={toolFunnelCsvFilename} />
+            </div>
             <p className="text-sm text-ink-500 mb-5">
               Visitors who reached &ldquo;invoice ready&rdquo; — started an invoice, moved through
               the builder, then (maybe) sent or downloaded it and signed up. People who never
@@ -326,7 +354,10 @@ export default async function AdminTrackingPage({
           {/* Direct-signup funnel — people who landed on beta login and signed
               up without touching the tool (migration 093, T4). */}
           <div className="rounded-xl border border-ink-200 bg-white p-6 mb-8">
-            <h2 className="text-lg font-semibold text-ink-900 mb-2">Direct signup funnel</h2>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h2 className="text-lg font-semibold text-ink-900">Direct signup funnel</h2>
+              <TrackingExportButton content={directFunnelCsv} filename={directFunnelCsvFilename} />
+            </div>
             <p className="text-sm text-ink-500 mb-5">
               Visitors who started or finished signup without ever reaching &ldquo;invoice
               ready.&rdquo; Kept separate from the tool funnel above so neither one hides the
@@ -429,9 +460,12 @@ export default async function AdminTrackingPage({
 
           {/* Drop-off map — the replay substitute */}
           <div className="rounded-xl border border-ink-200 bg-white p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingDown className="w-5 h-5 text-ink-400" />
-              <h2 className="text-lg font-semibold text-ink-900">Where people stopped</h2>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="w-5 h-5 text-ink-400" />
+                <h2 className="text-lg font-semibold text-ink-900">Where people stopped</h2>
+              </div>
+              <TrackingExportButton content={dropoffCsv} filename={dropoffCsvFilename} />
             </div>
             <p className="text-sm text-ink-500 mb-5">
               The last thing each person did. Mobile-heavy rows on one step usually mean a layout
@@ -483,10 +517,25 @@ export default async function AdminTrackingPage({
 
       {(visitors.length > 0 || page > 1) && (
         <div className="rounded-xl border border-ink-200 bg-white p-6 mt-8">
-          <h2 className="text-lg font-semibold text-ink-900 mb-2">Visitors</h2>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h2 className="text-lg font-semibold text-ink-900">Visitors</h2>
+            <div className="flex items-center gap-2">
+              <TrackingExportButton content={visitorsCsv} filename={visitorsCsvFilename} />
+              <TrackingExportButton
+                content={visitorsJson}
+                filename={visitorsJsonFilename}
+                mimeType="application/json;charset=utf-8"
+                label="Export JSON"
+              />
+            </div>
+          </div>
           <p className="text-sm text-ink-500 mb-5">
             One row per browser. Anonymous until they sign up — then the row resolves to their email
             and keeps the journey they took <em>before</em> they had an account.
+          </p>
+          <p className="text-xs text-ink-400 mb-5">
+            Converted rows carry a real email — treat these exports as personal data: keep them
+            private, don&apos;t post them publicly, and share carefully.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[840px]">
