@@ -95,19 +95,31 @@ export default async function AdminTrackingPage({
   const pageParam = typeof resolved.page === 'string' ? parseInt(resolved.page, 10) : 1
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
 
-  const [{ data: statsData }, { data: dropoffData }, { data: visitorData }, { data: countryData }] =
-    await Promise.all([
-      supabase.rpc('get_funnel_stats', { p_days: days }),
-      supabase.rpc('get_funnel_dropoff', { p_days: days }),
-      supabase.rpc('get_funnel_visitors', {
-        p_days: days,
-        p_limit: PAGE_SIZE,
-        p_offset: (page - 1) * PAGE_SIZE,
-      }),
-      supabase.rpc('get_funnel_countries', { p_days: days }),
-    ])
+  const [
+    { data: statsData },
+    { data: toolStatsData },
+    { data: directStatsData },
+    { data: dropoffData },
+    { data: visitorData },
+    { data: countryData },
+  ] = await Promise.all([
+    supabase.rpc('get_funnel_stats', { p_days: days }),
+    // T4 (audit Part 2): the single funnel above mixed tool users with direct
+    // signups, so it's split into two — see migration 093.
+    supabase.rpc('get_tool_funnel_stats', { p_days: days }),
+    supabase.rpc('get_direct_signup_funnel_stats', { p_days: days }),
+    supabase.rpc('get_funnel_dropoff', { p_days: days }),
+    supabase.rpc('get_funnel_visitors', {
+      p_days: days,
+      p_limit: PAGE_SIZE,
+      p_offset: (page - 1) * PAGE_SIZE,
+    }),
+    supabase.rpc('get_funnel_countries', { p_days: days }),
+  ])
 
   const stats: FunnelStat[] = (statsData || []) as FunnelStat[]
+  const toolStats: FunnelStat[] = (toolStatsData || []) as FunnelStat[]
+  const directStats: FunnelStat[] = (directStatsData || []) as FunnelStat[]
   const dropoff: DropoffRow[] = (dropoffData || []) as DropoffRow[]
   const visitors: VisitorRow[] = (visitorData || []) as VisitorRow[]
   const countries: CountryRow[] = (countryData || []) as CountryRow[]
@@ -139,6 +151,28 @@ export default async function AdminTrackingPage({
   const signups = Number(byEvent.get('signup_completed')?.people ?? 0)
   const started = Number(byEvent.get('signup_started')?.people ?? 0)
   const totalPeople = dropoff.reduce((a, r) => a + Number(r.people), 0)
+
+  // T4 (audit Part 2): the funnel above mixed tool users with direct signups,
+  // which is why "Finished signing up" could sit below "Started Google
+  // sign-in" in the list yet show a higher count — they weren't the same
+  // journey. Split into two funnels (migration 093): tool funnel is scoped to
+  // anon_ids that reached invoice_ready_viewed, direct-signup funnel to
+  // anon_ids that started/finished signup without ever doing so — disjoint by
+  // construction, so the two step lists below are never comparing different
+  // populations under one label again.
+  const orderFunnel = (rows: FunnelStat[]) => {
+    const byEv = new Map(rows.map((s) => [s.event, s]))
+    const ord = [
+      ...FUNNEL_ORDER.filter((e) => byEv.has(e)),
+      ...rows.map((s) => s.event).filter((e) => !FUNNEL_ORDER.includes(e)),
+    ]
+    const topN = ord.length ? Number(byEv.get(ord[0])?.people ?? 0) : 0
+    const pct = (n: number) => pctClamped(n, topN) ?? 0
+    return { byEv, ord, topN, pct }
+  }
+
+  const toolFunnel = orderFunnel(toolStats)
+  const directFunnel = orderFunnel(directStats)
 
   // Ranked bars, not a pie: country traffic is a long tail — one dominant market
   // plus a fan of sub-1% slivers that no angle comparison can separate (ADR-033).
@@ -251,33 +285,80 @@ export default async function AdminTrackingPage({
             </div>
           </div>
 
-          {/* Funnel */}
+          {/* Tool funnel — people who came to build an invoice. Scoped to
+              anon_ids that reached invoice_ready_viewed (migration 093, T4). */}
           <div className="rounded-xl border border-ink-200 bg-white p-6 mb-8">
-            <h2 className="text-lg font-semibold text-ink-900 mb-2">Funnel</h2>
+            <h2 className="text-lg font-semibold text-ink-900 mb-2">Tool funnel</h2>
             <p className="text-sm text-ink-500 mb-5">
-              How many people reached each step, as a percentage of the widest step actually
-              recorded — not the &ldquo;People seen&rdquo; number above (see the note there for why).
+              Visitors who reached &ldquo;invoice ready&rdquo; — started an invoice, moved through
+              the builder, then (maybe) sent or downloaded it and signed up. People who never
+              touched the tool are not in this funnel; see &ldquo;Direct signup funnel&rdquo; below.
             </p>
-            <div className="space-y-3">
-              {ordered.map((ev) => {
-                const s = byEvent.get(ev)!
-                const people = Number(s.people)
-                const width = Math.max(pctOf(people), 2)
-                return (
-                  <div key={ev}>
-                    <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-ink-700">{LABELS[ev] || ev}</span>
-                      <span className="text-ink-500 tabular-nums">
-                        {people} {top > 0 && <span className="text-ink-400">· {pctOf(people)}%</span>}
-                      </span>
+            {toolFunnel.ord.length === 0 ? (
+              <p className="text-sm text-ink-400">No tool-funnel visitors in this window.</p>
+            ) : (
+              <div className="space-y-3">
+                {toolFunnel.ord.map((ev) => {
+                  const s = toolFunnel.byEv.get(ev)!
+                  const people = Number(s.people)
+                  const width = Math.max(toolFunnel.pct(people), 2)
+                  return (
+                    <div key={ev}>
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-ink-700">{LABELS[ev] || ev}</span>
+                        <span className="text-ink-500 tabular-nums">
+                          {people}{' '}
+                          {toolFunnel.topN > 0 && (
+                            <span className="text-ink-400">· {toolFunnel.pct(people)}%</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full rounded-full bg-ink-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-brand-500" style={{ width: `${width}%` }} />
+                      </div>
                     </div>
-                    <div className="h-2.5 w-full rounded-full bg-ink-100 overflow-hidden">
-                      <div className="h-full rounded-full bg-brand-500" style={{ width: `${width}%` }} />
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Direct-signup funnel — people who landed on beta login and signed
+              up without touching the tool (migration 093, T4). */}
+          <div className="rounded-xl border border-ink-200 bg-white p-6 mb-8">
+            <h2 className="text-lg font-semibold text-ink-900 mb-2">Direct signup funnel</h2>
+            <p className="text-sm text-ink-500 mb-5">
+              Visitors who started or finished signup without ever reaching &ldquo;invoice
+              ready.&rdquo; Kept separate from the tool funnel above so neither one hides the
+              other&apos;s true conversion rate.
+            </p>
+            {directFunnel.ord.length === 0 ? (
+              <p className="text-sm text-ink-400">No direct-signup visitors in this window.</p>
+            ) : (
+              <div className="space-y-3">
+                {directFunnel.ord.map((ev) => {
+                  const s = directFunnel.byEv.get(ev)!
+                  const people = Number(s.people)
+                  const width = Math.max(directFunnel.pct(people), 2)
+                  return (
+                    <div key={ev}>
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-ink-700">{LABELS[ev] || ev}</span>
+                        <span className="text-ink-500 tabular-nums">
+                          {people}{' '}
+                          {directFunnel.topN > 0 && (
+                            <span className="text-ink-400">· {directFunnel.pct(people)}%</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-full rounded-full bg-ink-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-brand-500" style={{ width: `${width}%` }} />
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Traffic by country — ranked bars.
