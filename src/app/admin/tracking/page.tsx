@@ -21,6 +21,7 @@ import TrackingExportButton from '@/components/admin/TrackingExportButton'
 
 type FunnelStat = { event: string; people: number; events: number }
 type CountryRow = { country: string; people: number; events: number }
+type CountryConversionRow = { country: string; people: number; converted: number }
 type DropoffRow = {
   last_event: string
   last_step: string | null
@@ -97,6 +98,12 @@ export default async function AdminTrackingPage({
   const pageParam = typeof resolved.page === 'string' ? parseInt(resolved.page, 10) : 1
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
 
+  // T7 (audit Part 4): country filter for the funnel below. Only a 2-letter
+  // code (or the 'ZZ' unknown sentinel) is accepted — anything else is
+  // treated as no filter rather than passed through to the RPC.
+  const countryParam = typeof resolved.country === 'string' ? resolved.country.toUpperCase() : ''
+  const selectedCountry = /^[A-Z]{2}$/.test(countryParam) ? countryParam : undefined
+
   const [
     { data: statsData },
     { data: toolStatsData },
@@ -104,12 +111,14 @@ export default async function AdminTrackingPage({
     { data: dropoffData },
     { data: visitorData },
     { data: countryData },
+    { data: countryConversionData },
   ] = await Promise.all([
     supabase.rpc('get_funnel_stats', { p_days: days }),
     // T4 (audit Part 2): the single funnel above mixed tool users with direct
-    // signups, so it's split into two — see migration 093.
-    supabase.rpc('get_tool_funnel_stats', { p_days: days }),
-    supabase.rpc('get_direct_signup_funnel_stats', { p_days: days }),
+    // signups, so it's split into two — see migration 093. T7 (094) adds the
+    // optional country filter; unset when no country is selected.
+    supabase.rpc('get_tool_funnel_stats', { p_days: days, p_country: selectedCountry ?? null }),
+    supabase.rpc('get_direct_signup_funnel_stats', { p_days: days, p_country: selectedCountry ?? null }),
     supabase.rpc('get_funnel_dropoff', { p_days: days }),
     supabase.rpc('get_funnel_visitors', {
       p_days: days,
@@ -117,6 +126,8 @@ export default async function AdminTrackingPage({
       p_offset: (page - 1) * PAGE_SIZE,
     }),
     supabase.rpc('get_funnel_countries', { p_days: days }),
+    // T7 (audit Part 4): conversion rate by country — migration 094.
+    supabase.rpc('get_funnel_country_conversion', { p_days: days }),
   ])
 
   const stats: FunnelStat[] = (statsData || []) as FunnelStat[]
@@ -125,6 +136,7 @@ export default async function AdminTrackingPage({
   const dropoff: DropoffRow[] = (dropoffData || []) as DropoffRow[]
   const visitors: VisitorRow[] = (visitorData || []) as VisitorRow[]
   const countries: CountryRow[] = (countryData || []) as CountryRow[]
+  const countryConversion: CountryConversionRow[] = (countryConversionData || []) as CountryConversionRow[]
 
   // `total` is the same on every row (window function), so row 0 carries it.
   // Zero rows means either an empty window or a page past the end — both render
@@ -310,11 +322,64 @@ export default async function AdminTrackingPage({
             </div>
           </div>
 
+          {/* Country filter — narrows both funnels below to browsers whose
+              most-recent country in the window matches (T7, audit Part 4,
+              migration 094). Reuses the countries already fetched for the
+              "Traffic by country" card so there's no separate query for the
+              filter's own option list. */}
+          <div className="rounded-xl border border-ink-200 bg-white p-5 mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Globe className="w-4 h-4 text-ink-400" />
+              <h2 className="text-sm font-semibold text-ink-900">Filter the funnel by country</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/admin/tracking?days=${days}`}
+                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                  !selectedCountry
+                    ? 'bg-ink-900 text-white border-ink-900'
+                    : 'bg-white text-ink-600 border-ink-200 hover:border-ink-400'
+                }`}
+              >
+                All countries
+              </Link>
+              {countries.map((c) => (
+                <Link
+                  key={c.country}
+                  href={`/admin/tracking?days=${days}&country=${c.country}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                    selectedCountry === c.country
+                      ? 'bg-ink-900 text-white border-ink-900'
+                      : 'bg-white text-ink-600 border-ink-200 hover:border-ink-400'
+                  }`}
+                >
+                  <span className="mr-1.5">{countryFlag(c.country)}</span>
+                  {countryName(c.country)}
+                </Link>
+              ))}
+            </div>
+            {selectedCountry && (
+              <p className="text-xs text-ink-400 mt-3">
+                Showing the two funnels below for <span className="text-ink-700">{countryName(selectedCountry)}</span>{' '}
+                only — a browser counts toward a country by its most-recent country in this window,
+                same rule as &ldquo;Traffic by country&rdquo; below.
+              </p>
+            )}
+          </div>
+
           {/* Tool funnel — people who came to build an invoice. Scoped to
-              anon_ids that reached invoice_ready_viewed (migration 093, T4). */}
+              anon_ids that reached invoice_ready_viewed (migration 093, T4),
+              plus the country filter above when one is selected (094, T7). */}
           <div className="rounded-xl border border-ink-200 bg-white p-6 mb-8">
             <div className="flex items-center justify-between gap-3 mb-2">
-              <h2 className="text-lg font-semibold text-ink-900">Tool funnel</h2>
+              <h2 className="text-lg font-semibold text-ink-900">
+                Tool funnel
+                {selectedCountry && (
+                  <span className="ml-2 text-sm font-normal text-ink-400">
+                    · {countryFlag(selectedCountry)} {countryName(selectedCountry)}
+                  </span>
+                )}
+              </h2>
               <TrackingExportButton content={toolFunnelCsv} filename={toolFunnelCsvFilename} />
             </div>
             <p className="text-sm text-ink-500 mb-5">
@@ -352,10 +417,18 @@ export default async function AdminTrackingPage({
           </div>
 
           {/* Direct-signup funnel — people who landed on beta login and signed
-              up without touching the tool (migration 093, T4). */}
+              up without touching the tool (migration 093, T4), plus the
+              country filter above when one is selected (094, T7). */}
           <div className="rounded-xl border border-ink-200 bg-white p-6 mb-8">
             <div className="flex items-center justify-between gap-3 mb-2">
-              <h2 className="text-lg font-semibold text-ink-900">Direct signup funnel</h2>
+              <h2 className="text-lg font-semibold text-ink-900">
+                Direct signup funnel
+                {selectedCountry && (
+                  <span className="ml-2 text-sm font-normal text-ink-400">
+                    · {countryFlag(selectedCountry)} {countryName(selectedCountry)}
+                  </span>
+                )}
+              </h2>
               <TrackingExportButton content={directFunnelCsv} filename={directFunnelCsvFilename} />
             </div>
             <p className="text-sm text-ink-500 mb-5">
@@ -455,6 +528,66 @@ export default async function AdminTrackingPage({
                   since the IP was never stored, those historical rows can&apos;t be backfilled.
                 </p>
               </>
+            )}
+          </div>
+
+          {/* Conversion rate by country — same "converted" definition as the
+              Visitors table (user_id IS NOT NULL, migration 090), grouped by
+              a browser's most-recent country in the window (T7, audit Part 4,
+              migration 094). A table rather than bars: two numbers (people,
+              converted) per row read better as columns than as a second bar
+              chart competing with "Traffic by country" above. */}
+          <div className="rounded-xl border border-ink-200 bg-white p-6 mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <Globe className="w-5 h-5 text-ink-400" />
+              <h2 className="text-lg font-semibold text-ink-900">Conversion rate by country</h2>
+            </div>
+            <p className="text-sm text-ink-500 mb-5">
+              Of the browsers last seen in each country, how many converted (signed up). Same
+              definition of &ldquo;converted&rdquo; as the Visitors table below.
+            </p>
+            {countryConversion.length === 0 ? (
+              <p className="text-sm text-ink-400">No country data for this window.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[480px]">
+                  <thead>
+                    <tr className="text-left text-ink-500 border-b border-ink-200">
+                      <th className="pb-2 font-medium">Country</th>
+                      <th className="pb-2 font-medium text-right">People</th>
+                      <th className="pb-2 font-medium text-right">Converted</th>
+                      <th className="pb-2 font-medium text-right">Conversion rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {countryConversion.map((c) => {
+                      const people = Number(c.people)
+                      const converted = Number(c.converted)
+                      const unknown = c.country === 'ZZ'
+                      return (
+                        <tr key={c.country} className="border-b border-ink-100 last:border-0">
+                          <td className="py-2.5 whitespace-nowrap">
+                            <span className={unknown ? 'text-ink-400' : 'text-ink-700'}>
+                              <span className="mr-1.5">{countryFlag(c.country)}</span>
+                              {countryName(c.country)}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-right tabular-nums text-ink-900">{people}</td>
+                          <td className="py-2.5 text-right tabular-nums text-ink-900">{converted}</td>
+                          <td className="py-2.5 text-right tabular-nums whitespace-nowrap">
+                            <span className="text-ink-700">{ratioLabel(converted, people)}</span>
+                            {isLowSample(people) && (
+                              <span className="ml-1.5 text-[10px] uppercase tracking-wide text-amber-700">
+                                low sample
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
