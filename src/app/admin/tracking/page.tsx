@@ -566,10 +566,25 @@ export default async function AdminTrackingPage({
               </h2>
               <TrackingExportButton content={directFunnelCsv} filename={directFunnelCsvFilename} />
             </div>
-            <p className="text-sm text-ink-500 mb-5">
+            <p className="text-sm text-ink-500 mb-2">
               Visitors who started or finished signup without ever reaching &ldquo;invoice
               ready.&rdquo; Kept separate from the tool funnel above so neither one hides the
               other&apos;s true conversion rate.
+            </p>
+
+            {/* Read this before treating "direct" as a marketing channel. A
+                visitor lands here for three quite different reasons and we
+                cannot tell them apart, so the count is an upper bound on
+                genuine direct signups, not a measurement of them. */}
+            <p className="text-xs text-ink-400 mb-5 leading-relaxed">
+              Not everyone here arrived directly. The journey is joined across
+              invoice-generator and beta by a cookie on the shared domain, so someone
+              lands in this funnel if they <em>did</em> use the tool but the join failed —
+              Safari&apos;s tracking prevention, a privacy extension, blocked third-party
+              cookies, or a different device or browser between building and signing up.
+              The backup link only exists on the Send path, so anyone who chose
+              &ldquo;Download PDF only&rdquo; and signed up later also appears here. Treat this
+              as an upper bound on true direct signups.
             </p>
             {directFunnel.ord.length === 0 ? (
               <p className="text-sm text-ink-400">No direct-signup visitors in this window.</p>
