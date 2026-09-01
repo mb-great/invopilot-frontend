@@ -8,6 +8,8 @@ import { ArrowLeft, TrendingDown, Users2, Globe } from 'lucide-react'
 import { countryName, countryFlag } from '@/lib/tracking/countries'
 import { visitorsToCsv, visitorsToCsvWithoutEmails, visitorsToJson, funnelToCsv, dropoffToCsv, exportFilename } from '@/lib/tracking/csv'
 import TrackingExportButton from '@/components/admin/TrackingExportButton'
+import IncludeInternalToggle from '@/components/admin/IncludeInternalToggle'
+import InternalPatternsPanel from '@/components/admin/InternalPatternsPanel'
 
 /**
  * Admin → Funnel Tracking. Spec: docs/ANALYTICS_FUNNEL_TRACKING.md (ADR-032).
@@ -44,6 +46,7 @@ type VisitorRow = {
   /** Full count in the window, identical on every row — see migration 089. */
   total: number
 }
+type InternalPattern = { pattern: string; note: string | null; created_at: string }
 
 /** Funnel order. Anything not listed still renders, just after these. */
 const FUNNEL_ORDER = [
@@ -98,11 +101,27 @@ export default async function AdminTrackingPage({
   const pageParam = typeof resolved.page === 'string' ? parseInt(resolved.page, 10) : 1
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
 
-  // T7 (audit Part 4): country filter for the funnel below. Only a 2-letter
-  // code (or the 'ZZ' unknown sentinel) is accepted — anything else is
-  // treated as no filter rather than passed through to the RPC.
+  // T7 (audit Part 4): country filter for the funnel below. Only a real
+  // 2-letter code is accepted — anything else, including the 'ZZ' unknown
+  // sentinel, is treated as no filter rather than passed through to the RPC.
+  // 'ZZ' means "country couldn't be resolved," not a place someone can be
+  // "from," so it is deliberately not a filterable value even if requested
+  // directly via the URL.
   const countryParam = typeof resolved.country === 'string' ? resolved.country.toUpperCase() : ''
-  const selectedCountry = /^[A-Z]{2}$/.test(countryParam) ? countryParam : undefined
+  const selectedCountry =
+    /^[A-Z]{2}$/.test(countryParam) && countryParam !== 'ZZ' ? countryParam : undefined
+
+  // Internal/test-account toggle (migration 095). Default OFF — same
+  // behaviour as before this feature existed — and only ever turned on by
+  // an explicit `?internal=1` in the URL.
+  const includeInternal = resolved.internal === '1'
+  const toggleInternalHref = (() => {
+    const params = new URLSearchParams()
+    params.set('days', String(days))
+    if (selectedCountry) params.set('country', selectedCountry)
+    if (!includeInternal) params.set('internal', '1')
+    return `/admin/tracking?${params.toString()}`
+  })()
 
   const [
     { data: statsData },
@@ -112,22 +131,43 @@ export default async function AdminTrackingPage({
     { data: visitorData },
     { data: countryData },
     { data: countryConversionData },
+    { data: excludedCountData },
+    { data: patternsData },
   ] = await Promise.all([
-    supabase.rpc('get_funnel_stats', { p_days: days }),
+    supabase.rpc('get_funnel_stats', { p_days: days, p_include_internal: includeInternal }),
     // T4 (audit Part 2): the single funnel above mixed tool users with direct
     // signups, so it's split into two — see migration 093. T7 (094) adds the
     // optional country filter; unset when no country is selected.
-    supabase.rpc('get_tool_funnel_stats', { p_days: days, p_country: selectedCountry ?? null }),
-    supabase.rpc('get_direct_signup_funnel_stats', { p_days: days, p_country: selectedCountry ?? null }),
-    supabase.rpc('get_funnel_dropoff', { p_days: days }),
+    supabase.rpc('get_tool_funnel_stats', {
+      p_days: days,
+      p_country: selectedCountry ?? null,
+      p_include_internal: includeInternal,
+    }),
+    supabase.rpc('get_direct_signup_funnel_stats', {
+      p_days: days,
+      p_country: selectedCountry ?? null,
+      p_include_internal: includeInternal,
+    }),
+    supabase.rpc('get_funnel_dropoff', { p_days: days, p_include_internal: includeInternal }),
     supabase.rpc('get_funnel_visitors', {
       p_days: days,
       p_limit: PAGE_SIZE,
       p_offset: (page - 1) * PAGE_SIZE,
+      p_include_internal: includeInternal,
     }),
-    supabase.rpc('get_funnel_countries', { p_days: days }),
+    supabase.rpc('get_funnel_countries', { p_days: days, p_include_internal: includeInternal }),
     // T7 (audit Part 4): conversion rate by country — migration 094.
-    supabase.rpc('get_funnel_country_conversion', { p_days: days }),
+    supabase.rpc('get_funnel_country_conversion', { p_days: days, p_include_internal: includeInternal }),
+    // How many test/internal browsers this window's exclusion is currently
+    // hiding — shown next to the toggle so it's clear what flipping it does
+    // (migration 095).
+    supabase.rpc('get_internal_excluded_count', { p_days: days }),
+    // Existing patterns for the plus-icon panel below (migration 091 table;
+    // read directly, RLS's internal_pattern_admin_all policy applies here too).
+    supabase
+      .from('analytics_internal_pattern')
+      .select('pattern, note, created_at')
+      .order('created_at', { ascending: false }),
   ])
 
   const stats: FunnelStat[] = (statsData || []) as FunnelStat[]
@@ -137,6 +177,8 @@ export default async function AdminTrackingPage({
   const visitors: VisitorRow[] = (visitorData || []) as VisitorRow[]
   const countries: CountryRow[] = (countryData || []) as CountryRow[]
   const countryConversion: CountryConversionRow[] = (countryConversionData || []) as CountryConversionRow[]
+  const excludedCount: number = Number(excludedCountData ?? 0)
+  const internalPatterns: InternalPattern[] = (patternsData || []) as InternalPattern[]
 
   // `total` is the same on every row (window function), so row 0 carries it.
   // Zero rows means either an empty window or a page past the end — both render
@@ -223,6 +265,12 @@ export default async function AdminTrackingPage({
   const countryPct = (n: number) =>
     countryTotal > 0 ? Math.round((n / countryTotal) * 1000) / 10 : 0
 
+  // The country FILTER deliberately excludes 'ZZ' — "couldn't resolve this
+  // browser's country" is missing data, not a market someone can filter down
+  // to. ZZ still appears everywhere else below (ranked bars, conversion
+  // table, Visitors' Country column) — only the filter control drops it.
+  const filterableCountries = countries.filter((c) => c.country !== 'ZZ')
+
   // Cap the rendered bars. The RPC returns every country it saw, and a tail of
   // one-visitor rows is real data but not readable as 200 bars — it gets rolled
   // into a single line so the total still reconciles and nothing is hidden.
@@ -266,6 +314,25 @@ export default async function AdminTrackingPage({
             Last {d} days
           </Link>
         ))}
+      </div>
+
+      {/* Internal/test-account toggle + pattern manager (migration 095).
+          Default OFF, same numbers as before this existed — the checkbox is
+          the only way to see internal traffic on this dashboard. */}
+      <div className="rounded-xl border border-ink-200 bg-white p-5 mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <IncludeInternalToggle checked={includeInternal} href={toggleInternalHref} />
+            <span className="text-xs text-ink-400">
+              {excludedCount} test/internal {excludedCount === 1 ? 'browser' : 'browsers'}{' '}
+              {includeInternal ? 'included' : 'excluded'} from this window.
+            </span>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-ink-100">
+          <p className="text-xs text-ink-500 mb-2">Test-email patterns (ILIKE, matched against account email):</p>
+          <InternalPatternsPanel patterns={internalPatterns} />
+        </div>
       </div>
 
       {totalPeople === 0 ? (
@@ -330,46 +397,55 @@ export default async function AdminTrackingPage({
               most-recent country in the window matches (T7, audit Part 4,
               migration 094). Reuses the countries already fetched for the
               "Traffic by country" card so there's no separate query for the
-              filter's own option list. */}
-          <div className="rounded-xl border border-ink-200 bg-white p-5 mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <Globe className="w-4 h-4 text-ink-400" />
-              <h2 className="text-sm font-semibold text-ink-900">Filter the funnel by country</h2>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/admin/tracking?days=${days}`}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                  !selectedCountry
-                    ? 'bg-ink-900 text-white border-ink-900'
-                    : 'bg-white text-ink-600 border-ink-200 hover:border-ink-400'
-                }`}
-              >
-                All countries
-              </Link>
-              {countries.map((c) => (
+              filter's own option list. 'ZZ' (unknown) is deliberately left
+              out of this list — it means the country couldn't be resolved,
+              not a place someone can be "from," so it isn't a meaningful
+              thing to filter down to. It still shows up in every other
+              country breakdown below. When it's the only "country" seen in
+              the window, there is nothing left to filter by, so the whole
+              card is skipped rather than rendering with just "All
+              countries." */}
+          {filterableCountries.length > 0 && (
+            <div className="rounded-xl border border-ink-200 bg-white p-5 mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Globe className="w-4 h-4 text-ink-400" />
+                <h2 className="text-sm font-semibold text-ink-900">Filter the funnel by country</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <Link
-                  key={c.country}
-                  href={`/admin/tracking?days=${days}&country=${c.country}`}
+                  href={`/admin/tracking?days=${days}`}
                   className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                    selectedCountry === c.country
+                    !selectedCountry
                       ? 'bg-ink-900 text-white border-ink-900'
                       : 'bg-white text-ink-600 border-ink-200 hover:border-ink-400'
                   }`}
                 >
-                  <span className="mr-1.5">{countryFlag(c.country)}</span>
-                  {countryName(c.country)}
+                  All countries
                 </Link>
-              ))}
+                {filterableCountries.map((c) => (
+                  <Link
+                    key={c.country}
+                    href={`/admin/tracking?days=${days}&country=${c.country}`}
+                    className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                      selectedCountry === c.country
+                        ? 'bg-ink-900 text-white border-ink-900'
+                        : 'bg-white text-ink-600 border-ink-200 hover:border-ink-400'
+                    }`}
+                  >
+                    <span className="mr-1.5">{countryFlag(c.country)}</span>
+                    {countryName(c.country)}
+                  </Link>
+                ))}
+              </div>
+              {selectedCountry && (
+                <p className="text-xs text-ink-400 mt-3">
+                  Showing the two funnels below for <span className="text-ink-700">{countryName(selectedCountry)}</span>{' '}
+                  only — a browser counts toward a country by its most-recent country in this window,
+                  same rule as &ldquo;Traffic by country&rdquo; below.
+                </p>
+              )}
             </div>
-            {selectedCountry && (
-              <p className="text-xs text-ink-400 mt-3">
-                Showing the two funnels below for <span className="text-ink-700">{countryName(selectedCountry)}</span>{' '}
-                only — a browser counts toward a country by its most-recent country in this window,
-                same rule as &ldquo;Traffic by country&rdquo; below.
-              </p>
-            )}
-          </div>
+          )}
 
           {/* Tool funnel — people who came to build an invoice. Scoped to
               anon_ids that reached invoice_ready_viewed (migration 093, T4),
