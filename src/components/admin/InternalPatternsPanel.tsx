@@ -26,6 +26,32 @@ export default function InternalPatternsPanel({ patterns }: { patterns: Pattern[
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [removing, setRemoving] = useState<string | null>(null)
+
+  /** Removing a pattern is not destructive: the exclusion is computed at read
+   *  time, so those events simply reappear on the next load. */
+  const handleRemove = async (target: string) => {
+    if (removing) return
+    setRemoving(target)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/internal-patterns', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pattern: target }),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setError(json.error || 'Failed to remove pattern.')
+        return
+      }
+      router.refresh()
+    } catch {
+      setError('Network error — try again.')
+    } finally {
+      setRemoving(null)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,10 +86,20 @@ export default function InternalPatternsPanel({ patterns }: { patterns: Pattern[
         {patterns.map((p) => (
           <span
             key={p.pattern}
-            className="px-2 py-1 rounded-md bg-ink-100 text-ink-700 text-xs font-mono"
+            className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-md bg-ink-100 text-ink-700 text-xs font-mono"
             title={p.note || undefined}
           >
             {p.pattern}
+            <button
+              type="button"
+              onClick={() => handleRemove(p.pattern)}
+              disabled={removing === p.pattern}
+              aria-label={`Remove ${p.pattern}`}
+              title={`Stop excluding ${p.pattern}`}
+              className="inline-flex items-center justify-center h-4 w-4 rounded text-ink-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors"
+            >
+              <span aria-hidden className="text-sm leading-none">&times;</span>
+            </button>
           </span>
         ))}
         {patterns.length === 0 && (

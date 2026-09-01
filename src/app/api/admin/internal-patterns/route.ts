@@ -98,3 +98,52 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ data })
 }
+
+/**
+ * Remove a pattern. Same authorization story as POST: the caller's own
+ * session, with RLS's internal_pattern_admin_all as the real gate.
+ *
+ * Removing a pattern is not destructive to analytics data — the exclusion is
+ * computed at read time by internal_anon_ids(), so the events that pattern was
+ * hiding simply reappear in every card on the next page load. Nothing is
+ * deleted from analytics_events.
+ */
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin' && profile?.role !== 'superadmin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  let body: { pattern?: unknown }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
+  }
+
+  if (typeof body?.pattern !== 'string' || !body.pattern.trim()) {
+    return NextResponse.json({ error: 'Pattern is required.' }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from('analytics_internal_pattern')
+    .delete()
+    .eq('pattern', body.pattern.trim())
+
+  if (error) {
+    return NextResponse.json({ error: 'Failed to remove pattern.' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}
