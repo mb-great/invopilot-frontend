@@ -110,7 +110,7 @@ export default async function AdminTrackingPage({
   // directly via the URL.
   const countryParam = typeof resolved.country === 'string' ? resolved.country.toUpperCase() : ''
   const selectedCountry =
-    /^[A-Z]{2}$/.test(countryParam) && countryParam !== 'ZZ' ? countryParam : undefined
+    /^[A-Z]{2}$/.test(countryParam) ? countryParam : undefined
 
   // Internal/test-account toggle (migration 095). Default OFF — same
   // behaviour as before this feature existed — and only ever turned on by
@@ -277,7 +277,11 @@ export default async function AdminTrackingPage({
   // browser's country" is missing data, not a market someone can filter down
   // to. ZZ still appears everywhere else below (ranked bars, conversion
   // table, Visitors' Country column) — only the filter control drops it.
-  const filterableCountries = countries.filter((c) => c.country !== 'ZZ')
+  // 'ZZ' (Unknown) IS filterable. It was excluded at first on the reasoning that
+  // an absence of data is not a market — true, but it is the majority of the
+  // dataset right now (country only started recording 31 Aug), so being able to
+  // isolate "everything from before country tracking" is the more useful tool.
+  const filterableCountries = countries
 
   // Cap the rendered bars. The RPC returns every country it saw, and a tail of
   // one-visitor rows is real data but not readable as 200 bars — it gets rolled
