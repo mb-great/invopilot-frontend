@@ -23,6 +23,7 @@ import InternalPatternsPanel from '@/components/admin/InternalPatternsPanel'
 
 type FunnelStat = { event: string; people: number; events: number }
 type CountryRow = { country: string; people: number; events: number }
+type SourceRow = { source: string; people: number }
 type CountryConversionRow = { country: string; people: number; converted: number }
 type DropoffRow = {
   last_event: string
@@ -130,6 +131,7 @@ export default async function AdminTrackingPage({
     { data: dropoffData },
     { data: visitorData },
     { data: countryData },
+    { data: sourceData },
     { data: countryConversionData },
     { data: excludedCountData },
     { data: patternsData },
@@ -156,6 +158,11 @@ export default async function AdminTrackingPage({
       p_include_internal: includeInternal,
     }),
     supabase.rpc('get_funnel_countries', { p_days: days, p_include_internal: includeInternal }),
+    // Where the sign-ins we DO see began (migration 096). Replaces the old
+    // "auth survival" ratio: completed can exceed started because sign-in can
+    // begin somewhere untracked, so a percentage between them asserts a
+    // subset relationship that does not hold.
+    supabase.rpc('get_signup_start_sources', { p_days: days, p_include_internal: includeInternal }),
     // T7 (audit Part 4): conversion rate by country — migration 094.
     supabase.rpc('get_funnel_country_conversion', { p_days: days, p_include_internal: includeInternal }),
     // How many test/internal browsers this window's exclusion is currently
@@ -176,6 +183,7 @@ export default async function AdminTrackingPage({
   const dropoff: DropoffRow[] = (dropoffData || []) as DropoffRow[]
   const visitors: VisitorRow[] = (visitorData || []) as VisitorRow[]
   const countries: CountryRow[] = (countryData || []) as CountryRow[]
+  const signupSources: SourceRow[] = (sourceData || []) as SourceRow[]
   const countryConversion: CountryConversionRow[] = (countryConversionData || []) as CountryConversionRow[]
   const excludedCount: number = Number(excludedCountData ?? 0)
   const internalPatterns: InternalPattern[] = (patternsData || []) as InternalPattern[]
@@ -378,18 +386,61 @@ export default async function AdminTrackingPage({
               </p>
             </div>
             <div className="rounded-xl border border-ink-200 bg-white p-5">
-              <div className="text-ink-500 text-xs uppercase tracking-wide mb-2">Auth survival</div>
-              <div className="text-3xl font-bold text-ink-900">
-                {ratioLabel(signups, started)}
-              </div>
-              <p className="text-xs text-ink-400 mt-1">
-                Of people who started Google sign-in, how many finished creating an account.
+              <div className="text-ink-500 text-xs uppercase tracking-wide mb-2">Sign-ups</div>
+
+              {/* Two counts side by side rather than one ratio.
+                  A percentage here implies the second number is a subset of the
+                  first, and it is not: sign-in can begin somewhere we do not
+                  measure (a bookmark, a WordPress page, a returning visit), so
+                  "completed" legitimately exceeds "started". Bars state both
+                  facts without asserting a relationship that isn't true. */}
+              {(() => {
+                const scale = Math.max(signups, started, 1)
+                const rows: Array<{ label: string; value: number; tone: string }> = [
+                  { label: 'Started sign-in', value: started, tone: 'bg-ink-300' },
+                  { label: 'Created an account', value: signups, tone: 'bg-emerald-500' },
+                ]
+                return (
+                  <div className="space-y-2.5 mt-1">
+                    {rows.map((r) => (
+                      <div key={r.label}>
+                        <div className="flex items-baseline justify-between text-xs mb-1">
+                          <span className="text-ink-600">{r.label}</span>
+                          <span className="text-ink-900 font-semibold tabular-nums">{r.value}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-ink-100 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${r.tone}`}
+                            style={{ width: `${Math.max((r.value / scale) * 100, r.value > 0 ? 3 : 0)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+
+              <p className="text-xs text-ink-400 mt-3">
+                People who reached Google sign-in, and people who ended up with an account.
+                Not every account starts from a tracked page, so these are two counts, not a
+                funnel — the second can exceed the first.
               </p>
-              <p className="text-xs text-ink-400 mt-1">
-                {signups > started
-                  ? `${signups} of ${started} — signup_started under-fires through the OAuth redirect, so this will read "check data" until that's fixed`
-                  : `${signups} of ${started} finished sign-in`}
-              </p>
+
+              {signupSources.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-ink-100">
+                  <div className="text-[11px] uppercase tracking-wide text-ink-400 mb-1.5">
+                    Sign-ins started from
+                  </div>
+                  <ul className="space-y-1">
+                    {signupSources.map((r) => (
+                      <li key={r.source} className="flex items-baseline justify-between text-xs">
+                        <span className="text-ink-600">{r.source}</span>
+                        <span className="text-ink-900 font-medium tabular-nums">{r.people}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
