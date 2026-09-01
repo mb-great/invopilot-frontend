@@ -28,9 +28,16 @@ export async function POST(request: Request) {
     );
   }
 
-  // 1. Rate limit — 10/min per IP
+  // 1. Rate limit — 30/min per IP.
+  //
+  // Was 10. Raised because an IP is not a person: Jio/Airtel CGNAT and any
+  // office network put many people behind one address, so a shared-IP office
+  // could 429 itself. Measured against real behaviour rather than guessed —
+  // a PDF takes ~2.75s to render plus ~1s of queue wait, and the most any
+  // single user has ever created in one minute is 6. 30 leaves headroom for
+  // several people sharing an IP while still stopping a scripted flood.
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
-  if (process.env.NODE_ENV !== 'development' && !rateLimit(ip, 10, 60_000))
+  if (process.env.NODE_ENV !== 'development' && !rateLimit(ip, 30, 60_000))
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
 
